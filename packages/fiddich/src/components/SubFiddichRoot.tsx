@@ -5,7 +5,7 @@ import { FiddichStoreContext, SubFiddichStore } from "../core";
 export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
 
   const parent = useContext(FiddichStoreContext);
-  if(parent == null) throw new Error('');
+  if(parent == null) throw new Error('SubFiddichRoot can only be used inside FiddichRoot.');
 
   const storeRef = useRef<SubFiddichStore>({id: nanoid(), map: new Map(), parent});
   if(storeRef.current.parent.id !== parent.id) {

@@ -1,6 +1,5 @@
 import typescript from 'rollup-plugin-typescript2';
 
-
 export default {
   input: "./src/index.ts",
   preserveModules: true,
@@ -9,6 +8,11 @@ export default {
     format: "es",
     sourcemap: false
   },
+  external: [
+    'react',
+    'react/jsx-runtime',
+    'nanoid'
+  ],
   plugins: [
     typescript(),
   ]

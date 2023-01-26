@@ -9,7 +9,7 @@ export type AtomStateChangedEvent<T = any> = {
 
 export type Atom<T = any> = {
   key: string;
-  defaultValue: T;
+  default: T;
 };
 
 export type AtomState<T = any> = {

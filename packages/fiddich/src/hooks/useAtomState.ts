@@ -4,7 +4,7 @@ import { Atom, AtomState, FiddichStoreContext } from '../core';
 
 export const useAtomState = <T>(atom: Atom<T>): AtomState<T> => {
   const store = useContext(FiddichStoreContext);
-  if (store == null) throw new Error('');
+  if (store == null) throw new Error('Component is not inside the FiddichRoot/SubFiddichRoot.');
 
   const atomStateFromStore = getAtomState<T>(atom, store);
   const atomState = atomStateFromStore ?? createIndependentAtomState(atom);

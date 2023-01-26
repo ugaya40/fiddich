@@ -1,3 +1,5 @@
+export { atom } from './atom';
+
 export { FiddichRoot } from './components/FiddichRoot';
 export { SubFiddichRoot } from './components/SubFiddichRoot';
 

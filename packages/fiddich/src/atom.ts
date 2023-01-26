@@ -1,9 +1,11 @@
 import { Atom, AtomState, Store } from './core';
 import { TypedEvent } from './util/TypedEvent';
 
+export const atom = <T>(arg: { key: string; default: T }): Atom<T> => arg;
+
 export const createIndependentAtomState = <T = unknown>(atom: Atom<T>): AtomState<T> => ({
   atom,
-  value: atom.defaultValue,
+  value: atom.default,
   event: new TypedEvent(),
   storeId: 'none',
 });
