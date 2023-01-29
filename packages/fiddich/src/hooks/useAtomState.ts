@@ -1,13 +1,13 @@
 import { useContext } from 'react';
 import { assignAtomState, createIndependentAtomState, getAtomState } from '../atom';
-import { Atom, AtomState, AtomStateEffect, FiddichStoreContext } from '../core';
+import { Atoms, AtomState, FiddichStoreContext } from '../core';
 
-export const useAtomState = <T>(atom: Atom<T>, initialValue?: T, effect?: AtomStateEffect<T>): AtomState<T> => {
+export const useAtomState = <T>(atom: Atoms<T>, initialValue?: T): AtomState<T> => {
   const store = useContext(FiddichStoreContext);
   if (store == null) throw new Error('Component is not inside the FiddichRoot/SubFiddichRoot.');
 
   const atomStateFromStore = getAtomState<T>(atom, store);
-  const atomState = atomStateFromStore ?? createIndependentAtomState(atom, initialValue, effect);
+  const atomState = atomStateFromStore ?? createIndependentAtomState(atom, initialValue);
   if (atomStateFromStore == null) {
     assignAtomState(atomState, store);
   }

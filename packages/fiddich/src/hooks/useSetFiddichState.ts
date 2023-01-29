@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { changeValue } from '../atom';
-import { Atom, AtomState, AtomStateEffect, SetterOrUpdater } from '../core';
+import { Atoms, AtomState, SetterOrUpdater } from '../core';
 import { useAtomState } from './useAtomState';
 
 export const useSetFiddichStateInternal = <T>(atomState: AtomState<T>): SetterOrUpdater<T> => {
@@ -14,7 +14,7 @@ export const useSetFiddichStateInternal = <T>(atomState: AtomState<T>): SetterOr
   return setFunc;
 };
 
-export const useSetFiddichState = <T>(atom: Atom<T>, initialValue?: T, effect?: AtomStateEffect<T>): SetterOrUpdater<T> => {
-  const atomState = useAtomState(atom, initialValue, effect);
+export const useSetFiddichState = <T>(atom: Atoms<T>, initialValue?: T): SetterOrUpdater<T> => {
+  const atomState = useAtomState(atom, initialValue);
   return useSetFiddichStateInternal(atomState);
 };

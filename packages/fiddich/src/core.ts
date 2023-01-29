@@ -8,22 +8,38 @@ export type AtomStateChangedEvent<T = any> = {
 };
 
 export type Atom<T = any> = {
+  type: 'atom';
   key: string;
   default: T;
-  defaultEffect?: AtomStateEffect<T>;
 };
 
-export type AtomStateEffect<T> = {
-  onBeforeChange?: (newValue: T, old: T, state: AtomState<T>) => boolean;
-  onAfterChange?: (newValue: T, old: T, state: AtomState<T>) => void;
+export type AtomFamily<T = any> = {
+  type: 'atomFamily';
+  key: string;
+  baseKey: string;
+  default: T;
+};
+
+export type Atoms<T> = Atom<T> | AtomFamily<T>;
+
+export type AtomFamilyFunction<T = any, Parameter = any> = (arg: Parameter) => AtomFamily<T>;
+
+type ChangeEffectArg<T> = {
+  newValue: T;
+  oldValue: T;
+  atomState: AtomState<T>;
+};
+
+export type AtomsEffect<T> = {
+  onBeforeChange?: (arg: ChangeEffectArg<T>) => boolean;
+  onAfterChange?: (arg: ChangeEffectArg<T>) => void;
 };
 
 export type AtomState<T = any> = {
-  atom: Atom<T>;
+  atom: Atoms<T>;
   storeId: string;
   value: T;
   event: TypedEvent<AtomStateChangedEvent<T>>;
-  effect?: AtomStateEffect<T>;
 };
 
 export type FiddichStore = {
@@ -40,3 +56,5 @@ export type Store = FiddichStore | SubFiddichStore;
 export type SetterOrUpdater<T> = (setterOrUpdater: ((old: T) => T) | T) => void;
 
 export const FiddichStoreContext = createContext<Store | null>(null);
+
+export const globalEffectMap = new Map<string, AtomsEffect<any>>();

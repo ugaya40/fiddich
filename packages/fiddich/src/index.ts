@@ -1,4 +1,4 @@
-export { atom } from './atom';
+export { atom, atomFamily } from './atom';
 
 export { FiddichRoot, wrapFiddichRoot } from './components/FiddichRoot';
 export { SubFiddichRoot, wrapSubFiddichRoot } from './components/SubFiddichRoot';
