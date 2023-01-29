@@ -10,6 +10,12 @@ export type AtomStateChangedEvent<T = any> = {
 export type Atom<T = any> = {
   key: string;
   default: T;
+  defaultEffect?: AtomStateEffect<T>;
+};
+
+export type AtomStateEffect<T> = {
+  onBeforeChange?: (newValue: T, old: T, state: AtomState<T>) => boolean;
+  onAfterChange?: (newValue: T, old: T, state: AtomState<T>) => void;
 };
 
 export type AtomState<T = any> = {
@@ -17,6 +23,7 @@ export type AtomState<T = any> = {
   storeId: string;
   value: T;
   event: TypedEvent<AtomStateChangedEvent<T>>;
+  effect?: AtomStateEffect<T>;
 };
 
 export type FiddichStore = {

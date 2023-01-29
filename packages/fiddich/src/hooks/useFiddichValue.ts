@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
-import { Atom } from '../core';
+import { Atom, AtomState, AtomStateEffect } from '../core';
 import { useRerender } from '../util/util';
 import { useAtomState } from './useAtomState';
 
-export const useFiddichValue = <T>(atom: Atom<T>): T => {
-  const atomState = useAtomState(atom);
+export const useFiddichValueInternal = <T>(atomState: AtomState<T>): T => {
   const rerender = useRerender();
 
   useEffect(() => {
@@ -18,4 +17,9 @@ export const useFiddichValue = <T>(atom: Atom<T>): T => {
   }, [atomState.storeId]);
 
   return atomState.value;
+};
+
+export const useFiddichValue = <T>(atom: Atom<T>, initialValue?: T, effect?: AtomStateEffect<T>): T => {
+  const atomState = useAtomState(atom, initialValue, effect);
+  return useFiddichValueInternal(atomState);
 };

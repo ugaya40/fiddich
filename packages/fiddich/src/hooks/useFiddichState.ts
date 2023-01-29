@@ -1,7 +1,9 @@
-import { Atom, SetterOrUpdater } from '../core';
-import { useFiddichValue } from './useFiddichValue';
-import { useSetFiddichState } from './useSetFiddichState';
+import { Atom, AtomStateEffect, SetterOrUpdater } from '../core';
+import { useAtomState } from './useAtomState';
+import { useFiddichValueInternal } from './useFiddichValue';
+import { useSetFiddichStateInternal } from './useSetFiddichState';
 
-export const useFiddichState = <T>(atom: Atom<T>): [T, SetterOrUpdater<T>] => {
-  return [useFiddichValue(atom), useSetFiddichState(atom)];
+export const useFiddichState = <T>(atom: Atom<T>, initialValue?: T, effect?: AtomStateEffect<T>): [T, SetterOrUpdater<T>] => {
+  const atomState = useAtomState(atom, initialValue, effect);
+  return [useFiddichValueInternal(atomState), useSetFiddichStateInternal(atomState)];
 };
