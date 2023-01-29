@@ -1,7 +1,7 @@
 export { atom } from './atom';
 
-export { FiddichRoot } from './components/FiddichRoot';
-export { SubFiddichRoot } from './components/SubFiddichRoot';
+export { FiddichRoot, wrapFiddichRoot } from './components/FiddichRoot';
+export { SubFiddichRoot, wrapSubFiddichRoot } from './components/SubFiddichRoot';
 
 export { useFiddichState } from './hooks/useFiddichState';
 export { useFiddichValue } from './hooks/useFiddichValue';

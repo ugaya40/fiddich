@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { FC, ReactNode, useContext, useRef } from "react";
+import { ComponentType, FC, ReactNode, useContext, useRef } from "react";
 import { FiddichStoreContext, SubFiddichStore } from "../core";
 
 export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
@@ -17,4 +17,12 @@ export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
       {props.children}
     </FiddichStoreContext.Provider>
   )
+}
+
+export function wrapSubFiddichRoot<P extends Record<string, unknown>>(Component: ComponentType<P>): FC<P> {
+  return (props) => (
+    <SubFiddichRoot>
+      <Component {...props}/>
+    </SubFiddichRoot>
+  );
 }
