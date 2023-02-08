@@ -1,25 +1,25 @@
 import { useEffect } from 'react';
-import { Atoms, AtomState } from '../core';
+import { FiddichState, FiddichStateInstance } from '../core';
 import { useRerender } from '../util/util';
-import { useAtomState } from './useAtomState';
+import { useInstance } from './useInstance';
 
-export const useFiddichValueInternal = <T>(atomState: AtomState<T>): T => {
+export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T>): T => {
   const rerender = useRerender();
 
   useEffect(() => {
-    const listener = atomState.event.addListener(event => {
+    const listener = stateInstance.event.addListener(event => {
       if (event.type === 'change') {
         rerender();
       }
     });
 
     return () => listener.dispose();
-  }, [atomState.storeId]);
+  }, [stateInstance.storeId]);
 
-  return atomState.value;
+  return stateInstance.value;
 };
 
-export const useFiddichValue = <T>(atom: Atoms<T>, initialValue?: T): T => {
-  const atomState = useAtomState(atom, initialValue);
-  return useFiddichValueInternal(atomState);
+export const useFiddichValue = <T>(state: FiddichState<T>, initialValue?: T): T => {
+  const instance = useInstance(state, initialValue);
+  return useFiddichValueInternal(instance);
 };

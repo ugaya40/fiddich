@@ -1,10 +1,27 @@
-import { Atom, AtomFamilyFunction, Atoms, AtomState, AtomStateChangedEvent, AtomsEffect, globalEffectMap, Store } from './core';
+import { FiddichStateInstance, globalAtomEffectMap, Store, StateInstanceEvent } from './core';
 import { TypedEvent } from './util/TypedEvent';
+
+type ChangeEffectArg<T> = {
+  newValue: T;
+  oldValue: T;
+  stateInstance: FiddichStateInstance<T>;
+};
+
+export type AtomEffect<T> = {
+  onBeforeChange?: (arg: ChangeEffectArg<T>) => boolean;
+  onAfterChange?: (arg: ChangeEffectArg<T>) => void;
+};
+
+export type Atom<T = any> = {
+  type: 'atom';
+  key: string;
+  default: T;
+};
 
 type AtomArg<T> = {
   key: string;
   default: T;
-  effect?: AtomsEffect<T>;
+  effect?: AtomEffect<T>;
 };
 
 export const atom = <T>(arg: AtomArg<T>): Atom<T> => {
@@ -15,18 +32,27 @@ export const atom = <T>(arg: AtomArg<T>): Atom<T> => {
   };
 
   if (effect != null) {
-    globalEffectMap.set(result.key, effect);
+    globalAtomEffectMap.set(result.key, effect);
   }
 
   return result;
+};
+
+export type AtomFamily<T = any> = {
+  type: 'atomFamily';
+  key: string;
+  baseKey: string;
+  default: T;
 };
 
 type AtomFamilyArg<T, P> = {
   key: string;
   default: T;
   stringfy?: (arg: P) => string;
-  effect?: AtomsEffect<T>;
+  effect?: AtomEffect<T>;
 };
+
+type AtomFamilyFunction<T = any, Parameter = any> = (arg: Parameter) => AtomFamily<T>;
 
 export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T, P> => {
   const { key: baseKey, stringfy, effect, ...other } = arg;
@@ -41,52 +67,69 @@ export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T
   };
 
   if (effect != null) {
-    globalEffectMap.set(baseKey, effect);
+    globalAtomEffectMap.set(baseKey, effect);
   }
 
   return result;
 };
 
-export const createIndependentAtomState = <T = unknown>(atom: Atoms<T>, initialValue?: T): AtomState<T> => {
-  const newState: AtomState<T> = {
-    atom,
-    value: initialValue ?? atom.default,
-    event: new TypedEvent(),
-    storeId: 'none',
-  };
-  return newState;
+export type AtomInstance<T = any> = {
+  state: Atom<T> | AtomFamily<T>;
+  storeId: string;
+  value: T;
+  event: TypedEvent<StateInstanceEvent<T>>;
 };
 
-export const assignAtomState = (atomState: AtomState, store: Store): void => {
-  atomState.storeId = store.id;
-  store.map.set(atomState.atom.key, atomState);
-};
-
-export const getAtomState = <T = unknown>(atom: Atoms<T>, nearestStore: Store): AtomState<T> | null => {
-  const nearestStoreResult = nearestStore.map.get(atom.key);
+export const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<T>, nearestStore: Store, ref_storeTree: Store[]): AtomInstance<T> | null => {
+  ref_storeTree.push(nearestStore);
+  const nearestStoreResult = nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
   if (nearestStoreResult != null) return nearestStoreResult;
-  if ('parent' in nearestStore) return getAtomState(atom, nearestStore.parent);
+  if ('parent' in nearestStore) return getAtomInstanceInternal(atom, nearestStore.parent, ref_storeTree);
+  ref_storeTree.splice(0, ref_storeTree.length);
   return null;
 };
 
-export const changeValue = <T = unknown>(atomState: AtomState<T>, valueOrUpdater: ((old: T) => T) | T) => {
-  const oldValue = atomState.value;
+export const getAtomInstance = <T = unknown>(
+  atom: Atom<T> | AtomFamily<T>,
+  nearestStore: Store,
+  initialValue?: T
+): { instance: AtomInstance<T>; storeTree: Store[] } => {
+  const ref_storeTree: Store[] = [];
+  const atomInstanceFromStore = getAtomInstanceInternal<T>(atom, nearestStore, ref_storeTree);
+
+  if (atomInstanceFromStore != null) return { instance: atomInstanceFromStore, storeTree: ref_storeTree };
+
+  const newAtomInstance: AtomInstance<T> = {
+    state: atom,
+    value: initialValue ?? atom.default,
+    event: new TypedEvent(),
+    storeId: nearestStore.id,
+  };
+
+  nearestStore.map.set(newAtomInstance.state.key, newAtomInstance);
+  ref_storeTree.push(nearestStore);
+
+  return { instance: newAtomInstance, storeTree: ref_storeTree };
+};
+
+export const changeAtomValue = <T = unknown>(atomInstance: AtomInstance<T>, valueOrUpdater: ((old: T) => T) | T) => {
+  const oldValue = atomInstance.value;
   const newValue = typeof valueOrUpdater === 'function' ? (valueOrUpdater as (old: T) => T)(oldValue) : valueOrUpdater;
 
   if (oldValue === newValue) return;
 
-  const effect = globalEffectMap.get(atomState.atom.type === 'atomFamily' ? atomState.atom.baseKey : atomState.atom.key);
+  const effect = globalAtomEffectMap.get(atomInstance.state.type === 'atomFamily' ? atomInstance.state.baseKey : atomInstance.state.key);
 
   if (effect?.onBeforeChange != null) {
-    const beforeChangeResult = effect.onBeforeChange({ newValue, oldValue, atomState });
+    const beforeChangeResult = effect.onBeforeChange({ newValue, oldValue, stateInstance: atomInstance });
     if (!beforeChangeResult) return;
   }
 
-  atomState.value = newValue;
+  atomInstance.value = newValue;
 
-  effect?.onAfterChange?.({ newValue, oldValue, atomState });
+  effect?.onAfterChange?.({ newValue, oldValue, stateInstance: atomInstance });
 
-  atomState.event.emitAsync({
+  atomInstance.event.emitAsync({
     type: 'change',
     oldValue,
     newValue,

@@ -1,9 +1,9 @@
-import { Atoms, SetterOrUpdater } from '../core';
-import { useAtomState } from './useAtomState';
+import { Atom, AtomFamily } from '../atom';
+import { useInstance } from './useInstance';
 import { useFiddichValueInternal } from './useFiddichValue';
-import { useSetFiddichStateInternal } from './useSetFiddichState';
+import { SetterOrUpdater, useSetFiddichStateInternal } from './useSetFiddichState';
 
-export const useFiddichState = <T>(atom: Atoms<T>, initialValue?: T): [T, SetterOrUpdater<T>] => {
-  const atomState = useAtomState(atom, initialValue);
-  return [useFiddichValueInternal(atomState), useSetFiddichStateInternal(atomState)];
+export const useFiddichState = <T>(atom: Atom<T> | AtomFamily<T>, initialValue?: T): [T, SetterOrUpdater<T>] => {
+  const instance = useInstance(atom, initialValue);
+  return [useFiddichValueInternal(instance), useSetFiddichStateInternal(instance)];
 };
