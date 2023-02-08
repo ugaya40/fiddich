@@ -19,10 +19,6 @@ export const useSelectorInstance = <T>(selector: Selector<T>): SelectorInstance<
 
   const instanceInfo = getSelectorInstance(selector, store);
 
-  useEffect(() => {
-    return () => instanceInfo.instance.stateListeners.forEach(info => info.listener.dispose());
-  }, []);
-
   return instanceInfo.instance;
 };
 

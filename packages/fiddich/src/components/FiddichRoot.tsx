@@ -1,9 +1,20 @@
 import { nanoid } from "nanoid";
-import { ComponentType, FC, ReactNode, useRef } from "react";
+import { ComponentType, FC, ReactNode, useEffect, useRef } from "react";
 import { FiddichStore, FiddichStoreContext } from "../core";
+import { SelectorInstance } from "../selector";
 
 export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
   const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map()});
+
+  useEffect(() => {
+    return () => {
+      storeRef.current.map.forEach(value => {
+        if(value.state.type === 'selector') {
+          (value as SelectorInstance).stateListeners.forEach(({listener}) => listener.dispose());
+        }
+      })
+    }
+  },[]);
 
   return (
     <FiddichStoreContext.Provider value={storeRef.current}>
