@@ -1,6 +1,6 @@
 {
   "name": "fiddich",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": "Masanori Onoue <ugaya40@hotmail.com> (https://github.com/ugaya40)",
