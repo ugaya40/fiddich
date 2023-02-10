@@ -26,3 +26,8 @@ export const ChangeStateButton: FC<{state: Atom<any> | AtomFamily<any>}> = (prop
     </div>
   )
 }
+
+export function managedPromise<T>(value: T) {
+  let switchFunc: ((value: T) => void) | undefined = undefined;
+  return [new Promise(resolve => {switchFunc = resolve}), () => switchFunc!(value) ] as const
+}

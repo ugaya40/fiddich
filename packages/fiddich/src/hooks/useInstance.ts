@@ -1,4 +1,4 @@
-import { useContext, useEffect } from 'react';
+import { useContext } from 'react';
 import { Atom, AtomFamily, AtomInstance, getAtomInstance } from '../atom';
 import { FiddichStoreContext, FiddichState, FiddichStateInstance } from '../core';
 import { getSelectorInstance, Selector, SelectorInstance } from '../selector';

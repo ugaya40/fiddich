@@ -1,4 +1,5 @@
 import { FiddichStateInstance, globalAtomEffectMap, Store, StateInstanceEvent } from './core';
+import { getDataForSuspense } from './forSuspense';
 import { TypedEvent } from './util/TypedEvent';
 
 type ChangeEffectArg<T> = {
@@ -15,12 +16,12 @@ export type AtomEffect<T> = {
 export type Atom<T = any> = {
   type: 'atom';
   key: string;
-  default: T;
+  default: T | Promise<T>;
 };
 
 type AtomArg<T> = {
   key: string;
-  default: T;
+  default: T | Promise<T>;
   effect?: AtomEffect<T>;
 };
 
@@ -42,7 +43,7 @@ export type AtomFamily<T = any> = {
   type: 'atomFamily';
   key: string;
   baseKey: string;
-  default: T;
+  default: T | Promise<T>;
 };
 
 type AtomFamilyArg<T, P> = {
@@ -92,16 +93,23 @@ export const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<
 export const getAtomInstance = <T = unknown>(
   atom: Atom<T> | AtomFamily<T>,
   nearestStore: Store,
-  initialValue?: T
+  initialValue?: T | Promise<T>
 ): { instance: AtomInstance<T>; storeTree: Store[] } => {
   const ref_storeTree: Store[] = [];
   const atomInstanceFromStore = getAtomInstanceInternal<T>(atom, nearestStore, ref_storeTree);
 
   if (atomInstanceFromStore != null) return { instance: atomInstanceFromStore, storeTree: ref_storeTree };
 
+  const defaultValueResult = getDataForSuspense(nearestStore, atom.key, initialValue ?? atom.default);
+  if ('promise' in defaultValueResult) {
+    throw defaultValueResult.promise;
+  } else if ('error' in defaultValueResult) {
+    throw defaultValueResult.error;
+  }
+
   const newAtomInstance: AtomInstance<T> = {
     state: atom,
-    value: initialValue ?? atom.default,
+    value: defaultValueResult.data,
     event: new TypedEvent(),
     storeId: nearestStore.id,
   };

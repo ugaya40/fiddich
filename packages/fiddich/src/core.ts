@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import { Atom, AtomEffect, AtomFamily, AtomInstance } from './atom';
+import { DataResult, ErrorResult } from './forSuspense';
 import { Selector, SelectorInstance } from './selector';
 
 export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T>;
@@ -17,6 +18,10 @@ export type FiddichStateInstance<T = any> = AtomInstance<T> | SelectorInstance<T
 export type FiddichStore = {
   id: string;
   map: Map<string, FiddichStateInstance>;
+  forSuspense: {
+    dataMap: Map<string, DataResult<unknown> | ErrorResult>;
+    promiseMap: Map<string, Promise<void>>;
+  };
 };
 
 export type SubFiddichStore = FiddichStore & {

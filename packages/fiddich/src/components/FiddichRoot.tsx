@@ -4,7 +4,7 @@ import { FiddichStore, FiddichStoreContext } from "../core";
 import { SelectorInstance } from "../selector";
 
 export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
-  const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map()});
+  const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map(), forSuspense: {dataMap: new Map(), promiseMap: new Map()}});
 
   useEffect(() => {
     return () => {
