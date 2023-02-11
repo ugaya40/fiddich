@@ -1,10 +1,10 @@
 import { nanoid } from "nanoid";
-import { ComponentType, FC, ReactNode, useEffect, useRef } from "react";
+import { ComponentType, FC, ReactNode, Suspense, useEffect, useRef } from "react";
 import { FiddichStore, FiddichStoreContext } from "../core";
 import { SelectorInstance } from "../selector";
 
 export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
-  const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map(), forSuspense: {dataMap: new Map(), promiseMap: new Map()}});
+  const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map()});
 
   useEffect(() => {
     return () => {
@@ -18,7 +18,9 @@ export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
 
   return (
     <FiddichStoreContext.Provider value={storeRef.current}>
-      {props.children}
+      <Suspense>
+        {props.children}
+      </Suspense>
     </FiddichStoreContext.Provider>
   )
 }

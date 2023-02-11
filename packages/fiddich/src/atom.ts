@@ -1,5 +1,4 @@
-import { FiddichStateInstance, globalAtomEffectMap, Store, StateInstanceEvent } from './core';
-import { getDataForSuspense } from './forSuspense';
+import { FiddichStateInstance, globalAtomEffectMap, Store, StateInstanceEvent, StateInstanceStatus } from './core';
 import { TypedEvent } from './util/TypedEvent';
 
 type ChangeEffectArg<T> = {
@@ -16,12 +15,12 @@ export type AtomEffect<T> = {
 export type Atom<T = any> = {
   type: 'atom';
   key: string;
-  default: T | Promise<T>;
+  default: T | Promise<T> | (() => T | Promise<T>);
 };
 
 type AtomArg<T> = {
   key: string;
-  default: T | Promise<T>;
+  default: T | Promise<T> | (() => T | Promise<T>);
   effect?: AtomEffect<T>;
 };
 
@@ -43,12 +42,12 @@ export type AtomFamily<T = any> = {
   type: 'atomFamily';
   key: string;
   baseKey: string;
-  default: T | Promise<T>;
+  default: T | Promise<T> | (() => T | Promise<T>);
 };
 
 type AtomFamilyArg<T, P> = {
   key: string;
-  default: T;
+  default: T | Promise<T> | (() => T | Promise<T>);
   stringfy?: (arg: P) => string;
   effect?: AtomEffect<T>;
 };
@@ -77,7 +76,7 @@ export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T
 export type AtomInstance<T = any> = {
   state: Atom<T> | AtomFamily<T>;
   storeId: string;
-  value: T;
+  status: StateInstanceStatus<T>;
   event: TypedEvent<StateInstanceEvent<T>>;
 };
 
@@ -93,36 +92,61 @@ export const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<
 export const getAtomInstance = <T = unknown>(
   atom: Atom<T> | AtomFamily<T>,
   nearestStore: Store,
-  initialValue?: T | Promise<T>
+  initialValue?: T | Promise<T> | (() => T | Promise<T>)
 ): { instance: AtomInstance<T>; storeTree: Store[] } => {
   const ref_storeTree: Store[] = [];
   const atomInstanceFromStore = getAtomInstanceInternal<T>(atom, nearestStore, ref_storeTree);
 
   if (atomInstanceFromStore != null) return { instance: atomInstanceFromStore, storeTree: ref_storeTree };
 
-  const defaultValueResult = getDataForSuspense(nearestStore, atom.key, initialValue ?? atom.default);
-  if ('promise' in defaultValueResult) {
-    throw defaultValueResult.promise;
-  } else if ('error' in defaultValueResult) {
-    throw defaultValueResult.error;
-  }
+  const decidedInitialValue = initialValue ?? atom.default;
+  const actualInitialValue = typeof decidedInitialValue === 'function' ? (decidedInitialValue as Function)() : decidedInitialValue;
+
+  const status: StateInstanceStatus<T> =
+    actualInitialValue instanceof Promise
+      ? {
+          type: 'pending',
+          promise: actualInitialValue,
+          oldValue: undefined,
+          abortRequest: false,
+        }
+      : {
+          type: 'stable',
+          value: actualInitialValue,
+        };
 
   const newAtomInstance: AtomInstance<T> = {
     state: atom,
-    value: defaultValueResult.data,
     event: new TypedEvent(),
     storeId: nearestStore.id,
+    status,
   };
 
+  if (status.type === 'pending') {
+    new Promise(async resolve => {
+      const result = await status.promise!;
+      if (!status.abortRequest) {
+        newAtomInstance.status = {
+          type: 'stable',
+          value: result,
+        };
+      }
+      resolve(undefined);
+    });
+  }
+
   nearestStore.map.set(newAtomInstance.state.key, newAtomInstance);
+
   ref_storeTree.push(nearestStore);
 
   return { instance: newAtomInstance, storeTree: ref_storeTree };
 };
 
-export const changeAtomValue = <T = unknown>(atomInstance: AtomInstance<T>, valueOrUpdater: ((old: T) => T) | T) => {
-  const oldValue = atomInstance.value;
-  const newValue = typeof valueOrUpdater === 'function' ? (valueOrUpdater as (old: T) => T)(oldValue) : valueOrUpdater;
+export const changeAtomValue = <T = unknown>(atomInstance: AtomInstance<T>, valueOrUpdater: ((old: T | undefined) => T) | T) => {
+  if (atomInstance.status.type === 'pending') atomInstance.status.abortRequest = true;
+  const oldValue = atomInstance.status.type === 'pending' ? undefined : atomInstance.status.value;
+
+  const newValue = typeof valueOrUpdater === 'function' ? (valueOrUpdater as (old: T | undefined) => T)(oldValue) : valueOrUpdater;
 
   if (oldValue === newValue) return;
 
@@ -133,11 +157,14 @@ export const changeAtomValue = <T = unknown>(atomInstance: AtomInstance<T>, valu
     if (!beforeChangeResult) return;
   }
 
-  atomInstance.value = newValue;
+  atomInstance.status = {
+    type: 'stable',
+    value: newValue,
+  };
 
   effect?.onAfterChange?.({ newValue, oldValue, stateInstance: atomInstance });
 
-  atomInstance.event.emitAsync({
+  atomInstance.event.emit({
     type: 'change',
     oldValue,
     newValue,

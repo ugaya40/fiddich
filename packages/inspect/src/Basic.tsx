@@ -9,16 +9,16 @@ const AtomState1 = atom({
 
 const SelectorState1 = selector({
   key: 'SelectorState1',
-  get: ({get}) => {
-    const atom1 = get(AtomState1);
+  get: async ({get}) => {
+    const atom1 = await get(AtomState1);
     return `selector1 - ${atom1}`
   }
 });
 
 const SelectorState2 = selector({
   key: 'SelectorState2',
-  get: ({get}) => {
-    const selector1 = get(SelectorState1);
+  get: async ({get}) => {
+    const selector1 = await get(SelectorState1);
     return `selector2 - ${selector1}`
   }
 });

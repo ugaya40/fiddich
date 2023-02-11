@@ -1,19 +1,19 @@
-import { FiddichState, StateChangedEvent, FiddichStateInstance, Store } from './core';
+import { FiddichState, StateChangedEvent, FiddichStateInstance, Store, StateInstanceStatus, PendingStatus } from './core';
 import { getStateInstance } from './stateOperator';
 import { Disposable } from './util/Disposable';
 import { TypedEvent } from './util/TypedEvent';
 
-export type GetState = <TSource>(arg: FiddichState<TSource>) => TSource;
+export type GetState = <TSource>(arg: FiddichState<TSource>) => Promise<TSource>;
 
 export type Selector<T = any> = {
   type: 'selector';
   key: string;
-  get: (arg: { get: GetState }) => T;
+  get: (arg: { get: GetState }) => Promise<T>;
 };
 
 type SelectorArg<T> = {
   key: string;
-  get: (arg: { get: GetState }) => T;
+  get: (arg: { get: GetState }) => Promise<T>;
 };
 
 export function selector<T>(arg: SelectorArg<T>): Selector<T> {
@@ -23,15 +23,13 @@ export function selector<T>(arg: SelectorArg<T>): Selector<T> {
   };
 }
 
-export type IndependentSelectorInstance<T = any> = {
+export type SelectorInstance<T = any> = {
   state: Selector<T>;
   storeId: string;
   event: TypedEvent<StateChangedEvent<T>>;
   stateListeners: Map<FiddichState<any>, { instance: FiddichStateInstance<any>; listener: Disposable }>;
-  value?: T;
+  status: StateInstanceStatus<T>;
 };
-
-export type SelectorInstance<T = any> = Required<IndependentSelectorInstance<T>>;
 
 export const getSelectorInstanceInternal = <T = unknown>(atom: Selector<T>, nearestStore: Store, ref_storeTree: Store[]): SelectorInstance | null => {
   ref_storeTree.push(nearestStore);
@@ -42,30 +40,46 @@ export const getSelectorInstanceInternal = <T = unknown>(atom: Selector<T>, near
   return null;
 };
 
-const buildGetFunction = (independentSelectorInstance: IndependentSelectorInstance, nearestStore: Store): GetState => {
-  const getFunction = <TSource>(state: FiddichState<TSource>): TSource => {
+const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore: Store): GetState => {
+  const getFunction = async <TSource>(state: FiddichState<TSource>): Promise<TSource> => {
     const { instance: sourceInstance } = getStateInstance(state, nearestStore);
 
-    const existingListener = independentSelectorInstance.stateListeners.get(state);
+    const existingListener = selectorInstance.stateListeners.get(state);
 
     if (existingListener == null || existingListener.instance !== sourceInstance) {
       existingListener?.listener?.dispose?.();
 
-      const listener = sourceInstance.event.addListener(event => {
+      const listener = sourceInstance.event.addListener(async event => {
         if (event.type === 'change') {
-          const oldValue = independentSelectorInstance.value;
-          const newValue = independentSelectorInstance.state.get({ get: getFunction });
+          if (selectorInstance.status.type === 'pending') selectorInstance.status.abortRequest = true;
+          const oldValue = selectorInstance.status.type === 'pending' ? selectorInstance.status.oldValue : selectorInstance.status.value;
 
-          if (oldValue !== newValue) {
-            independentSelectorInstance.value = newValue;
-            independentSelectorInstance.event.emitAsync({ type: 'change', oldValue, newValue });
+          selectorInstance.status = {
+            type: 'pending',
+            oldValue,
+            abortRequest: false,
+            promise: selectorInstance.state.get({ get: getFunction }),
+          };
+
+          const newValue = await selectorInstance.status.promise!;
+
+          if (oldValue !== newValue && !selectorInstance.status.abortRequest) {
+            selectorInstance.status = {
+              type: 'stable',
+              value: newValue,
+            };
+            selectorInstance.event.emit({ type: 'change', oldValue, newValue });
           }
         }
       });
-      independentSelectorInstance.stateListeners.set(state, { instance: sourceInstance, listener });
+      selectorInstance.stateListeners.set(state, { instance: sourceInstance, listener });
     }
 
-    return sourceInstance.value;
+    if (sourceInstance.status.type === 'pending') {
+      return sourceInstance.status.promise!;
+    } else {
+      return sourceInstance.status.value;
+    }
   };
 
   return getFunction;
@@ -77,17 +91,33 @@ export const getSelectorInstance = <T = unknown>(selector: Selector<T>, nearestS
 
   if (selectorInstanceFromStore != null) return { instance: selectorInstanceFromStore, storeTree: ref_storeTree };
 
-  const independentSelectorInstance = {
+  const selectorInstance: SelectorInstance<T> = {
     state: selector,
     event: new TypedEvent(),
     storeId: nearestStore.id,
+    status: {
+      type: 'pending',
+      abortRequest: false,
+      oldValue: undefined,
+    },
     stateListeners: new Map<FiddichState<any>, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
-  } as IndependentSelectorInstance<T> | SelectorInstance<T>;
+  };
 
-  const getFunction = buildGetFunction(independentSelectorInstance, nearestStore);
+  const getFunction = buildGetFunction(selectorInstance, nearestStore);
 
-  independentSelectorInstance.value = independentSelectorInstance.state.get({ get: getFunction });
-  const selectorInstance = independentSelectorInstance as SelectorInstance<T>;
+  const status = selectorInstance.status as PendingStatus<T>;
+  status.promise = selectorInstance.state.get({ get: getFunction });
+
+  new Promise(async resolve => {
+    const result = await status.promise!;
+    if (!status.abortRequest) {
+      selectorInstance.status = {
+        type: 'stable',
+        value: result,
+      };
+    }
+    resolve(undefined);
+  });
 
   nearestStore.map.set(selectorInstance.state.key, selectorInstance);
   ref_storeTree.push(nearestStore);

@@ -1,27 +1,36 @@
 import { createContext } from 'react';
 import { Atom, AtomEffect, AtomFamily, AtomInstance } from './atom';
-import { DataResult, ErrorResult } from './forSuspense';
 import { Selector, SelectorInstance } from './selector';
 
 export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T>;
 
 export type StateChangedEvent<T = any> = {
   type: 'change';
-  oldValue: T;
+  oldValue: T | undefined;
   newValue: T;
 };
 
 export type StateInstanceEvent<T = any> = StateChangedEvent<T>;
+
+export type PendingStatus<T> = {
+  type: 'pending';
+  promise?: Promise<T>;
+  oldValue: T | undefined;
+  abortRequest: boolean;
+};
+
+export type StableStatus<T> = {
+  type: 'stable';
+  value: T;
+};
+
+export type StateInstanceStatus<T> = PendingStatus<T> | StableStatus<T>;
 
 export type FiddichStateInstance<T = any> = AtomInstance<T> | SelectorInstance<T>;
 
 export type FiddichStore = {
   id: string;
   map: Map<string, FiddichStateInstance>;
-  forSuspense: {
-    dataMap: Map<string, DataResult<unknown> | ErrorResult>;
-    promiseMap: Map<string, Promise<void>>;
-  };
 };
 
 export type SubFiddichStore = FiddichStore & {

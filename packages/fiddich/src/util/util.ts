@@ -22,3 +22,5 @@ export function useRerender() {
     setFlg(old => !old);
   }, []);
 }
+
+export function promiseStatus(value: Promise<any>) {}

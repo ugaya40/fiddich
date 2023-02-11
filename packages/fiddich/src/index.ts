@@ -6,9 +6,9 @@ export type { Selector, SelectorInstance } from './selector';
 export { FiddichRoot, wrapFiddichRoot } from './components/FiddichRoot';
 export { SubFiddichRoot, wrapSubFiddichRoot } from './components/SubFiddichRoot';
 
-export { useFiddichState } from './hooks/useFiddichState';
+export { useFiddichAtom } from './hooks/useFiddichAtom';
 export { useFiddichValue } from './hooks/useFiddichValue';
-export { useSetFiddichState } from './hooks/useSetFiddichState';
-export type { SetterOrUpdater } from './hooks/useSetFiddichState';
+export { useSetFiddichAtom } from './hooks/useSetFiddichAtom';
+export type { SetterOrUpdater } from './hooks/useSetFiddichAtom';
 
 export type { FiddichState, FiddichStore, FiddichStateInstance } from './core';

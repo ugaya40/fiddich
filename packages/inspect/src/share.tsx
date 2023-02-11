@@ -1,4 +1,4 @@
-import { Atom, AtomFamily, FiddichState, useFiddichValue, useSetFiddichState } from "fiddich";
+import { Atom, AtomFamily, FiddichState, useFiddichValue, useSetFiddichAtom } from "fiddich";
 import { FC, useRef } from "react";
 
 export const StateString: FC<{state: FiddichState<any>, initialValue?: string}> = (props) => {
@@ -15,7 +15,7 @@ export const StateString: FC<{state: FiddichState<any>, initialValue?: string}> 
 }
 
 export const ChangeStateButton: FC<{state: Atom<any> | AtomFamily<any>}> = (props) => {
-  const setValue = useSetFiddichState(props.state);
+  const setValue = useSetFiddichAtom(props.state);
   const renderCountRef = useRef(0);
   renderCountRef.current++;
   return(
@@ -25,9 +25,4 @@ export const ChangeStateButton: FC<{state: Atom<any> | AtomFamily<any>}> = (prop
       <button onClick={() => setValue(Date.now().toString())}>change</button>
     </div>
   )
-}
-
-export function managedPromise<T>(value: T) {
-  let switchFunc: ((value: T) => void) | undefined = undefined;
-  return [new Promise(resolve => {switchFunc = resolve}), () => switchFunc!(value) ] as const
 }

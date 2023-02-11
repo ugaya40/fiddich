@@ -16,7 +16,11 @@ export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T
     return () => listener.dispose();
   }, [stateInstance.storeId]);
 
-  return stateInstance.value;
+  if (stateInstance.status.type === 'pending') {
+    throw stateInstance.status.promise!;
+  } else {
+    return stateInstance.status.value;
+  }
 };
 
 export const useFiddichValue = <T>(state: FiddichState<T>, initialValue?: T): T => {
