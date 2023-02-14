@@ -48,7 +48,7 @@ export const atom = <T>(arg: AtomArg<T>): Atom<T> => {
   return result;
 };
 
-export type AtomFamily<T = unknown, P = unknown> = {
+export type AtomFamily<T = unknown, P = any> = {
   type: 'atomFamily';
   key: string;
   baseKey: string;
@@ -179,7 +179,6 @@ const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T |
 
   effect?.onAfterChange?.({ newValue, oldValue, stateInstance: atomInstance });
 
-  console.log(`[${atomInstance.state.key}]-change`);
   atomInstance.event.emit({
     type: 'change',
     oldValue,
@@ -221,7 +220,6 @@ export const changeAtomValue = <T = unknown, P = unknown>(
       promise: newValue,
     };
 
-    console.log(`[${atomInstance.state.key}]-pending`);
     atomInstance.event.emit({
       type: 'pending',
       promise: newValue,

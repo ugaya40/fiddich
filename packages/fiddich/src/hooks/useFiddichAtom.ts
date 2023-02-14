@@ -7,7 +7,7 @@ export const useFiddichAtom = <T>(
   atom: Atom<T> | AtomFamily<T>,
   option?: {
     initialValue?: T;
-    withTransition?: true;
+    withTransition?: boolean;
   }
 ): [T, AtomSetterOrUpdater<T>] => {
   const instance = useInstance(atom, option?.initialValue);

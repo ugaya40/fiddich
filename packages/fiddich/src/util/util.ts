@@ -16,9 +16,9 @@ export function anonymousPromise<T>(func: () => T): Promise<T> {
   });
 }
 
-export function useRerender(withTransition?: true) {
+export function useRerender(withTransition?: boolean) {
   const setFlg = useState(0)[1];
   return useCallback(() => {
-    withTransition ? startTransition(() => setFlg(old => old + 1)) : setFlg(old => old + 1);
+    withTransition ?? true ? startTransition(() => setFlg(old => old + 1)) : setFlg(old => old + 1);
   }, []);
 }

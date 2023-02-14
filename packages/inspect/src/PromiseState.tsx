@@ -1,13 +1,6 @@
 import { atom, selector, useSetFiddichAtom, wrapFiddichRoot } from "fiddich";
 import { FC, Suspense } from "react";
-import { StateString } from "./share";
-
-const sleep = (ms: number) => new Promise(r => setTimeout(r,ms));
-
-function managedPromise<T>(value: T) {
-  let resolveFunc: ((value: T) => void) | undefined = undefined;
-  return [new Promise<T>(resolve => {resolveFunc = resolve}), () => resolveFunc!(value) ] as const
-}
+import { managedPromise, sleep, StateString } from "./share";
 
 let resolveRef: () => void | undefined; 
 
@@ -73,16 +66,16 @@ const PromiseStateInternal: FC = (props) => {
       </p>
       
       <Suspense fallback={<p>{'loading...AtomState1 WithTransition'}</p>}>
-        <StateString state={AtomState1} withTransition={true}/>
-      </Suspense>
-      <Suspense fallback={<p>{'loading...SelectorState1 WithTransition'}</p>}>
-        <StateString state={SelectorState1} withTransition={true}/>
-      </Suspense>
-      <Suspense fallback={<p>{'loading...AtomState1'}</p>}>
         <StateString state={AtomState1}/>
       </Suspense>
-      <Suspense fallback={<p>{'loading...SelectorState1'}</p>}>
+      <Suspense fallback={<p>{'loading...SelectorState1 WithTransition'}</p>}>
         <StateString state={SelectorState1}/>
+      </Suspense>
+      <Suspense fallback={<p>{'loading...AtomState1'}</p>}>
+        <StateString state={AtomState1} withTransition={false}/>
+      </Suspense>
+      <Suspense fallback={<p>{'loading...SelectorState1'}</p>}>
+        <StateString state={SelectorState1} withTransition={false}/>
       </Suspense>
     </>
   );

@@ -25,31 +25,33 @@ export function selector<T>(arg: SelectorArg<T>): Selector<T> {
   };
 }
 
-export type SelectorFamily<T = any> = {
+export type SelectorFamily<T = unknown, P = any> = {
   type: 'selectorFamily';
   key: string;
   baseKey: string;
-  get: (arg: { get: GetState }) => Promise<T>;
+  get: (arg: { get: GetState; parameter: P }) => Promise<T>;
+  parameter: P;
   compare?: Compare<T>;
 };
 
 type SelectorFamilyArg<T, P> = {
   key: string;
-  get: (arg: { get: GetState }) => Promise<T>;
+  get: (arg: { get: GetState; parameter: P }) => Promise<T>;
   stringfy?: (arg: P) => string;
   compare?: Compare<T>;
 };
 
-type SelectorFamilyFunction<T = any, Parameter = any> = (arg: Parameter) => SelectorFamily<T>;
+type SelectorFamilyFunction<T = unknown, P = unknown> = (arg: P) => SelectorFamily<T, P>;
 
 export const selectorFamily = <T, P>(arg: SelectorFamilyArg<T, P>): SelectorFamilyFunction<T, P> => {
   const { key: baseKey, stringfy, ...other } = arg;
-  const result: SelectorFamilyFunction<T, P> = para => {
-    const key = `${baseKey}-familyKey-${stringfy != null ? stringfy(para) : `${para}`}`;
+  const result: SelectorFamilyFunction<T, P> = parameter => {
+    const key = `${baseKey}-familyKey-${stringfy != null ? stringfy(parameter) : `${parameter}`}`;
     return {
       ...other,
       key,
       baseKey,
+      parameter,
       type: 'selectorFamily',
     };
   };
@@ -57,15 +59,19 @@ export const selectorFamily = <T, P>(arg: SelectorFamilyArg<T, P>): SelectorFami
   return result;
 };
 
-export type SelectorInstance<T = any> = {
-  state: Selector<T>;
+export type SelectorInstance<T = unknown> = {
+  state: Selector<T> | SelectorFamily<T, any>;
   storeId: string;
   event: TypedEvent<StateInstanceEvent<T>>;
   stateListeners: Map<FiddichState<any>, { instance: FiddichStateInstance<any>; listener: Disposable }>;
   status: StateInstanceStatus<T>;
 };
 
-export const getSelectorInstanceInternal = <T = unknown>(atom: Selector<T>, nearestStore: Store, ref_storeTree: Store[]): SelectorInstance | null => {
+export const getSelectorInstanceInternal = <T = unknown>(
+  atom: Selector<T> | SelectorFamily<T>,
+  nearestStore: Store,
+  ref_storeTree: Store[]
+): SelectorInstance<T> | null => {
   ref_storeTree.push(nearestStore);
   const nearestStoreResult = nearestStore.map.get(atom.key) as SelectorInstance<T> | undefined;
   if (nearestStoreResult != null) return nearestStoreResult;
@@ -95,14 +101,15 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore
         if (selectorInstance.status.type === 'pending') selectorInstance.status.abortRequest = true;
         const oldValue = selectorInstance.status.type === 'pending' ? selectorInstance.status.oldValue : selectorInstance.status.value;
 
+        const state = selectorInstance.state;
+
         selectorInstance.status = {
           type: 'pending',
           oldValue,
           abortRequest: false,
-          promise: selectorInstance.state.get({ get: getFunction }),
+          promise: state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction }),
         };
 
-        console.log(`[${selectorInstance.state.key}]-pending`);
         selectorInstance.event.emit({ type: 'pending', promise: selectorInstance.status.promise! });
 
         if (event.type === 'change') {
@@ -114,7 +121,6 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore
               type: 'stable',
               value: newValue,
             };
-            console.log(`[${selectorInstance.state.key}]-change`);
             selectorInstance.event.emit({ type: 'change', oldValue, newValue });
           }
         }
@@ -132,7 +138,10 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore
   return getFunction;
 };
 
-export const getSelectorInstance = <T = unknown>(selector: Selector<T>, nearestStore: Store): { instance: SelectorInstance<T>; storeTree: Store[] } => {
+export const getSelectorInstance = <T = unknown>(
+  selector: Selector<T> | SelectorFamily<T>,
+  nearestStore: Store
+): { instance: SelectorInstance<T>; storeTree: Store[] } => {
   const ref_storeTree: Store[] = [];
   const selectorInstanceFromStore = getSelectorInstanceInternal<T>(selector, nearestStore, ref_storeTree);
 
@@ -146,6 +155,7 @@ export const getSelectorInstance = <T = unknown>(selector: Selector<T>, nearestS
       type: 'pending',
       abortRequest: false,
       oldValue: undefined,
+      promise: undefined,
     },
     stateListeners: new Map<FiddichState<any>, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
   };
@@ -153,7 +163,8 @@ export const getSelectorInstance = <T = unknown>(selector: Selector<T>, nearestS
   const getFunction = buildGetFunction(selectorInstance, nearestStore);
 
   const status = selectorInstance.status as PendingStatus<T>;
-  status.promise = selectorInstance.state.get({ get: getFunction });
+  const state = selectorInstance.state;
+  status.promise = state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction });
 
   new Promise(async resolve => {
     const result = await status.promise!;

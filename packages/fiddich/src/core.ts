@@ -1,8 +1,8 @@
 import { createContext } from 'react';
 import { Atom, AtomEffect, AtomFamily, AtomInstance } from './atom';
-import { Selector, SelectorInstance } from './selector';
+import { Selector, SelectorFamily, SelectorInstance } from './selector';
 
-export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T>;
+export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T> | SelectorFamily<T>;
 
 export type StatePendingEvent<T = any> = {
   type: 'pending';

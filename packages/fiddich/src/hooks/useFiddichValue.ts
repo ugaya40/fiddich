@@ -3,7 +3,7 @@ import { FiddichState, FiddichStateInstance } from '../core';
 import { useRerender } from '../util/util';
 import { useInstance } from './useInstance';
 
-export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: true): T => {
+export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: boolean): T => {
   const rerender = useRerender(withTransition);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export const useFiddichValue = <T>(
   state: FiddichState<T>,
   option?: {
     initialValue?: T;
-    withTransition?: true;
+    withTransition?: boolean;
   }
 ): T => {
   const instance = useInstance(state, option?.initialValue);
