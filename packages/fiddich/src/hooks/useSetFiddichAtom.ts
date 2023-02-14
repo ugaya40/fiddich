@@ -1,12 +1,10 @@
 import { useCallback } from 'react';
-import { Atom, AtomFamily, AtomInstance, changeAtomValue } from '../atom';
+import { Atom, AtomFamily, AtomInstance, changeAtomValue, AtomSetterOrUpdater, AtomSetterOrUpdaterArg, AtomFamilySetterOrUpdater } from '../atom';
 import { useAtomInstance } from './useInstance';
 
-export type SetterOrUpdater<T> = (setterOrUpdater: ((old: T | undefined) => T) | T) => void;
-
-export const useSetFiddichAtomInternal = <T>(atomInstance: AtomInstance<T>): SetterOrUpdater<T> => {
+export const useSetFiddichAtomInternal = <T, P>(atomInstance: AtomInstance<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> => {
   const setFunc = useCallback(
-    (valueOrUpdater: ((old: T | undefined) => T) | T) => {
+    (valueOrUpdater: AtomSetterOrUpdaterArg<T>) => {
       changeAtomValue(atomInstance, valueOrUpdater);
     },
     [atomInstance.storeId]
@@ -15,7 +13,10 @@ export const useSetFiddichAtomInternal = <T>(atomInstance: AtomInstance<T>): Set
   return setFunc;
 };
 
-export const useSetFiddichAtom = <T>(atom: Atom<T> | AtomFamily<T>, initialValue?: T): SetterOrUpdater<T> => {
+export function useSetFiddichAtom<T>(atom: Atom<T>, initialValue?: T): AtomSetterOrUpdater<T>;
+export function useSetFiddichAtom<T, P>(atom: AtomFamily<T, P>, initialValue?: T): AtomFamilySetterOrUpdater<T, P>;
+export function useSetFiddichAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, initialValue?: T): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
+export function useSetFiddichAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, initialValue?: T): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> {
   const atomInstance = useAtomInstance(atom, initialValue);
   return useSetFiddichAtomInternal(atomInstance);
-};
+}

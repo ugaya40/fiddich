@@ -1,9 +1,15 @@
-import { Atom, AtomFamily } from '../atom';
+import { Atom, AtomFamily, AtomSetterOrUpdater } from '../atom';
 import { useInstance } from './useInstance';
 import { useFiddichValueInternal } from './useFiddichValue';
-import { SetterOrUpdater, useSetFiddichAtomInternal } from './useSetFiddichAtom';
+import { useSetFiddichAtomInternal } from './useSetFiddichAtom';
 
-export const useFiddichAtom = <T>(atom: Atom<T> | AtomFamily<T>, initialValue?: T): [T, SetterOrUpdater<T>] => {
-  const instance = useInstance(atom, initialValue);
-  return [useFiddichValueInternal(instance), useSetFiddichAtomInternal(instance)];
+export const useFiddichAtom = <T>(
+  atom: Atom<T> | AtomFamily<T>,
+  option?: {
+    initialValue?: T;
+    withTransition?: true;
+  }
+): [T, AtomSetterOrUpdater<T>] => {
+  const instance = useInstance(atom, option?.initialValue);
+  return [useFiddichValueInternal(instance, option?.withTransition), useSetFiddichAtomInternal(instance)];
 };

@@ -1,4 +1,4 @@
-import { atom, FiddichRoot, selector } from "fiddich";
+import { atom, selector, useSetFiddichAtom, wrapFiddichRoot } from "fiddich";
 import { FC, Suspense } from "react";
 import { StateString } from "./share";
 
@@ -29,18 +29,63 @@ const SelectorState1 = selector({
   }
 });
 
-export const PromiseState: FC = (props) => {
-
+const PromiseStateInternal: FC = (props) => {
+  const setAtomState1 = useSetFiddichAtom(AtomState1);
   return (
-    <FiddichRoot>
-      <br/>
-      <button onClick={() => resolveRef!()}>resolve AtomState1 defaultValue</button>
+    <>
+      <p/>
+        <button onClick={() => resolveRef!()}>resolve AtomState1 defaultValue</button>
+        <span>AtomState1 changes after 0s, SeletorState1 changes after 3s </span>
+      <p/>
+
+      <p>
+        <button onClick={() => setAtomState1('value')}>
+          {`set 'value' to AtomsState1`}
+        </button>
+        <span>AtomState1 changes after 0s, SeletorState1 changes after 3s </span>
+      </p>
+
+      <p>
+        <button onClick={() => setAtomState1(new Promise(async r => {
+          await sleep(3000);
+          r('promiseValue')
+        }))}>
+          {`set 'Promise<promiseValue>' to AtomsState1`}
+        </button>
+        <span>AtomState1 changes after 3s, SeletorState1 changes after 6s </span>
+      </p>
+
+      <p>
+        <button onClick={() => setAtomState1((old) => old + '-functionValue')}>
+          {`set '(old) => old + functionValue' to AtomsState1`}
+        </button>
+        <span>AtomState1 changes after 0s, SeletorState1 changes after 3s </span>
+      </p>
+
+      <p>
+        <button onClick={() => setAtomState1(async (old) => {
+          await sleep(3000);
+          return old +'-promiseFunctionValue';
+        })}>
+          {`set '(old) => Promise<old + promiseFunctionValue>' to AtomsState1`}
+        </button>
+        <span>AtomState1 changes after 3s, SeletorState1 changes after 6s </span>
+      </p>
+      
+      <Suspense fallback={<p>{'loading...AtomState1 WithTransition'}</p>}>
+        <StateString state={AtomState1} withTransition={true}/>
+      </Suspense>
+      <Suspense fallback={<p>{'loading...SelectorState1 WithTransition'}</p>}>
+        <StateString state={SelectorState1} withTransition={true}/>
+      </Suspense>
       <Suspense fallback={<p>{'loading...AtomState1'}</p>}>
         <StateString state={AtomState1}/>
       </Suspense>
       <Suspense fallback={<p>{'loading...SelectorState1'}</p>}>
         <StateString state={SelectorState1}/>
       </Suspense>
-    </FiddichRoot>
+    </>
   );
 }
+
+export const PromiseState = wrapFiddichRoot(PromiseStateInternal);

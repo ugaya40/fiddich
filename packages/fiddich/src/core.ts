@@ -4,13 +4,20 @@ import { Selector, SelectorInstance } from './selector';
 
 export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T>;
 
+export type StatePendingEvent<T = any> = {
+  type: 'pending';
+  promise: Promise<T>;
+};
+
 export type StateChangedEvent<T = any> = {
   type: 'change';
   oldValue: T | undefined;
   newValue: T;
 };
 
-export type StateInstanceEvent<T = any> = StateChangedEvent<T>;
+export type Compare<T> = (oldValue: T | undefined, newValue: T | undefined) => boolean;
+
+export type StateInstanceEvent<T = any> = StatePendingEvent<T> | StateChangedEvent<T>;
 
 export type PendingStatus<T> = {
   type: 'pending';

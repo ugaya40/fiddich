@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { startTransition, useCallback, useState } from 'react';
 import { Disposable } from './Disposable';
 
 export const randomId = () => `${Math.round(Math.random() * 1e16)}`;
@@ -16,11 +16,9 @@ export function anonymousPromise<T>(func: () => T): Promise<T> {
   });
 }
 
-export function useRerender() {
-  const setFlg = useState(false)[1];
+export function useRerender(withTransition?: true) {
+  const setFlg = useState(0)[1];
   return useCallback(() => {
-    setFlg(old => !old);
+    withTransition ? startTransition(() => setFlg(old => old + 1)) : setFlg(old => old + 1);
   }, []);
 }
-
-export function promiseStatus(value: Promise<any>) {}

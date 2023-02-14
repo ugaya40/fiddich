@@ -27,9 +27,9 @@ const SelectorState2 = selector({
 export const Basic: FC = (props) => {
   return (
     <FiddichRoot>
-      <StateString state={AtomState1}/>
-      <StateString state={SelectorState1}/>
-      <StateString state={SelectorState2}/>
+      <StateString state={AtomState1} withTransition={true}/>
+      <StateString state={SelectorState1} withTransition={true}/>
+      <StateString state={SelectorState2} withTransition={true}/>
       <ChangeStateButton  state={AtomState1}/>
     </FiddichRoot>
   );

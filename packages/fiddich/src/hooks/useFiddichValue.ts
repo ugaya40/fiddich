@@ -3,12 +3,12 @@ import { FiddichState, FiddichStateInstance } from '../core';
 import { useRerender } from '../util/util';
 import { useInstance } from './useInstance';
 
-export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T>): T => {
-  const rerender = useRerender();
+export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: true): T => {
+  const rerender = useRerender(withTransition);
 
   useEffect(() => {
     const listener = stateInstance.event.addListener(event => {
-      if (event.type === 'change') {
+      if (event.type === 'change' || event.type === 'pending') {
         rerender();
       }
     });
@@ -23,7 +23,13 @@ export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T
   }
 };
 
-export const useFiddichValue = <T>(state: FiddichState<T>, initialValue?: T): T => {
-  const instance = useInstance(state, initialValue);
-  return useFiddichValueInternal(instance);
+export const useFiddichValue = <T>(
+  state: FiddichState<T>,
+  option?: {
+    initialValue?: T;
+    withTransition?: true;
+  }
+): T => {
+  const instance = useInstance(state, option?.initialValue);
+  return useFiddichValueInternal(instance, option?.withTransition);
 };

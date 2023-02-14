@@ -5,7 +5,7 @@ import { getSelectorInstance, Selector, SelectorInstance } from '../selector';
 
 const noStoreErrorText = 'Component is not inside the FiddichRoot/SubFiddichRoot.';
 
-export const useAtomInstance = <T>(atom: Atom<T> | AtomFamily<T>, initialValue?: T): AtomInstance<T> => {
+export const useAtomInstance = <T, P>(atom: Atom<T> | AtomFamily<T, P>, initialValue?: T): AtomInstance<T> => {
   const store = useContext(FiddichStoreContext);
   if (store == null) throw new Error(noStoreErrorText);
 
