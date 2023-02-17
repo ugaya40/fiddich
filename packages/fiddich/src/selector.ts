@@ -70,27 +70,32 @@ export type SelectorInstance<T = unknown> = {
 export const getSelectorInstanceInternal = <T = unknown>(
   atom: Selector<T> | SelectorFamily<T>,
   nearestStore: Store,
-  ref_storeTree: Store[]
+  ref_storeTree: Store[],
+  forceNearest: boolean
 ): SelectorInstance<T> | null => {
   ref_storeTree.push(nearestStore);
   const nearestStoreResult = nearestStore.map.get(atom.key) as SelectorInstance<T> | undefined;
   if (nearestStoreResult != null) return nearestStoreResult;
-  if ('parent' in nearestStore) return getSelectorInstanceInternal(atom, nearestStore.parent, ref_storeTree);
+  if (!forceNearest && 'parent' in nearestStore) return getSelectorInstanceInternal(atom, nearestStore.parent, ref_storeTree, forceNearest);
   ref_storeTree.splice(0, ref_storeTree.length);
   return null;
 };
 
-const getStateInstance = <T = unknown>(state: FiddichState<T>, nearestStore: Store): { instance: FiddichStateInstance<T>; storeTree: Store[] } => {
+const getStateInstance = <T = unknown>(
+  state: FiddichState<T>,
+  nearestStore: Store,
+  forceNearest: boolean
+): { instance: FiddichStateInstance<T>; storeTree: Store[] } => {
   if (state.type === 'atom' || state.type === 'atomFamily') {
-    return getAtomInstance(state, nearestStore);
+    return getAtomInstance(state, nearestStore, forceNearest);
   } else {
-    return getSelectorInstance(state, nearestStore);
+    return getSelectorInstance(state, nearestStore, forceNearest);
   }
 };
 
-const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore: Store): GetState => {
+const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore: Store, forceNearest: boolean): GetState => {
   const getFunction = async <TSource>(state: FiddichState<TSource>): Promise<TSource> => {
-    const { instance: sourceInstance } = getStateInstance(state, nearestStore);
+    const { instance: sourceInstance } = getStateInstance(state, nearestStore, forceNearest);
 
     const existingListener = selectorInstance.stateListeners.get(state);
 
@@ -140,10 +145,11 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore
 
 export const getSelectorInstance = <T = unknown>(
   selector: Selector<T> | SelectorFamily<T>,
-  nearestStore: Store
+  nearestStore: Store,
+  forceNearest: boolean
 ): { instance: SelectorInstance<T>; storeTree: Store[] } => {
   const ref_storeTree: Store[] = [];
-  const selectorInstanceFromStore = getSelectorInstanceInternal<T>(selector, nearestStore, ref_storeTree);
+  const selectorInstanceFromStore = getSelectorInstanceInternal<T>(selector, nearestStore, ref_storeTree, forceNearest);
 
   if (selectorInstanceFromStore != null) return { instance: selectorInstanceFromStore, storeTree: ref_storeTree };
 
@@ -160,7 +166,7 @@ export const getSelectorInstance = <T = unknown>(
     stateListeners: new Map<FiddichState<any>, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
   };
 
-  const getFunction = buildGetFunction(selectorInstance, nearestStore);
+  const getFunction = buildGetFunction(selectorInstance, nearestStore, forceNearest);
 
   const status = selectorInstance.status as PendingStatus<T>;
   const state = selectorInstance.state;

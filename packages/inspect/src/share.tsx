@@ -1,26 +1,34 @@
-import { Atom, AtomFamily, FiddichState, useFiddichValue, useSetFiddichAtom } from "fiddich";
+import { Atom, AtomFamily, FiddichState, useValue, useNearestValue, useSetAtom, useSetNearestAtom } from "fiddich";
 import { FC, useRef } from "react";
 
-export const StateString: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean}> = (props) => {
-  const value = useFiddichValue(props.state, {initialValue: props.initialValue, withTransition: props.withTransition});
+/* eslint react-hooks/rules-of-hooks: 0 */
+
+export const StateString: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean, forceNearest?: boolean}> = (props) => {
+  const value = props.forceNearest ? 
+    useNearestValue(props.state, {initialValue: props.initialValue, withTransition: props.withTransition}) : 
+    useValue(props.state, {initialValue: props.initialValue, withTransition: props.withTransition});
   const renderCountRef = useRef(0);
   renderCountRef.current++;
   return(
     <div style={{backgroundColor: 'gray'}}>
       <p style={{fontWeight: 'bold'}}>{props.withTransition ? `${props.state.key} value block (With Transition)` : `${props.state.key} value block`}</p>
+      {props.forceNearest && <p style={{fontWeight: 'bold'}}>{'(force Nearest Store)'}</p>}
       <p>{`render-count: ${renderCountRef.current}`}</p>
       <p>{value}</p>
     </div>
   )
 }
 
-export const ChangeStateButton: FC<{state: Atom<any> | AtomFamily<any>}> = (props) => {
-  const setValue = useSetFiddichAtom(props.state);
+export const ChangeStateButton: FC<{state: Atom<any> | AtomFamily<any>, forceNearest?: boolean}> = (props) => {
+  const setValue = props.forceNearest ? 
+    useSetNearestAtom(props.state): 
+    useSetAtom(props.state);
   const renderCountRef = useRef(0);
   renderCountRef.current++;
   return(
     <div style={{backgroundColor: 'green'}}>
       <p style={{fontWeight: 'bold'}}>{`${props.state.key} change button block`}</p>
+      {props.forceNearest && <p style={{fontWeight: 'bold'}}>{'(force Nearest Store)'}</p>}
       <p>{`render-count: ${renderCountRef.current}`}</p>
       <button onClick={() => setValue(Date.now().toString())}>change</button>
     </div>

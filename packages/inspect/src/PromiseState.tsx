@@ -1,4 +1,4 @@
-import { atom, selector, useSetFiddichAtom, wrapFiddichRoot } from "fiddich";
+import { atom, selector, useSetAtom, wrapFiddichRoot } from "fiddich";
 import { FC, Suspense } from "react";
 import { managedPromise, sleep, StateString } from "./share";
 
@@ -23,7 +23,7 @@ const SelectorState1 = selector({
 });
 
 const PromiseStateInternal: FC = (props) => {
-  const setAtomState1 = useSetFiddichAtom(AtomState1);
+  const setAtomState1 = useSetAtom(AtomState1);
   return (
     <>
       <p/>

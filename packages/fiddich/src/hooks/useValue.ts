@@ -3,7 +3,7 @@ import { FiddichState, FiddichStateInstance } from '../core';
 import { useRerender } from '../util/util';
 import { useInstance } from './useInstance';
 
-export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: boolean): T => {
+export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: boolean): T => {
   const rerender = useRerender(withTransition);
 
   useEffect(() => {
@@ -23,13 +23,24 @@ export const useFiddichValueInternal = <T>(stateInstance: FiddichStateInstance<T
   }
 };
 
-export const useFiddichValue = <T>(
+export const useValue = <T>(
   state: FiddichState<T>,
   option?: {
     initialValue?: T;
     withTransition?: boolean;
   }
 ): T => {
-  const instance = useInstance(state, option?.initialValue);
-  return useFiddichValueInternal(instance, option?.withTransition);
+  const instance = useInstance(state, false, option?.initialValue);
+  return useValueInternal(instance, option?.withTransition);
+};
+
+export const useNearestValue = <T>(
+  state: FiddichState<T>,
+  option?: {
+    initialValue?: T;
+    withTransition?: boolean;
+  }
+): T => {
+  const instance = useInstance(state, true, option?.initialValue);
+  return useValueInternal(instance, option?.withTransition);
 };

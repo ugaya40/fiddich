@@ -1,4 +1,4 @@
-import { atom, FiddichRoot, selector, useFiddichValue } from "fiddich";
+import { atom, FiddichRoot, selector, useValue } from "fiddich";
 import { FC, Suspense } from "react";
 import { sleep } from "./share";
 
@@ -39,7 +39,7 @@ export default function Other() {
 
 const AtomComponent: FC = (props) => {
   try {
-    const atomString = useFiddichValue(AtomState);
+    const atomString = useValue(AtomState);
 
     return (
       <div style={{ backgroundColor: 'gray', padding: '10px' }}>
@@ -54,7 +54,7 @@ const AtomComponent: FC = (props) => {
 
 const SelectorComponent: FC = (props) => {
   try {
-    const selectorString = useFiddichValue(SourceSelector);
+    const selectorString = useValue(SourceSelector);
 
     return (
       <div style={{ backgroundColor: 'gray', padding: '10px' }}>

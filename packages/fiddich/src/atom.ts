@@ -97,12 +97,13 @@ export type AtomInstance<T = unknown> = {
 export const getAtomInstanceInternal = <T = unknown>(
   atom: Atom<T> | AtomFamily<T, any>,
   nearestStore: Store,
-  ref_storeTree: Store[]
+  ref_storeTree: Store[],
+  forceNearest: boolean
 ): AtomInstance<T> | null => {
   ref_storeTree.push(nearestStore);
   const nearestStoreResult = nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
   if (nearestStoreResult != null) return nearestStoreResult;
-  if ('parent' in nearestStore) return getAtomInstanceInternal(atom, nearestStore.parent, ref_storeTree);
+  if (!forceNearest && 'parent' in nearestStore) return getAtomInstanceInternal(atom, nearestStore.parent, ref_storeTree, forceNearest);
   ref_storeTree.splice(0, ref_storeTree.length);
   return null;
 };
@@ -110,10 +111,11 @@ export const getAtomInstanceInternal = <T = unknown>(
 export const getAtomInstance = <T = unknown>(
   atom: Atom<T> | AtomFamily<T, any>,
   nearestStore: Store,
+  forceNearest: boolean,
   initialValue?: AtomValueArg<T>
 ): { instance: AtomInstance<T>; storeTree: Store[] } => {
   const ref_storeTree: Store[] = [];
-  const atomInstanceFromStore = getAtomInstanceInternal(atom, nearestStore, ref_storeTree);
+  const atomInstanceFromStore = getAtomInstanceInternal(atom, nearestStore, ref_storeTree, forceNearest);
 
   if (atomInstanceFromStore != null) return { instance: atomInstanceFromStore, storeTree: ref_storeTree };
 

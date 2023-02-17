@@ -12,12 +12,18 @@ const AtomState2 = atom({
   default: 'atom2 default value',
 });
 
+const AtomState3 = atom({
+  key: 'AtomState3',
+  default: 'atom3 default value',
+});
+
 
 export const SubRoot: FC = (props) => {
   const [show, setShow] = useState(false);
   return (
     <FiddichRoot>
       <StateString state={AtomState1}/>
+      <StateString state={AtomState3}/>
       {show && 
         <>
           <StateString state={AtomState2}/>
@@ -26,10 +32,12 @@ export const SubRoot: FC = (props) => {
       }
       <SubFiddichRoot>
         <div style={{padding: '10px', backgroundColor: 'lavender'}}>
-          <StateString state={AtomState1}/> 
+          <StateString state={AtomState1}/>
           <StateString state={AtomState2} initialValue={'SubRoot AtomState2 Value'}/>
+          <StateString state={AtomState3} forceNearest={true}/>
           <ChangeStateButton  state={AtomState1}/>
           <ChangeStateButton  state={AtomState2}/>
+          <ChangeStateButton  state={AtomState3} forceNearest={true}/>
         </div>
       </SubFiddichRoot>
       <button onClick={() => setShow(old => !old)}>Reads a new AtomState2 under MainRoot</button>
