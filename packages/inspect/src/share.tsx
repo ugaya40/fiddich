@@ -7,7 +7,7 @@ export const StateString: FC<{state: FiddichState<any>, initialValue?: string, w
   renderCountRef.current++;
   return(
     <div style={{backgroundColor: 'gray'}}>
-      <p style={{fontWeight: 'bold'}}>{(props.withTransition ?? true) ? `${props.state.key} value block (With Transition)` : `${props.state.key} value block`}</p>
+      <p style={{fontWeight: 'bold'}}>{props.withTransition ? `${props.state.key} value block (With Transition)` : `${props.state.key} value block`}</p>
       <p>{`render-count: ${renderCountRef.current}`}</p>
       <p>{value}</p>
     </div>

@@ -65,17 +65,17 @@ const PromiseStateInternal: FC = (props) => {
         <span>AtomState1 changes after 3s, SeletorState1 changes after 6s </span>
       </p>
       
-      <Suspense fallback={<p>{'loading...AtomState1 WithTransition'}</p>}>
+      <Suspense fallback={<p>{'loading...AtomState1'}</p>}>
         <StateString state={AtomState1}/>
       </Suspense>
-      <Suspense fallback={<p>{'loading...SelectorState1 WithTransition'}</p>}>
+      <Suspense fallback={<p>{'loading...SelectorState1'}</p>}>
         <StateString state={SelectorState1}/>
       </Suspense>
-      <Suspense fallback={<p>{'loading...AtomState1'}</p>}>
-        <StateString state={AtomState1} withTransition={false}/>
+      <Suspense fallback={<p>{'loading...AtomState1  WithTransition'}</p>}>
+        <StateString state={AtomState1} withTransition={true}/>
       </Suspense>
-      <Suspense fallback={<p>{'loading...SelectorState1'}</p>}>
-        <StateString state={SelectorState1} withTransition={false}/>
+      <Suspense fallback={<p>{'loading...SelectorState1  WithTransition'}</p>}>
+        <StateString state={SelectorState1} withTransition={true}/>
       </Suspense>
     </>
   );
