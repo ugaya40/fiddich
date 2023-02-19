@@ -1,7 +1,6 @@
 import { getAtomInstance } from './atom';
 import { FiddichState, FiddichStateInstance, Store, StateInstanceStatus, PendingStatus, StateInstanceEvent, Compare } from './core';
-import { Disposable } from './util/Disposable';
-import { TypedEvent } from './util/TypedEvent';
+import { Disposable, TypedEvent } from './util/TypedEvent';
 
 export type GetState = <TSource>(arg: FiddichState<TSource>) => Promise<TSource>;
 
@@ -103,30 +102,36 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore
       existingListener?.listener?.dispose?.();
 
       const listener = sourceInstance.event.addListener(async event => {
-        if (selectorInstance.status.type === 'pending') selectorInstance.status.abortRequest = true;
-        const oldValue = selectorInstance.status.type === 'pending' ? selectorInstance.status.oldValue : selectorInstance.status.value;
-
         const state = selectorInstance.state;
 
-        selectorInstance.status = {
-          type: 'pending',
-          oldValue,
-          abortRequest: false,
-          promise: state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction }),
-        };
+        if (event.type === 'pending' || (event.type === 'change' && event.promise == null)) {
+          if (selectorInstance.status.type === 'pending') selectorInstance.status.abortRequest = true;
 
-        selectorInstance.event.emit({ type: 'pending', promise: selectorInstance.status.promise! });
+          const oldValue = selectorInstance.status.type === 'pending' ? selectorInstance.status.oldValue : selectorInstance.status.value;
+          const pendingPromise =
+            state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction });
+
+          selectorInstance.status = {
+            type: 'pending',
+            oldValue,
+            abortRequest: false,
+            promise: pendingPromise,
+          };
+
+          selectorInstance.event.emit({ type: 'pending', promise: selectorInstance.status.promise! });
+        }
 
         if (event.type === 'change') {
-          const newValue = await selectorInstance.status.promise!;
+          const oldStatus = selectorInstance.status as PendingStatus<T>;
+          const newValue = await oldStatus.promise!;
           const compareFunction: Compare<T> = selectorInstance.state.compare ?? ((o, n) => o === n);
 
-          if (!compareFunction(oldValue, newValue) && !selectorInstance.status.abortRequest) {
+          if (!compareFunction(oldStatus.oldValue, newValue) && !oldStatus.abortRequest) {
             selectorInstance.status = {
               type: 'stable',
               value: newValue,
             };
-            selectorInstance.event.emit({ type: 'change', oldValue, newValue });
+            selectorInstance.event.emit({ type: 'change', oldValue: oldStatus.oldValue, newValue, promise: oldStatus.promise });
           }
         }
       });

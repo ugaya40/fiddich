@@ -1,14 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { FiddichState, FiddichStateInstance } from '../core';
-import { useRerender } from '../util/util';
 import { useInstance } from './useInstance';
+import { useRerender } from './useRerender';
 
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: boolean): T => {
   const rerender = useRerender(withTransition);
 
+  const pendingPromiseRef = useRef<Promise<T> | undefined>(undefined);
+
   useEffect(() => {
     const listener = stateInstance.event.addListener(event => {
-      if (event.type === 'change' || event.type === 'pending') {
+      if (event.type === 'pending') {
+        pendingPromiseRef.current = event.promise;
+        console.log(`pending rerender - ${stateInstance.state.key}`);
+        rerender();
+      } else if (event.type === 'change') {
+        if (event.promise != null && event.promise === pendingPromiseRef.current) return;
+        console.log(`change rerender - ${stateInstance.state.key}`);
         rerender();
       }
     });

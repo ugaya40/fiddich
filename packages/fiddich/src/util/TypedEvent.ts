@@ -1,4 +1,6 @@
-import { Disposable } from './Disposable';
+export interface Disposable {
+  dispose(): void;
+}
 
 export interface Listener<T> {
   (event: T): void;

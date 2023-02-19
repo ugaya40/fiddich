@@ -1,14 +1,17 @@
 import { Atom, AtomFamily, FiddichState, useValue, useNearestValue, useSetAtom, useSetNearestAtom } from "fiddich";
-import { FC, useRef } from "react";
+import { FC, Suspense, useRef } from "react";
 
 /* eslint react-hooks/rules-of-hooks: 0 */
 
-export const StateString: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean, forceNearest?: boolean}> = (props) => {
+const StateStringInternal: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean, forceNearest?: boolean, trace?: boolean}> = (props) => {
   const value = props.forceNearest ? 
     useNearestValue(props.state, {initialValue: props.initialValue, withTransition: props.withTransition}) : 
     useValue(props.state, {initialValue: props.initialValue, withTransition: props.withTransition});
   const renderCountRef = useRef(0);
   renderCountRef.current++;
+  if(props.trace) {
+    console.trace()
+  }
   return(
     <div style={{backgroundColor: 'gray'}}>
       <p style={{fontWeight: 'bold'}}>{props.withTransition ? `${props.state.key} value block (With Transition)` : `${props.state.key} value block`}</p>
@@ -16,6 +19,14 @@ export const StateString: FC<{state: FiddichState<any>, initialValue?: string, w
       <p>{`render-count: ${renderCountRef.current}`}</p>
       <p>{value}</p>
     </div>
+  )
+}
+
+export const StateString: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean, forceNearest?: boolean, trace?: boolean}> = (props) => {
+  return (
+    <Suspense fallback={<p>{`loading...${props.state.key}  ${props.withTransition ? '': 'with transition'}`}</p>}>
+      <StateStringInternal {...props}/>
+    </Suspense>
   )
 }
 

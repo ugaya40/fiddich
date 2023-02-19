@@ -22,9 +22,7 @@ export const Family: FC = (props) => {
   return (
     <FiddichRoot>
       <StateString state={AtomFamilyState1(4)}/>
-      <Suspense fallback={<p>{'loading...SelectorFamilyState1'}</p>}>
-        <StateString state={SelectorFamilyState1(3)}/>
-      </Suspense>
+      <StateString state={SelectorFamilyState1(3)}/>
     </FiddichRoot>
   );
 }

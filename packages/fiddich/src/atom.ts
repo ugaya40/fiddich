@@ -163,7 +163,7 @@ export const getAtomInstance = <T = unknown>(
   return { instance: newAtomInstance, storeTree: ref_storeTree };
 };
 
-const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T | undefined, newValue: T) => {
+const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T | undefined, newValue: T, promise?: Promise<T>) => {
   const compareFunction: Compare<T> = atomInstance.state.compare ?? ((o, n) => o === n);
   if (compareFunction(oldValue, newValue)) return;
 
@@ -185,6 +185,7 @@ const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T |
     type: 'change',
     oldValue,
     newValue,
+    promise,
   });
 };
 
@@ -231,7 +232,7 @@ export const changeAtomValue = <T = unknown, P = unknown>(
       const status = atomInstance.status as PendingStatus<T>;
       const newValue = await status.promise!;
       if (!status.abortRequest) {
-        changeAtomValueInternal(atomInstance, oldValue, newValue);
+        changeAtomValueInternal(atomInstance, oldValue, newValue, status.promise);
       }
       resolve(undefined);
     });

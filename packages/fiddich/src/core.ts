@@ -13,6 +13,7 @@ export type StateChangedEvent<T = any> = {
   type: 'change';
   oldValue: T | undefined;
   newValue: T;
+  promise?: Promise<T>;
 };
 
 export type Compare<T> = (oldValue: T | undefined, newValue: T | undefined) => boolean;
