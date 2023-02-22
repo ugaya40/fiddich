@@ -9,7 +9,7 @@ const AtomState1 = atom({
 
 const SelectorState1 = selector({
   key: 'SelectorState1',
-  get: async ({get}) => {
+  getAsync: async ({get}) => {
     const atom1 = await get(AtomState1);
     return `selector1 - ${atom1}`
   }
@@ -17,20 +17,26 @@ const SelectorState1 = selector({
 
 const SelectorState2 = selector({
   key: 'SelectorState2',
-  get: async ({get}) => {
-    const selector1 = await get(SelectorState1);
+  get: ({get}) => {
+    const selector1 = get(SelectorState1);
     return `selector2 - ${selector1}`
   }
 });
 
 
 export const Basic: FC = (props) => {
-  return (
-    <FiddichRoot>
-      <StateString state={AtomState1}/>
-      <StateString state={SelectorState1}/>
-      <StateString state={SelectorState2}/>
-      <ChangeStateButton  state={AtomState1}/>
-    </FiddichRoot>
-  );
+  try {
+    return (
+      <FiddichRoot>
+        <StateString state={AtomState1}/>
+        <StateString state={SelectorState1}/>
+        <StateString state={SelectorState2}/>
+        <ChangeStateButton  state={AtomState1}/>
+      </FiddichRoot>
+    );
+  }
+  catch(e) {
+    console.log(e);
+    throw e;
+  }
 }

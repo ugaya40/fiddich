@@ -6,17 +6,9 @@ import { useRerender } from './useRerender';
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: boolean): T => {
   const rerender = useRerender(withTransition);
 
-  const pendingPromiseRef = useRef<Promise<T> | undefined>(undefined);
-
   useEffect(() => {
     const listener = stateInstance.event.addListener(event => {
-      if (event.type === 'pending') {
-        pendingPromiseRef.current = event.promise;
-        console.log(`pending rerender - ${stateInstance.state.key}`);
-        rerender();
-      } else if (event.type === 'change') {
-        if (event.promise != null && event.promise === pendingPromiseRef.current) return;
-        console.log(`change rerender - ${stateInstance.state.key}`);
+      if (event.type === 'pending' || event.type === 'pending for source' || event.type === 'change') {
         rerender();
       }
     });
@@ -24,10 +16,10 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, with
     return () => listener.dispose();
   }, [stateInstance.storeId]);
 
-  if (stateInstance.status.type === 'pending') {
-    throw stateInstance.status.promise!;
-  } else {
+  if (stateInstance.status.type === 'stable') {
     return stateInstance.status.value;
+  } else {
+    throw stateInstance.status.promise;
   }
 };
 

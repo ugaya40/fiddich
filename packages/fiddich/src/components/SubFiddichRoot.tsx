@@ -17,7 +17,7 @@ export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
     return () => {
       storeRef.current.map.forEach(value => {
         if(value.state.type === 'selector') {
-          (value as SelectorInstance).stateListeners.forEach(({listener}) => listener.dispose());
+          (value as SelectorInstance<unknown>).stateListeners.forEach(({listener}) => listener.dispose());
         }
       })
     }

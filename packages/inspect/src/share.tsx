@@ -24,7 +24,7 @@ const StateStringInternal: FC<{state: FiddichState<any>, initialValue?: string, 
 
 export const StateString: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean, forceNearest?: boolean, trace?: boolean}> = (props) => {
   return (
-    <Suspense fallback={<p>{`loading...${props.state.key}  ${props.withTransition ? '': 'with transition'}`}</p>}>
+    <Suspense fallback={<p>{`loading...${props.state.key}  ${props.withTransition ? 'with transition': ''}`}</p>}>
       <StateStringInternal {...props}/>
     </Suspense>
   )

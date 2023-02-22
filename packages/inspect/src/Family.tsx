@@ -9,7 +9,7 @@ const AtomFamilyState1 = atomFamily<string, number>({
 
 const SelectorFamilyState1 = selectorFamily<string, number>({
   key: 'SelectorFamilyState1',
-  get: async ({get, parameter}) => {
+  getAsync: async ({get, parameter}) => {
     const atom1 = await get(AtomFamilyState1(parameter));
     await sleep(3000);
     return `selectorFamily-parameter-${atom1}`

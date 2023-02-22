@@ -15,7 +15,7 @@ const AtomState = atom({
 
 const SourceSelector = selector({
   key: 'SourceSelector',
-  get: async ({ get }) => {
+  getAsync: async ({ get }) => {
     console.log('start selector get');
     const atom1 = await get(AtomState);
     await sleep(3000);

@@ -9,8 +9,8 @@ export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
   useEffect(() => {
     return () => {
       storeRef.current.map.forEach(value => {
-        if(value.state.type === 'selector') {
-          (value as SelectorInstance).stateListeners.forEach(({listener}) => listener.dispose());
+        if(value.state.type === 'selector' || value.state.type === 'selectorFamily') {
+          (value as SelectorInstance<unknown>).stateListeners.forEach(({listener}) => listener.dispose());
         }
       })
     }

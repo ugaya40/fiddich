@@ -15,7 +15,7 @@ const AtomState1 = atom({
 
 const SelectorState1 = selector({
   key: 'SelectorState1',
-  get: async ({get}) => {
+  getAsync: async ({get}) => {
     const atomState1 = await get(AtomState1);
     await sleep(3000);
     return `selector-${atomState1}`;

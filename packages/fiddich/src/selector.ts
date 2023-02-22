@@ -1,21 +1,49 @@
 import { getAtomInstance } from './atom';
-import { FiddichState, FiddichStateInstance, Store, StateInstanceStatus, PendingStatus, StateInstanceEvent, Compare } from './core';
+import {
+  FiddichState,
+  FiddichStateInstance,
+  Store,
+  PendingStatus,
+  Compare,
+  PendingEvent,
+  PendingForSourceEvent,
+  ChangedEvent,
+  ChangedByPromiseEvent,
+  PendingForSourceStatus,
+  StableStatus,
+} from './core';
 import { Disposable, TypedEvent } from './util/TypedEvent';
 
-export type GetState = <TSource>(arg: FiddichState<TSource>) => Promise<TSource>;
+export type GetState = <TSource>(arg: FiddichState<TSource>) => TSource;
+export type GetStateAsync = <TSource>(arg: FiddichState<TSource>) => Promise<TSource>;
 
-export type Selector<T = any> = {
+type SelectorBase<T = any> = {
   type: 'selector';
   key: string;
-  get: (arg: { get: GetState }) => Promise<T>;
   compare?: Compare<T>;
 };
+
+type SyncSelector<T> = SelectorBase<T> & {
+  get: (arg: { get: GetState }) => T;
+};
+
+type AsyncSelector<T> = SelectorBase<T> & {
+  getAsync: (arg: { get: GetStateAsync }) => Promise<T>;
+};
+
+export type Selector<T = any> = SyncSelector<T> | AsyncSelector<T>;
 
 type SelectorArg<T> = {
   key: string;
-  get: (arg: { get: GetState }) => Promise<T>;
   compare?: Compare<T>;
-};
+} & (
+  | {
+      getAsync: (arg: { get: GetStateAsync }) => Promise<T>;
+    }
+  | {
+      get: (arg: { get: GetState }) => T;
+    }
+);
 
 export function selector<T>(arg: SelectorArg<T>): Selector<T> {
   return {
@@ -24,21 +52,36 @@ export function selector<T>(arg: SelectorArg<T>): Selector<T> {
   };
 }
 
-export type SelectorFamily<T = unknown, P = any> = {
+type SelectorFamilyBase<T = unknown, P = any> = {
   type: 'selectorFamily';
   key: string;
   baseKey: string;
-  get: (arg: { get: GetState; parameter: P }) => Promise<T>;
   parameter: P;
   compare?: Compare<T>;
 };
 
+type SyncSelectorFamily<T, P> = SelectorFamilyBase<T, P> & {
+  get: (arg: { get: GetState; parameter: P }) => T;
+};
+
+type AsyncSelectorFamily<T, P> = SelectorFamilyBase<T, P> & {
+  getAsync: (arg: { get: GetStateAsync; parameter: P }) => Promise<T>;
+};
+
+export type SelectorFamily<T = unknown, P = any> = SyncSelectorFamily<T, P> | AsyncSelectorFamily<T, P>;
+
 type SelectorFamilyArg<T, P> = {
   key: string;
-  get: (arg: { get: GetState; parameter: P }) => Promise<T>;
   stringfy?: (arg: P) => string;
   compare?: Compare<T>;
-};
+} & (
+  | {
+      getAsync: (arg: { get: GetStateAsync; parameter: P }) => Promise<T>;
+    }
+  | {
+      get: (arg: { get: GetState; parameter: P }) => T;
+    }
+);
 
 type SelectorFamilyFunction<T = unknown, P = unknown> = (arg: P) => SelectorFamily<T, P>;
 
@@ -58,24 +101,26 @@ export const selectorFamily = <T, P>(arg: SelectorFamilyArg<T, P>): SelectorFami
   return result;
 };
 
-export type SelectorInstance<T = unknown> = {
+export type SelectorInstance<T> = {
   state: Selector<T> | SelectorFamily<T, any>;
   storeId: string;
-  event: TypedEvent<StateInstanceEvent<T>>;
+  event: TypedEvent<PendingEvent<T> | PendingForSourceEvent | ChangedEvent<T> | ChangedByPromiseEvent<T>>;
   stateListeners: Map<FiddichState<any>, { instance: FiddichStateInstance<any>; listener: Disposable }>;
-  status: StateInstanceStatus<T>;
+  status: PendingStatus<T> | PendingForSourceStatus<T> | StableStatus<T>;
 };
 
+type UninitializedSelectorInstance<T> = Omit<SelectorInstance<T>, 'status'>;
+
 export const getSelectorInstanceInternal = <T = unknown>(
-  atom: Selector<T> | SelectorFamily<T>,
+  selector: Selector<T> | SelectorFamily<T>,
   nearestStore: Store,
   ref_storeTree: Store[],
   forceNearest: boolean
 ): SelectorInstance<T> | null => {
   ref_storeTree.push(nearestStore);
-  const nearestStoreResult = nearestStore.map.get(atom.key) as SelectorInstance<T> | undefined;
+  const nearestStoreResult = nearestStore.map.get(selector.key) as SelectorInstance<T> | undefined;
   if (nearestStoreResult != null) return nearestStoreResult;
-  if (!forceNearest && 'parent' in nearestStore) return getSelectorInstanceInternal(atom, nearestStore.parent, ref_storeTree, forceNearest);
+  if (!forceNearest && 'parent' in nearestStore) return getSelectorInstanceInternal(selector, nearestStore.parent, ref_storeTree, forceNearest);
   ref_storeTree.splice(0, ref_storeTree.length);
   return null;
 };
@@ -92,24 +137,27 @@ const getStateInstance = <T = unknown>(
   }
 };
 
-const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore: Store, forceNearest: boolean): GetState => {
-  const getFunction = async <TSource>(state: FiddichState<TSource>): Promise<TSource> => {
-    const { instance: sourceInstance } = getStateInstance(state, nearestStore, forceNearest);
+function asSelectorInstance<T>(arg: UninitializedSelectorInstance<T> | SelectorInstance<T>): asserts arg is SelectorInstance<T> {}
 
+const buildGetAsyncFunction = <T>(selectorInstance: UninitializedSelectorInstance<T>, nearestStore: Store): GetStateAsync => {
+  const getAsyncFunction = async <TSource>(state: FiddichState<TSource>): Promise<TSource> => {
+    const { instance: sourceInstance } = getStateInstance(state, nearestStore, false);
+    const compareFunction: Compare<T> = selectorInstance.state.compare ?? ((o, n) => o === n);
     const existingListener = selectorInstance.stateListeners.get(state);
 
     if (existingListener == null || existingListener.instance !== sourceInstance) {
       existingListener?.listener?.dispose?.();
 
       const listener = sourceInstance.event.addListener(async event => {
-        const state = selectorInstance.state;
+        asSelectorInstance(selectorInstance);
+        const state = selectorInstance.state as AsyncSelector<T> | AsyncSelectorFamily<T, unknown>;
+        const oldValue = selectorInstance.status.type === 'stable' ? selectorInstance.status.value : selectorInstance.status.oldValue;
 
-        if (event.type === 'pending' || (event.type === 'change' && event.promise == null)) {
+        if (event.type === 'pending' || event.type === 'change') {
           if (selectorInstance.status.type === 'pending') selectorInstance.status.abortRequest = true;
 
-          const oldValue = selectorInstance.status.type === 'pending' ? selectorInstance.status.oldValue : selectorInstance.status.value;
           const pendingPromise =
-            state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction });
+            state.type === 'selectorFamily' ? state.getAsync({ get: getAsyncFunction, parameter: state.parameter }) : state.getAsync({ get: getAsyncFunction });
 
           selectorInstance.status = {
             type: 'pending',
@@ -117,38 +165,85 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, nearestStore
             abortRequest: false,
             promise: pendingPromise,
           };
+          selectorInstance.event.emit({ type: 'pending', promise: pendingPromise });
 
-          selectorInstance.event.emit({ type: 'pending', promise: selectorInstance.status.promise! });
-        }
+          const newValue = await pendingPromise;
 
-        if (event.type === 'change') {
-          const oldStatus = selectorInstance.status as PendingStatus<T>;
-          const newValue = await oldStatus.promise!;
-          const compareFunction: Compare<T> = selectorInstance.state.compare ?? ((o, n) => o === n);
-
-          if (!compareFunction(oldStatus.oldValue, newValue) && !oldStatus.abortRequest) {
+          if (!compareFunction(oldValue, newValue) && !selectorInstance.status.abortRequest) {
             selectorInstance.status = {
               type: 'stable',
               value: newValue,
             };
-            selectorInstance.event.emit({ type: 'change', oldValue: oldStatus.oldValue, newValue, promise: oldStatus.promise });
+            selectorInstance.event.emit({ type: 'change by promise', oldValue, newValue, promise: pendingPromise });
           }
         }
       });
       selectorInstance.stateListeners.set(state, { instance: sourceInstance, listener });
     }
 
-    if (sourceInstance.status.type === 'pending') {
-      return sourceInstance.status.promise!;
-    } else {
+    if (sourceInstance.status.type === 'stable') {
       return sourceInstance.status.value;
+    } else {
+      return (sourceInstance.status as PendingStatus<TSource>).promise;
+    }
+  };
+
+  return getAsyncFunction;
+};
+
+const buildGetFunction = <T>(selectorInstance: UninitializedSelectorInstance<T>, nearestStore: Store): GetState => {
+  const getFunction = <TSource>(state: FiddichState<TSource>): TSource => {
+    const { instance: sourceInstance } = getStateInstance(state, nearestStore, false);
+    const compareFunction: Compare<T> = selectorInstance.state.compare ?? ((o, n) => o === n);
+    const existingListener = selectorInstance.stateListeners.get(state);
+
+    if (existingListener == null || existingListener.instance !== sourceInstance) {
+      existingListener?.listener?.dispose?.();
+
+      const listener = sourceInstance.event.addListener(event => {
+        asSelectorInstance(selectorInstance);
+
+        const state = selectorInstance.state as SyncSelector<T> | SyncSelectorFamily<T, unknown>;
+        const oldValue = selectorInstance.status.type === 'stable' ? selectorInstance.status.value : selectorInstance.status.oldValue;
+
+        if (event.type === 'pending') {
+          if (selectorInstance.status.type === 'pending') {
+            selectorInstance.status.abortRequest = true;
+          }
+
+          selectorInstance.status = {
+            type: 'pending for source',
+            oldValue,
+            promise: event.promise,
+          };
+
+          selectorInstance.event.emit({ type: 'pending for source', promise: event.promise });
+        } else if (event.type === 'change' || event.type === 'change by promise') {
+          const newValue = state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction });
+
+          if (!compareFunction(oldValue, newValue)) {
+            selectorInstance.status = {
+              type: 'stable',
+              value: newValue,
+            };
+            selectorInstance.event.emit({ type: 'change', oldValue, newValue });
+          }
+        }
+      });
+      selectorInstance.stateListeners.set(state, { instance: sourceInstance, listener });
+    }
+
+    if (sourceInstance.status.type === 'stable') {
+      return sourceInstance.status.value;
+    } else {
+      throw sourceInstance.status.promise;
     }
   };
 
   return getFunction;
 };
 
-export const getSelectorInstance = <T = unknown>(
+export const getSelectorInstance = <T>(
   selector: Selector<T> | SelectorFamily<T>,
   nearestStore: Store,
   forceNearest: boolean
@@ -158,36 +253,52 @@ export const getSelectorInstance = <T = unknown>(
 
   if (selectorInstanceFromStore != null) return { instance: selectorInstanceFromStore, storeTree: ref_storeTree };
 
-  const selectorInstance: SelectorInstance<T> = {
+  const selectorInstance: UninitializedSelectorInstance<T> | SelectorInstance<T> = {
     state: selector,
     event: new TypedEvent(),
     storeId: nearestStore.id,
-    status: {
-      type: 'pending',
-      abortRequest: false,
-      oldValue: undefined,
-      promise: undefined,
-    },
     stateListeners: new Map<FiddichState<any>, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
   };
 
-  const getFunction = buildGetFunction(selectorInstance, nearestStore, forceNearest);
-
-  const status = selectorInstance.status as PendingStatus<T>;
+  asSelectorInstance(selectorInstance);
   const state = selectorInstance.state;
-  status.promise = state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction });
 
-  new Promise(async resolve => {
-    const result = await status.promise!;
-    if (!status.abortRequest) {
-      selectorInstance.status = {
+  if ('getAsync' in state) {
+    const getAsyncFunction = buildGetAsyncFunction(selectorInstance, nearestStore);
+    const pendingStatus: PendingStatus<T> = {
+      type: 'pending',
+      abortRequest: false,
+      oldValue: undefined,
+      promise:
+        state.type === 'selectorFamily' ? state.getAsync({ get: getAsyncFunction, parameter: state.parameter }) : state.getAsync({ get: getAsyncFunction }),
+    };
+    selectorInstance.status = pendingStatus;
+    new Promise<void>(async resolve => {
+      const result = await pendingStatus.promise;
+      if (!pendingStatus.abortRequest) {
+        selectorInstance.status = {
+          type: 'stable',
+          value: result,
+        };
+      }
+      resolve();
+    });
+  } else if ('get' in state) {
+    const getFunction = buildGetFunction(selectorInstance, nearestStore);
+    try {
+      const value = state.type === 'selectorFamily' ? state.get({ get: getFunction, parameter: state.parameter }) : state.get({ get: getFunction });
+      const stableStatus: StableStatus<T> = {
         type: 'stable',
-        value: result,
+        value,
       };
+      selectorInstance.status = stableStatus;
+    } catch (e) {
+      if (e instanceof Promise) {
+        selectorInstance.stateListeners.forEach(arg => arg.listener.dispose());
+      }
+      throw e;
     }
-    resolve(undefined);
-  });
-
+  }
   nearestStore.map.set(selectorInstance.state.key, selectorInstance);
   ref_storeTree.push(nearestStore);
 
