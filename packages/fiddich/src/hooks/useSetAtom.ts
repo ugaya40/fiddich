@@ -13,7 +13,7 @@ export const useSetAtomInternal = <T, P>(atomInstance: AtomInstance<T>): AtomSet
   return setFunc;
 };
 
-type SetAtomOption<T> = {
+export type SetAtomOption<T> = {
   initialValue?: T;
   place?: StorePlaceTypeHookContext;
 };
@@ -30,40 +30,28 @@ type LimitedSetAtomOption<T> = Omit<SetAtomOption<T>, 'place'>;
 
 export function useSetNearestAtom<T>(atom: Atom<T>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
 export function useSetNearestAtom<T, P>(atom: AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomFamilySetterOrUpdater<T, P>;
-export function useSetNearestAtom<T, P>(
-  atom: Atom<T> | AtomFamily<T, P>,
-  option?: LimitedSetAtomOption<T>
-): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
-export function useSetNearestAtom<T, P>(
-  atom: Atom<T> | AtomFamily<T, P>,
-  option?: LimitedSetAtomOption<T>
-): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> {
+export function useSetNearestAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
+export function useSetNearestAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> {
   const atomInstance = useAtomInstance(atom, { type: 'nearest' }, option?.initialValue);
   return useSetAtomInternal(atomInstance);
 }
 
 export function useSetRootAtom<T>(atom: Atom<T>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
 export function useSetRootAtom<T, P>(atom: AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomFamilySetterOrUpdater<T, P>;
-export function useSetRootAtom<T, P>(
-  atom: Atom<T> | AtomFamily<T, P>,
-  option?: LimitedSetAtomOption<T>
-): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
-export function useSetRootAtom<T, P>(
-  atom: Atom<T> | AtomFamily<T, P>,
-  option?: LimitedSetAtomOption<T>
-): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> {
+export function useSetRootAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
+export function useSetRootAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> {
   const atomInstance = useAtomInstance(atom, { type: 'root' }, option?.initialValue);
   return useSetAtomInternal(atomInstance);
 }
 
-export function useSetNamedAtom<T>(rootName: string, atom: Atom<T>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
-export function useSetNamedAtom<T, P>(rootName: string, atom: AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomFamilySetterOrUpdater<T, P>;
-export function useSetNamedAtom<T, P>(
+export function useSetNamedRootAtom<T>(rootName: string, atom: Atom<T>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
+export function useSetNamedRootAtom<T, P>(rootName: string, atom: AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomFamilySetterOrUpdater<T, P>;
+export function useSetNamedRootAtom<T, P>(
   rootName: string,
   atom: Atom<T> | AtomFamily<T, P>,
   option?: LimitedSetAtomOption<T>
 ): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
-export function useSetNamedAtom<T, P>(
+export function useSetNamedRootAtom<T, P>(
   rootName: string,
   atom: Atom<T> | AtomFamily<T, P>,
   option?: LimitedSetAtomOption<T>

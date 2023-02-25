@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { Atom, AtomFamily, AtomInstance, getAtomInstance } from '../atom';
-import { FiddichStoreContext, FiddichState, FiddichStateInstance } from '../core';
+import { FiddichStoreContext, FiddichState, FiddichStateInstance } from '../share';
 import { getSelectorInstance, Selector, SelectorFamily, SelectorInstance } from '../selector';
 
 const noStoreErrorText = 'Component is not inside the FiddichRoot/SubFiddichRoot.';
@@ -35,7 +35,7 @@ export const useAtomInstance = <T, P>(atom: Atom<T> | AtomFamily<T, P>, storePla
   return getAtomInstance(atom, storePlaceType, initialValue);
 };
 
-export const useSelectorInstance = <T>(selector: Selector<T> | SelectorFamily<T, any>, storePlace: StorePlaceTypeHookContext): SelectorInstance<T> => {
+const useSelectorInstance = <T>(selector: Selector<T> | SelectorFamily<T, any>, storePlace: StorePlaceTypeHookContext): SelectorInstance<T> => {
   const store = useContext(FiddichStoreContext);
   if (store == null) throw new Error(noStoreErrorText);
 

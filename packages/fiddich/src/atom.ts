@@ -8,13 +8,15 @@ import {
   ChangedByPromiseEvent,
   StableStatus,
   StorePlaceType,
-} from './core';
+  UninitializedStatus,
+  getOldValue,
+} from './share';
 import { EventPublisher, eventPublisher } from './event';
 import { getNamedStore, getRootStore } from './util';
 
 type ChangeEffectArg<T> = {
   newValue: T;
-  oldValue: T;
+  oldValue: T | undefined;
   stateInstance: FiddichStateInstance<T>;
 };
 
@@ -101,7 +103,7 @@ export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T
 export type AtomInstance<T = unknown> = {
   state: Atom<T> | AtomFamily<T, any>;
   storeId: string;
-  status: StableStatus<T> | PendingStatus<T>;
+  status: UninitializedStatus<T> | StableStatus<T> | PendingStatus<T>;
   event: EventPublisher<PendingEvent<T> | ChangedEvent<T> | ChangedByPromiseEvent<T>>;
 };
 
@@ -120,7 +122,10 @@ const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>
       return nearestStoreResult;
     }
     if ('parent' in storePlaceType.nearestStore) {
-      return getAtomInstanceInternal(atom, { type: storePlaceType.type, nearestStore: storePlaceType.nearestStore.parent });
+      return getAtomInstanceInternal(atom, {
+        type: storePlaceType.type,
+        nearestStore: storePlaceType.nearestStore.parent,
+      });
     }
   } else if (storePlaceType.type === 'root') {
     return getRootStore(storePlaceType.nearestStore).map.get(atom.key) as AtomInstance<T> | undefined;
@@ -129,11 +134,7 @@ const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>
   return undefined;
 };
 
-export const getAtomInstance = <T = unknown>(
-  atom: Atom<T> | AtomFamily<T, any>,
-  storePlaceType: StorePlaceType,
-  initialValue?: AtomValueArg<T>
-): AtomInstance<T> => {
+export const getAtomInstance = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>, storePlaceType: StorePlaceType, initialValue?: AtomValueArg<T>): AtomInstance<T> => {
   const atomInstanceFromStore = getAtomInstanceInternal(atom, storePlaceType);
 
   if (atomInstanceFromStore != null) return atomInstanceFromStore;
@@ -142,34 +143,30 @@ export const getAtomInstance = <T = unknown>(
   const parameter = atom.type === 'atomFamily' ? atom.parameter : undefined;
   const actualInitialValue = typeof decidedInitialValue === 'function' ? (decidedInitialValue as Function)(parameter) : decidedInitialValue;
   const targetStore =
-    storePlaceType.type === 'named'
-      ? getNamedStore(storePlaceType.name)
-      : storePlaceType.type === 'root'
-      ? getRootStore(storePlaceType.nearestStore)
-      : storePlaceType.nearestStore;
+    storePlaceType.type === 'named' ? getNamedStore(storePlaceType.name) : storePlaceType.type === 'root' ? getRootStore(storePlaceType.nearestStore) : storePlaceType.nearestStore;
+
+  const status: UninitializedStatus<T> | StableStatus<T> =
+    actualInitialValue instanceof Promise
+      ? {
+          type: 'uninitialized',
+          promise: actualInitialValue,
+          abortRequest: false,
+        }
+      : {
+          type: 'stable',
+          value: actualInitialValue,
+        };
 
   const newAtomInstance: AtomInstance<T> = {
     state: atom,
     event: eventPublisher(),
     storeId: targetStore.id,
-    status:
-      actualInitialValue instanceof Promise
-        ? {
-            type: 'pending',
-            promise: actualInitialValue,
-            oldValue: undefined,
-            abortRequest: false,
-          }
-        : {
-            type: 'stable',
-            value: actualInitialValue,
-          },
+    status,
   };
 
-  if (newAtomInstance.status.type === 'pending') {
-    const status = newAtomInstance.status;
+  if (status.type === 'uninitialized') {
     new Promise<void>(async resolve => {
-      const result = await status.promise;
+      const result = await status.promise!;
       if (!status.abortRequest) {
         newAtomInstance.status = {
           type: 'stable',
@@ -188,7 +185,7 @@ const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T |
   const compareFunction: Compare<T> = atomInstance.state.compare ?? ((o, n) => o === n);
   if (compareFunction(oldValue, newValue)) return;
 
-  const effect = globalAtomEffectMap.get(atomInstance.state.type === 'atomFamily' ? atomInstance.state.baseKey : atomInstance.state.key);
+  const effect = globalAtomEffectMap.get(atomInstance.state.type === 'atomFamily' ? atomInstance.state.baseKey : atomInstance.state.key) as AtomEffect<T>;
 
   if (effect?.onBeforeChange != null) {
     const beforeChangeResult = effect.onBeforeChange({ newValue, oldValue, stateInstance: atomInstance });
@@ -218,11 +215,7 @@ const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T |
   );
 };
 
-const getNewValue = <T, P>(
-  atomInstance: AtomInstance<T>,
-  valueOrUpdater: AtomSetterOrUpdaterArg<T> | AtomFamilySetterOrUpdaterArg<T, P>,
-  oldValue: T | undefined
-) => {
+const getNewValue = <T, P>(atomInstance: AtomInstance<T>, valueOrUpdater: AtomSetterOrUpdaterArg<T> | AtomFamilySetterOrUpdaterArg<T, P>, oldValue: T | undefined) => {
   if (typeof valueOrUpdater === 'function') {
     if (atomInstance.state.type === 'atom') {
       return (valueOrUpdater as (old: T | undefined) => T | Promise<T>)(oldValue);
@@ -235,13 +228,10 @@ const getNewValue = <T, P>(
   }
 };
 
-export const changeAtomValue = <T = unknown, P = unknown>(
-  atomInstance: AtomInstance<T>,
-  valueOrUpdater: AtomSetterOrUpdaterArg<T> | AtomFamilySetterOrUpdaterArg<T, P>
-) => {
+export const changeAtomValue = <T = unknown, P = unknown>(atomInstance: AtomInstance<T>, valueOrUpdater: AtomSetterOrUpdaterArg<T> | AtomFamilySetterOrUpdaterArg<T, P>) => {
   if (atomInstance.status.type === 'pending') atomInstance.status.abortRequest = true;
 
-  const oldValue = atomInstance.status.type === 'stable' ? atomInstance.status.value : atomInstance.status.oldValue;
+  const oldValue = getOldValue(atomInstance);
   const newValue = getNewValue(atomInstance, valueOrUpdater, oldValue);
 
   if (newValue instanceof Promise) {
@@ -259,7 +249,7 @@ export const changeAtomValue = <T = unknown, P = unknown>(
 
     new Promise<void>(async resolve => {
       const status = atomInstance.status as PendingStatus<T>;
-      const newValue = await (status.promise as Promise<T>);
+      const newValue = await status.promise;
       if (!status.abortRequest) {
         changeAtomValueInternal(atomInstance, oldValue, newValue, status.promise);
       }

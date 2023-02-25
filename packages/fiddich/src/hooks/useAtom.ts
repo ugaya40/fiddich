@@ -3,13 +3,13 @@ import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useValueInternal } from './useValue';
 import { useSetAtomInternal } from './useSetAtom';
 
-type AtomOption<T> = {
+export type AtomOption<T> = {
   initialValue?: T;
   withTransition?: boolean;
   place?: StorePlaceTypeHookContext;
 };
 
-type LimitedAtomOption<T> = Omit<AtomOption<T>, 'place'>;
+export type LimitedAtomOption<T> = Omit<AtomOption<T>, 'place'>;
 
 export const useAtom = <T>(atom: Atom<T> | AtomFamily<T>, option?: AtomOption<T>): [T, AtomSetterOrUpdater<T>] => {
   const instance = useInstance(atom, option?.place ?? { type: 'normal' }, option?.initialValue);

@@ -29,6 +29,12 @@ export type ChangedByPromiseEvent<T = any> = {
 
 export type Compare<T> = (oldValue: T | undefined, newValue: T | undefined) => boolean;
 
+export type UninitializedStatus<T> = {
+  type: 'uninitialized';
+  promise: Promise<T> | undefined;
+  abortRequest: boolean;
+};
+
 export type PendingStatus<T> = {
   type: 'pending';
   promise: Promise<T>;
@@ -88,3 +94,7 @@ export const FiddichStoreContext = createContext<Store | null>(null);
 export const globalAtomEffectMap = new Map<string, AtomEffect<any>>();
 
 export const globalStoreMap = new Map<string, Store>();
+
+export const getOldValue = <T>(instance: FiddichStateInstance<T>) => {
+  return instance.status.type === 'stable' ? instance.status.value : instance.status.type === 'uninitialized' ? undefined : instance.status.oldValue;
+};

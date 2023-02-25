@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Atom, AtomFamily } from '../atom';
-import { FiddichState, FiddichStateInstance } from '../core';
+import { FiddichState, FiddichStateInstance } from '../share';
 import { Selector, SelectorFamily } from '../selector';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useRerender } from './useRerender';
@@ -25,17 +25,17 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, with
   }
 };
 
-type SelectorValueOption = {
+export type SelectorValueOption = {
   withTransition?: boolean;
   place?: StorePlaceTypeHookContext;
 };
 
-type AtomValueOption<T> = SelectorValueOption & {
+export type AtomValueOption<T> = SelectorValueOption & {
   initialValue?: T;
 };
 
-type LimitedSelectorValueOption = Omit<SelectorValueOption, 'place'>;
-type LimitedAtomValueOption<T> = Omit<AtomValueOption<T>, 'place'>;
+export type LimitedSelectorValueOption = Omit<SelectorValueOption, 'place'>;
+export type LimitedAtomValueOption<T> = Omit<AtomValueOption<T>, 'place'>;
 
 export function useValue<T>(state: Atom<T> | AtomFamily<T, any>, option?: AtomValueOption<T>): T;
 export function useValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?: SelectorValueOption): T;

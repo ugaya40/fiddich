@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { ComponentType, FC, ReactNode, Suspense, useEffect, useRef } from "react";
-import { FiddichStore, FiddichStoreContext, globalStoreMap } from "../core";
+import { FiddichStore, FiddichStoreContext, globalStoreMap } from "../share";
 import { SelectorInstance } from "../selector";
 
 export const FiddichRoot: FC<{children?: ReactNode, name?: string}> = (props) => {

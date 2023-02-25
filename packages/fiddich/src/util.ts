@@ -1,4 +1,4 @@
-import { globalStoreMap, Store } from './core';
+import { globalStoreMap, Store } from './share';
 
 export function getNamedStore(name: string): Store {
   const store = globalStoreMap.get(name);
