@@ -1,15 +1,16 @@
 import {
   FiddichStateInstance,
   globalAtomEffectMap,
-  Store,
   PendingStatus,
   Compare,
   PendingEvent,
   ChangedEvent,
   ChangedByPromiseEvent,
   StableStatus,
+  StorePlaceType,
 } from './core';
-import { TypedEvent } from './util/TypedEvent';
+import { EventPublisher, eventPublisher } from './event';
+import { getNamedStore, getRootStore } from './util';
 
 type ChangeEffectArg<T> = {
   newValue: T;
@@ -101,42 +102,56 @@ export type AtomInstance<T = unknown> = {
   state: Atom<T> | AtomFamily<T, any>;
   storeId: string;
   status: StableStatus<T> | PendingStatus<T>;
-  event: TypedEvent<PendingEvent<T> | ChangedEvent<T> | ChangedByPromiseEvent<T>>;
+  event: EventPublisher<PendingEvent<T> | ChangedEvent<T> | ChangedByPromiseEvent<T>>;
 };
 
-export const getAtomInstanceInternal = <T = unknown>(
-  atom: Atom<T> | AtomFamily<T, any>,
-  nearestStore: Store,
-  ref_storeTree: Store[],
-  forceNearest: boolean
-): AtomInstance<T> | null => {
-  ref_storeTree.push(nearestStore);
-  const nearestStoreResult = nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
-  if (nearestStoreResult != null) return nearestStoreResult;
-  if (!forceNearest && 'parent' in nearestStore) return getAtomInstanceInternal(atom, nearestStore.parent, ref_storeTree, forceNearest);
-  ref_storeTree.splice(0, ref_storeTree.length);
-  return null;
+const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>, storePlaceType: StorePlaceType): AtomInstance<T> | undefined => {
+  if (storePlaceType.type === 'named') {
+    const store = getNamedStore(storePlaceType.name);
+    return store.map.get(atom.key) as AtomInstance<T> | undefined;
+  } else if (storePlaceType.type === 'nearest') {
+    const nearestStoreResult = storePlaceType.nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
+    if (nearestStoreResult != null) {
+      return nearestStoreResult;
+    }
+  } else if (storePlaceType.type === 'normal') {
+    const nearestStoreResult = storePlaceType.nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
+    if (nearestStoreResult != null) {
+      return nearestStoreResult;
+    }
+    if ('parent' in storePlaceType.nearestStore) {
+      return getAtomInstanceInternal(atom, { type: storePlaceType.type, nearestStore: storePlaceType.nearestStore.parent });
+    }
+  } else if (storePlaceType.type === 'root') {
+    return getRootStore(storePlaceType.nearestStore).map.get(atom.key) as AtomInstance<T> | undefined;
+  }
+
+  return undefined;
 };
 
 export const getAtomInstance = <T = unknown>(
   atom: Atom<T> | AtomFamily<T, any>,
-  nearestStore: Store,
-  forceNearest: boolean,
+  storePlaceType: StorePlaceType,
   initialValue?: AtomValueArg<T>
-): { instance: AtomInstance<T>; storeTree: Store[] } => {
-  const ref_storeTree: Store[] = [];
-  const atomInstanceFromStore = getAtomInstanceInternal(atom, nearestStore, ref_storeTree, forceNearest);
+): AtomInstance<T> => {
+  const atomInstanceFromStore = getAtomInstanceInternal(atom, storePlaceType);
 
-  if (atomInstanceFromStore != null) return { instance: atomInstanceFromStore, storeTree: ref_storeTree };
+  if (atomInstanceFromStore != null) return atomInstanceFromStore;
 
   const decidedInitialValue = initialValue ?? atom.default;
   const parameter = atom.type === 'atomFamily' ? atom.parameter : undefined;
   const actualInitialValue = typeof decidedInitialValue === 'function' ? (decidedInitialValue as Function)(parameter) : decidedInitialValue;
+  const targetStore =
+    storePlaceType.type === 'named'
+      ? getNamedStore(storePlaceType.name)
+      : storePlaceType.type === 'root'
+      ? getRootStore(storePlaceType.nearestStore)
+      : storePlaceType.nearestStore;
 
   const newAtomInstance: AtomInstance<T> = {
     state: atom,
-    event: new TypedEvent(),
-    storeId: nearestStore.id,
+    event: eventPublisher(),
+    storeId: targetStore.id,
     status:
       actualInitialValue instanceof Promise
         ? {
@@ -165,11 +180,8 @@ export const getAtomInstance = <T = unknown>(
     });
   }
 
-  nearestStore.map.set(newAtomInstance.state.key, newAtomInstance);
-
-  ref_storeTree.push(nearestStore);
-
-  return { instance: newAtomInstance, storeTree: ref_storeTree };
+  targetStore.map.set(newAtomInstance.state.key, newAtomInstance);
+  return newAtomInstance;
 };
 
 const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T | undefined, newValue: T, promise?: Promise<T>) => {

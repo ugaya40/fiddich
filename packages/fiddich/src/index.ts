@@ -6,8 +6,8 @@ export type { Selector, SelectorInstance } from './selector';
 export { FiddichRoot, wrapFiddichRoot } from './components/FiddichRoot';
 export { SubFiddichRoot, wrapSubFiddichRoot } from './components/SubFiddichRoot';
 
-export { useAtom, useNearestAtom } from './hooks/useAtom';
-export { useValue, useNearestValue } from './hooks/useValue';
-export { useSetAtom, useSetNearestAtom } from './hooks/useSetAtom';
+export { useAtom, useNearestAtom, useRootAtom, useNamedRootAtom } from './hooks/useAtom';
+export { useValue, useNearestValue, useRootValue, useNamedRootValue } from './hooks/useValue';
+export { useSetAtom, useSetNearestAtom, useSetRootAtom, useSetNamedAtom } from './hooks/useSetAtom';
 
 export type { FiddichState, FiddichStore, FiddichStateInstance } from './core';

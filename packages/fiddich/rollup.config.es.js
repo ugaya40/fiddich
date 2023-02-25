@@ -6,7 +6,7 @@ export default {
   output: {
     dir: "./dist",
     format: "es",
-    sourcemap: false
+    sourcemap: true
   },
   external: [
     'react',

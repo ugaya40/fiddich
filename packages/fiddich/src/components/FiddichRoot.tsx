@@ -1,13 +1,16 @@
 import { nanoid } from "nanoid";
 import { ComponentType, FC, ReactNode, Suspense, useEffect, useRef } from "react";
-import { FiddichStore, FiddichStoreContext } from "../core";
+import { FiddichStore, FiddichStoreContext, globalStoreMap } from "../core";
 import { SelectorInstance } from "../selector";
 
-export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
-  const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map()});
+export const FiddichRoot: FC<{children?: ReactNode, name?: string}> = (props) => {
+  const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map(), name: props.name});
 
   useEffect(() => {
+    if(props.name != null) globalStoreMap.set(props.name, storeRef.current);
+
     return () => {
+      if(props.name != null) globalStoreMap.delete(props.name);
       storeRef.current.map.forEach(value => {
         if(value.state.type === 'selector' || value.state.type === 'selectorFamily') {
           (value as SelectorInstance<unknown>).stateListeners.forEach(({listener}) => listener.dispose());

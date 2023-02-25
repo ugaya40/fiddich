@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { Atom, AtomFamily } from '../atom';
 import { FiddichState, FiddichStateInstance } from '../core';
-import { useInstance } from './useInstance';
+import { Selector, SelectorFamily } from '../selector';
+import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useRerender } from './useRerender';
 
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: boolean): T => {
@@ -23,24 +25,46 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, with
   }
 };
 
-export const useValue = <T>(
-  state: FiddichState<T>,
-  option?: {
-    initialValue?: T;
-    withTransition?: boolean;
-  }
-): T => {
-  const instance = useInstance(state, false, option?.initialValue);
-  return useValueInternal(instance, option?.withTransition);
+type SelectorValueOption = {
+  withTransition?: boolean;
+  place?: StorePlaceTypeHookContext;
 };
 
-export const useNearestValue = <T>(
-  state: FiddichState<T>,
-  option?: {
-    initialValue?: T;
-    withTransition?: boolean;
-  }
-): T => {
-  const instance = useInstance(state, true, option?.initialValue);
-  return useValueInternal(instance, option?.withTransition);
+type AtomValueOption<T> = SelectorValueOption & {
+  initialValue?: T;
 };
+
+type LimitedSelectorValueOption = Omit<SelectorValueOption, 'place'>;
+type LimitedAtomValueOption<T> = Omit<AtomValueOption<T>, 'place'>;
+
+export function useValue<T>(state: Atom<T> | AtomFamily<T, any>, option?: AtomValueOption<T>): T;
+export function useValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?: SelectorValueOption): T;
+export function useValue<T>(state: FiddichState<T>, option?: AtomValueOption<T>): T;
+export function useValue<T>(state: FiddichState<T>, option?: AtomValueOption<T>): T {
+  const instance = useInstance(state, option?.place ?? { type: 'normal' }, option?.initialValue);
+  return useValueInternal(instance, option?.withTransition);
+}
+
+export function useNearestValue<T>(state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
+export function useNearestValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?: LimitedSelectorValueOption): T;
+export function useNearestValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
+export function useNearestValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
+  const instance = useInstance(state, { type: 'nearest' }, option?.initialValue);
+  return useValueInternal(instance, option?.withTransition);
+}
+
+export function useRootValue<T>(state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
+export function useRootValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?: LimitedSelectorValueOption): T;
+export function useRootValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
+export function useRootValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
+  const instance = useInstance(state, { type: 'root' }, option?.initialValue);
+  return useValueInternal(instance, option?.withTransition);
+}
+
+export function useNamedRootValue<T>(rootName: string, state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
+export function useNamedRootValue<T>(rootName: string, state: Selector<T> | SelectorFamily<T, any>, option?: LimitedSelectorValueOption): T;
+export function useNamedRootValue<T>(rootName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
+export function useNamedRootValue<T>(rootName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
+  const instance = useInstance(state, { type: 'named', name: rootName }, option?.initialValue);
+  return useValueInternal(instance, option?.withTransition);
+}

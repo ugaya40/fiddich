@@ -51,6 +51,7 @@ export type FiddichStateInstance<T = any> = AtomInstance<T> | SelectorInstance<T
 
 export type FiddichStore = {
   id: string;
+  name?: string;
   map: Map<string, FiddichStateInstance>;
 };
 
@@ -60,6 +61,30 @@ export type SubFiddichStore = FiddichStore & {
 
 export type Store = FiddichStore | SubFiddichStore;
 
+export type NormalStorePlaceType = {
+  type: 'normal';
+  nearestStore: Store;
+};
+
+export type NearestStorePlaceType = {
+  type: 'nearest';
+  nearestStore: Store;
+};
+
+export type RootStorePlaceType = {
+  type: 'root';
+  nearestStore: Store;
+};
+
+export type NamedStorePlaceType = {
+  type: 'named';
+  name: string;
+};
+
+export type StorePlaceType = NormalStorePlaceType | RootStorePlaceType | NearestStorePlaceType | NamedStorePlaceType;
+
 export const FiddichStoreContext = createContext<Store | null>(null);
 
 export const globalAtomEffectMap = new Map<string, AtomEffect<any>>();
+
+export const globalStoreMap = new Map<string, Store>();
