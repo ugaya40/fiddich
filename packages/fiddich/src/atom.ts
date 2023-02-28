@@ -1,29 +1,6 @@
-import {
-  FiddichStateInstance,
-  globalAtomEffectMap,
-  PendingStatus,
-  Compare,
-  PendingEvent,
-  ChangedEvent,
-  ChangedByPromiseEvent,
-  StableStatus,
-  StorePlaceType,
-  UninitializedStatus,
-  getOldValue,
-} from './share';
+import { PendingStatus, Compare, PendingEvent, ChangedEvent, ChangedByPromiseEvent, StableStatus, StorePlaceType, UninitializedStatus } from './share';
 import { EventPublisher, eventPublisher } from './event';
-import { getNamedStore, getRootStore } from './util';
-
-type ChangeEffectArg<T> = {
-  newValue: T;
-  oldValue: T | undefined;
-  stateInstance: FiddichStateInstance<T>;
-};
-
-export type AtomEffect<T> = {
-  onBeforeChange?: (arg: ChangeEffectArg<T>) => boolean;
-  onAfterChange?: (arg: ChangeEffectArg<T>) => void;
-};
+import { getNamedStore, getOldValue, getRootStore } from './util';
 
 type AtomValueArg<T> = T | Promise<T> | (() => T | Promise<T>);
 type AtomFamilyValueArg<T, P> = T | Promise<T> | ((arg: P) => T | Promise<T>);
@@ -37,26 +14,22 @@ export type Atom<T = unknown> = {
   type: 'atom';
   key: string;
   default: AtomValueArg<T>;
+  noSuspense?: boolean;
   compare?: Compare<T>;
 };
 
 type AtomArg<T> = {
   key: string;
   default: AtomValueArg<T>;
-  effect?: AtomEffect<T>;
+  noSuspense?: boolean;
   compare?: Compare<T>;
 };
 
 export const atom = <T>(arg: AtomArg<T>): Atom<T> => {
-  const { effect, ...other } = arg;
   const result: Atom<T> = {
-    ...other,
+    ...arg,
     type: 'atom',
   };
-
-  if (effect != null) {
-    globalAtomEffectMap.set(result.key, effect);
-  }
 
   return result;
 };
@@ -67,6 +40,7 @@ export type AtomFamily<T = unknown, P = any> = {
   baseKey: string;
   default: AtomFamilyValueArg<T, P>;
   parameter: P;
+  noSuspense?: boolean;
   compare?: Compare<T>;
 };
 
@@ -74,16 +48,16 @@ type AtomFamilyArg<T, P> = {
   key: string;
   default: AtomFamilyValueArg<T, P>;
   stringfy?: (arg: P) => string;
-  effect?: AtomEffect<T>;
+  noSuspense?: boolean;
   compare?: Compare<T>;
 };
 
 type AtomFamilyFunction<T = any, P = any> = (arg: P) => AtomFamily<T, P>;
 
 export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T, P> => {
-  const { key: baseKey, stringfy, effect, ...other } = arg;
+  const { key: baseKey, stringfy, ...other } = arg;
   const result: AtomFamilyFunction<T, P> = parameter => {
-    const key = `${baseKey}-familyKey-${stringfy != null ? stringfy(parameter) : `${parameter}`}`;
+    const key = `${baseKey}-familyKey-${stringfy != null ? stringfy(parameter) : `${JSON.stringify(parameter)}`}`;
     return {
       ...other,
       parameter,
@@ -92,10 +66,6 @@ export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T
       type: 'atomFamily',
     };
   };
-
-  if (effect != null) {
-    globalAtomEffectMap.set(baseKey, effect);
-  }
 
   return result;
 };
@@ -111,12 +81,12 @@ const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>
   if (storePlaceType.type === 'named') {
     const store = getNamedStore(storePlaceType.name);
     return store.map.get(atom.key) as AtomInstance<T> | undefined;
-  } else if (storePlaceType.type === 'nearest') {
+  } else if (storePlaceType.type === 'normal') {
     const nearestStoreResult = storePlaceType.nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
     if (nearestStoreResult != null) {
       return nearestStoreResult;
     }
-  } else if (storePlaceType.type === 'normal') {
+  } else if (storePlaceType.type === 'hierarchical') {
     const nearestStoreResult = storePlaceType.nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
     if (nearestStoreResult != null) {
       return nearestStoreResult;
@@ -183,13 +153,20 @@ export const getAtomInstance = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>,
 
 const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T | undefined, newValue: T, promise?: Promise<T>) => {
   const compareFunction: Compare<T> = atomInstance.state.compare ?? ((o, n) => o === n);
-  if (compareFunction(oldValue, newValue)) return;
-
-  const effect = globalAtomEffectMap.get(atomInstance.state.type === 'atomFamily' ? atomInstance.state.baseKey : atomInstance.state.key) as AtomEffect<T>;
-
-  if (effect?.onBeforeChange != null) {
-    const beforeChangeResult = effect.onBeforeChange({ newValue, oldValue, stateInstance: atomInstance });
-    if (!beforeChangeResult) return;
+  if (promise == null && compareFunction(oldValue, newValue)) {
+    if (atomInstance.status.type === 'pending') {
+      //For when you interrupt a change in a promise and set a value that is a non-promise.
+      atomInstance.status = {
+        type: 'stable',
+        value: newValue,
+      };
+      atomInstance.event.emit({
+        type: 'change',
+        newValue,
+        oldValue,
+      });
+    }
+    return;
   }
 
   atomInstance.status = {
@@ -197,10 +174,8 @@ const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T |
     value: newValue,
   };
 
-  effect?.onAfterChange?.({ newValue, oldValue, stateInstance: atomInstance });
-
   atomInstance.event.emit(
-    promise != null
+    promise != null && !atomInstance.state.noSuspense
       ? {
           type: 'change by promise',
           newValue,
@@ -235,17 +210,19 @@ export const changeAtomValue = <T = unknown, P = unknown>(atomInstance: AtomInst
   const newValue = getNewValue(atomInstance, valueOrUpdater, oldValue);
 
   if (newValue instanceof Promise) {
-    atomInstance.status = {
-      type: 'pending',
-      oldValue,
-      abortRequest: false,
-      promise: newValue,
-    };
+    if (!atomInstance.state.noSuspense) {
+      atomInstance.status = {
+        type: 'pending',
+        oldValue,
+        abortRequest: false,
+        promise: newValue,
+      };
 
-    atomInstance.event.emit({
-      type: 'pending',
-      promise: newValue,
-    });
+      atomInstance.event.emit({
+        type: 'pending',
+        promise: newValue,
+      });
+    }
 
     new Promise<void>(async resolve => {
       const status = atomInstance.status as PendingStatus<T>;

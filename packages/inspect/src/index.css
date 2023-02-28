@@ -1,0 +1,21 @@
+p {
+  margin: 0px
+}
+
+div {
+  padding: 4px
+}
+
+.simple-table {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  font-size: 0.9em;
+}
+
+.simple-table div{
+  padding: 0px 3px 0px 3px;
+}
+
+.simple-table .header {
+  text-align: end;
+}

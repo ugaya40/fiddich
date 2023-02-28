@@ -28,11 +28,11 @@ export function useSetAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: SetA
 
 type LimitedSetAtomOption<T> = Omit<SetAtomOption<T>, 'place'>;
 
-export function useSetNearestAtom<T>(atom: Atom<T>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
-export function useSetNearestAtom<T, P>(atom: AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomFamilySetterOrUpdater<T, P>;
-export function useSetNearestAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
-export function useSetNearestAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> {
-  const atomInstance = useAtomInstance(atom, { type: 'nearest' }, option?.initialValue);
+export function useSetHierarchicalAtom<T>(atom: Atom<T>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
+export function useSetHierarchicalAtom<T, P>(atom: AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomFamilySetterOrUpdater<T, P>;
+export function useSetHierarchicalAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P>;
+export function useSetHierarchicalAtom<T, P>(atom: Atom<T> | AtomFamily<T, P>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> | AtomFamilySetterOrUpdater<T, P> {
+  const atomInstance = useAtomInstance(atom, { type: 'hierarchical' }, option?.initialValue);
   return useSetAtomInternal(atomInstance);
 }
 

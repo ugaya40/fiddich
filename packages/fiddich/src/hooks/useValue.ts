@@ -5,18 +5,28 @@ import { Selector, SelectorFamily } from '../selector';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useRerender } from './useRerender';
 
-export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, withTransition?: boolean): T => {
-  const rerender = useRerender(withTransition);
+export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, noSuspense?: boolean): T => {
+  const rerender = useRerender();
+
+  const compare = stateInstance.state.compare ?? ((old: T | undefined, current: T) => old === current);
 
   useEffect(() => {
     const listener = stateInstance.event.addListener(event => {
-      if (event.type === 'pending' || event.type === 'pending for source' || event.type === 'change') {
-        rerender();
+      if (!noSuspense) {
+        if (event.type === 'pending' || event.type === 'pending for source' || event.type === 'change') {
+          rerender();
+        }
+      } else {
+        if (event.type === 'change by promise' || event.type === 'change') {
+          if (!compare(event.oldValue, event.newValue)) {
+            rerender();
+          }
+        }
       }
     });
 
     return () => listener.dispose();
-  }, [stateInstance.storeId]);
+  }, [stateInstance, stateInstance.storeId]);
 
   if (stateInstance.status.type === 'stable') {
     return stateInstance.status.value;
@@ -26,7 +36,7 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, with
 };
 
 export type SelectorValueOption = {
-  withTransition?: boolean;
+  noSuspense?: boolean;
   place?: StorePlaceTypeHookContext;
 };
 
@@ -42,15 +52,15 @@ export function useValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?
 export function useValue<T>(state: FiddichState<T>, option?: AtomValueOption<T>): T;
 export function useValue<T>(state: FiddichState<T>, option?: AtomValueOption<T>): T {
   const instance = useInstance(state, option?.place ?? { type: 'normal' }, option?.initialValue);
-  return useValueInternal(instance, option?.withTransition);
+  return useValueInternal(instance, option?.noSuspense);
 }
 
-export function useNearestValue<T>(state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
-export function useNearestValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?: LimitedSelectorValueOption): T;
-export function useNearestValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
-export function useNearestValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
-  const instance = useInstance(state, { type: 'nearest' }, option?.initialValue);
-  return useValueInternal(instance, option?.withTransition);
+export function useHierarchicalValue<T>(state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
+export function useHierarchicalValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?: LimitedSelectorValueOption): T;
+export function useHierarchicalValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
+export function useHierarchicalValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
+  const instance = useInstance(state, { type: 'hierarchical' }, option?.initialValue);
+  return useValueInternal(instance, option?.noSuspense);
 }
 
 export function useRootValue<T>(state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
@@ -58,7 +68,7 @@ export function useRootValue<T>(state: Selector<T> | SelectorFamily<T, any>, opt
 export function useRootValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
 export function useRootValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
   const instance = useInstance(state, { type: 'root' }, option?.initialValue);
-  return useValueInternal(instance, option?.withTransition);
+  return useValueInternal(instance, option?.noSuspense);
 }
 
 export function useNamedRootValue<T>(rootName: string, state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
@@ -66,5 +76,5 @@ export function useNamedRootValue<T>(rootName: string, state: Selector<T> | Sele
 export function useNamedRootValue<T>(rootName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
 export function useNamedRootValue<T>(rootName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
   const instance = useInstance(state, { type: 'named', name: rootName }, option?.initialValue);
-  return useValueInternal(instance, option?.withTransition);
+  return useValueInternal(instance, option?.noSuspense);
 }

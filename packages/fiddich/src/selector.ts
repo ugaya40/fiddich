@@ -13,13 +13,12 @@ import {
   StorePlaceType,
   NormalStorePlaceType,
   RootStorePlaceType,
-  NearestStorePlaceType,
   NamedStorePlaceType,
   UninitializedStatus,
-  getOldValue,
+  HierarchicalStorePlaceType,
 } from './share';
 import { Disposable, eventPublisher, EventPublisher } from './event';
-import { getNamedStore, getRootStore } from './util';
+import { getNamedStore, getOldValue, getRootStore } from './util';
 
 export type GetState = <TSource>(arg: FiddichState<TSource>) => TSource;
 export type GetStateAsync = <TSource>(arg: FiddichState<TSource>) => Promise<TSource>;
@@ -27,14 +26,14 @@ export type GetStateAsync = <TSource>(arg: FiddichState<TSource>) => Promise<TSo
 type AsyncSelectorGetArgsType = {
   get: GetStateAsync;
   snapshot: GetStateAsync;
-  nearest: { get: GetStateAsync; snapshot: GetStateAsync };
+  hierarchy: { get: GetStateAsync; snapshot: GetStateAsync };
   root: { get: GetStateAsync; snapshot: GetStateAsync };
   named: (name: string) => { get: GetStateAsync; snapshot: GetStateAsync };
 };
 type SyncSelectorGetArgsType = {
   get: GetState;
   snapshot: GetState;
-  nearest: { get: GetState; snapshot: GetState };
+  hierarchy: { get: GetState; snapshot: GetState };
   root: { get: GetState; snapshot: GetState };
   named: (name: string) => { get: GetState; snapshot: GetState };
 };
@@ -43,6 +42,7 @@ type SelectorBase<T = any> = {
   type: 'selector';
   key: string;
   compare?: Compare<T>;
+  noSuspense?: boolean;
 };
 
 export type SyncSelector<T> = SelectorBase<T> & {
@@ -58,6 +58,7 @@ export type Selector<T = any> = SyncSelector<T> | AsyncSelector<T>;
 type SelectorArg<T> = {
   key: string;
   compare?: Compare<T>;
+  noSuspense?: boolean;
 } & (
   | {
       getAsync: (arg: AsyncSelectorGetArgsType) => Promise<T>;
@@ -80,6 +81,7 @@ type SelectorFamilyBase<T = unknown, P = any> = {
   baseKey: string;
   parameter: P;
   compare?: Compare<T>;
+  noSuspense?: boolean;
 };
 
 type AsyncSelectorFamilyGetArgsType<P> = AsyncSelectorGetArgsType & { parameter: P };
@@ -99,6 +101,7 @@ type SelectorFamilyArg<T, P> = {
   key: string;
   stringfy?: (arg: P) => string;
   compare?: Compare<T>;
+  noSuspense?: boolean;
 } & (
   | {
       getAsync: (arg: AsyncSelectorFamilyGetArgsType<P>) => Promise<T>;
@@ -138,12 +141,12 @@ const getSelectorInstanceInternal = <T = unknown>(selector: Selector<T> | Select
   if (storePlaceType.type === 'named') {
     const store = getNamedStore(storePlaceType.name);
     return store.map.get(selector.key) as SelectorInstance<T> | undefined;
-  } else if (storePlaceType.type === 'nearest') {
+  } else if (storePlaceType.type === 'normal') {
     const nearestStoreResult = storePlaceType.nearestStore.map.get(selector.key) as SelectorInstance<T> | undefined;
     if (nearestStoreResult != null) {
       return nearestStoreResult;
     }
-  } else if (storePlaceType.type === 'normal') {
+  } else if (storePlaceType.type === 'hierarchical') {
     const nearestStoreResult = storePlaceType.nearestStore.map.get(selector.key) as SelectorInstance<T> | undefined;
     if (nearestStoreResult != null) {
       return nearestStoreResult;
@@ -188,17 +191,17 @@ export const getSelectorInstance = <T>(selector: Selector<T> | SelectorFamily<T>
   if ('getAsync' in state) {
     const getterArg = asyncGetterArg(selectorInstance, storePlaceType);
 
-    (uninitializedStatus.promise = state.type === 'selectorFamily' ? state.getAsync({ ...getterArg, parameter: state.parameter }) : state.getAsync(getterArg)),
-      new Promise<void>(async resolve => {
-        const result = await uninitializedStatus.promise!;
-        if (!uninitializedStatus.abortRequest) {
-          selectorInstance.status = {
-            type: 'stable',
-            value: result,
-          };
-        }
-        resolve();
-      });
+    uninitializedStatus.promise = state.type === 'selectorFamily' ? state.getAsync({ ...getterArg, parameter: state.parameter }) : state.getAsync(getterArg);
+    new Promise<void>(async resolve => {
+      const result = await uninitializedStatus.promise!;
+      if (!uninitializedStatus.abortRequest) {
+        selectorInstance.status = {
+          type: 'stable',
+          value: result,
+        };
+      }
+      resolve();
+    });
   } else if ('get' in state) {
     try {
       const getterArg = syncGetterArg(selectorInstance, storePlaceType);
@@ -265,7 +268,6 @@ const getStateListenerkey = <T>(selectorInstance: SelectorInstance<T>, storePlac
 const buildGetAsyncFunction = <T>(selectorInstance: SelectorInstance<T>, storePlaceType: StorePlaceType): GetStateAsync => {
   const getAsyncFunction = async <TSource>(state: FiddichState<TSource>): Promise<TSource> => {
     const sourceInstance = getStateInstance(state, storePlaceType);
-    const compareFunction: Compare<T> = selectorInstance.state.compare ?? ((o, n) => o === n);
     const listenerKey = getStateListenerkey(selectorInstance, storePlaceType);
     const existingListener = selectorInstance.stateListeners.get(listenerKey);
     const getterArg = asyncGetterArg<T>(selectorInstance, storePlaceType);
@@ -293,16 +295,27 @@ const buildGetAsyncFunction = <T>(selectorInstance: SelectorInstance<T>, storePl
             abortRequest: false,
             promise: pendingPromise,
           };
-          selectorInstance.event.emit({ type: 'pending', promise: pendingPromise });
+
+          if (!selectorInstance.state.noSuspense) {
+            selectorInstance.event.emit({ type: 'pending', promise: pendingPromise });
+          }
+
+          //Save it because it may be overwritten by another pending status.
+          const currentStatus = selectorInstance.status;
 
           const newValue = await pendingPromise;
 
-          if (!compareFunction(oldValue, newValue) && !selectorInstance.status.abortRequest) {
+          if (!currentStatus.abortRequest) {
             selectorInstance.status = {
               type: 'stable',
               value: newValue,
             };
-            selectorInstance.event.emit({ type: 'change by promise', oldValue, newValue, promise: pendingPromise });
+
+            if (!selectorInstance.state.noSuspense) {
+              selectorInstance.event.emit({ type: 'change by promise', oldValue, newValue, promise: pendingPromise });
+            } else {
+              selectorInstance.event.emit({ type: 'change', oldValue, newValue });
+            }
           }
         }
       });
@@ -345,16 +358,35 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, storePlaceTy
             promise: event.promise,
           };
 
-          selectorInstance.event.emit({ type: 'pending for source', promise: event.promise });
+          if (!selectorInstance.state.noSuspense) {
+            selectorInstance.event.emit({ type: 'pending for source', promise: event.promise });
+          }
         } else if (event.type === 'change' || event.type === 'change by promise') {
           const newValue = state.type === 'selectorFamily' ? state.get({ ...getterArg, parameter: state.parameter }) : state.get(getterArg);
-          if (!compareFunction(oldValue, newValue)) {
-            selectorInstance.status = {
-              type: 'stable',
-              value: newValue,
-            };
-            selectorInstance.event.emit({ type: 'change', oldValue, newValue });
+
+          if (event.type === 'change') {
+            if (compareFunction(oldValue, newValue)) {
+              if (selectorInstance.status.type === 'pending') {
+                //For when you interrupt a change in a promise and set a value that is a non-promise.
+                selectorInstance.status = {
+                  type: 'stable',
+                  value: newValue,
+                };
+                selectorInstance.event.emit({
+                  type: 'change',
+                  newValue,
+                  oldValue,
+                });
+              }
+              return;
+            }
           }
+
+          selectorInstance.status = {
+            type: 'stable',
+            value: newValue,
+          };
+          selectorInstance.event.emit({ type: 'change', oldValue, newValue });
         }
       });
       selectorInstance.stateListeners.set(listenerKey, { instance: sourceInstance, listener });
@@ -374,7 +406,7 @@ function syncGetterArg<T>(selectorInstance: SelectorInstance<T>, storePlaceType:
   const nearestStore = storePlaceType.type === 'named' ? getNamedStore(storePlaceType.name) : storePlaceType.nearestStore;
   const normalStorePlace: NormalStorePlaceType = { type: 'normal', nearestStore };
   const rootStorePlace: RootStorePlaceType = { type: 'root', nearestStore };
-  const nearestStorePlace: NearestStorePlaceType = { type: 'nearest', nearestStore };
+  const hierarchicalStorePlace: HierarchicalStorePlaceType = { type: 'hierarchical', nearestStore };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
   return {
     get: buildGetFunction(selectorInstance, normalStorePlace),
@@ -383,9 +415,9 @@ function syncGetterArg<T>(selectorInstance: SelectorInstance<T>, storePlaceType:
       get: buildGetFunction(selectorInstance, rootStorePlace),
       snapshot: buildSnapshotFunction(rootStorePlace),
     },
-    nearest: {
-      get: buildGetFunction(selectorInstance, nearestStorePlace),
-      snapshot: buildSnapshotFunction(nearestStorePlace),
+    hierarchy: {
+      get: buildGetFunction(selectorInstance, hierarchicalStorePlace),
+      snapshot: buildSnapshotFunction(hierarchicalStorePlace),
     },
     named: (name: string) => ({
       get: buildGetFunction(selectorInstance, namedStorePlace(name)),
@@ -398,7 +430,7 @@ function asyncGetterArg<T>(selectorInstance: SelectorInstance<T>, storePlaceType
   const nearestStore = storePlaceType.type === 'named' ? getNamedStore(storePlaceType.name) : storePlaceType.nearestStore;
   const normalStorePlace: NormalStorePlaceType = { type: 'normal', nearestStore };
   const rootStorePlace: RootStorePlaceType = { type: 'root', nearestStore };
-  const nearestStorePlace: NearestStorePlaceType = { type: 'nearest', nearestStore };
+  const hierarchicalStorePlace: HierarchicalStorePlaceType = { type: 'hierarchical', nearestStore };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
   return {
     get: buildGetAsyncFunction(selectorInstance, normalStorePlace),
@@ -407,9 +439,9 @@ function asyncGetterArg<T>(selectorInstance: SelectorInstance<T>, storePlaceType
       get: buildGetAsyncFunction(selectorInstance, rootStorePlace),
       snapshot: buildSnapshotAsyncFunction(rootStorePlace),
     },
-    nearest: {
-      get: buildGetAsyncFunction(selectorInstance, nearestStorePlace),
-      snapshot: buildSnapshotAsyncFunction(nearestStorePlace),
+    hierarchy: {
+      get: buildGetAsyncFunction(selectorInstance, hierarchicalStorePlace),
+      snapshot: buildSnapshotAsyncFunction(hierarchicalStorePlace),
     },
     named: (name: string) => ({
       get: buildGetAsyncFunction(selectorInstance, namedStorePlace(name)),

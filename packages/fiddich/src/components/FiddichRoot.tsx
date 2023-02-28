@@ -5,12 +5,24 @@ import { SelectorInstance } from "../selector";
 
 export const FiddichRoot: FC<{children?: ReactNode, name?: string}> = (props) => {
   const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map(), name: props.name});
+  const nameRef = useRef<string | undefined>(undefined);
+
+  if(props.name !== nameRef.current) {
+    if(nameRef.current != null) {
+      globalStoreMap.delete(nameRef.current);
+    }
+    if(props.name != null) {
+      globalStoreMap.set(props.name, storeRef.current);
+    }
+
+    nameRef.current = props.name;
+  }
 
   useEffect(() => {
-    if(props.name != null) globalStoreMap.set(props.name, storeRef.current);
-
     return () => {
-      if(props.name != null) globalStoreMap.delete(props.name);
+      if(nameRef.current != null) {
+        globalStoreMap.delete(nameRef.current);
+      }
       storeRef.current.map.forEach(value => {
         if(value.state.type === 'selector' || value.state.type === 'selectorFamily') {
           (value as SelectorInstance<unknown>).stateListeners.forEach(({listener}) => listener.dispose());
@@ -21,9 +33,7 @@ export const FiddichRoot: FC<{children?: ReactNode, name?: string}> = (props) =>
 
   return (
     <FiddichStoreContext.Provider value={storeRef.current}>
-      <Suspense>
-        {props.children}
-      </Suspense>
+      {props.children}
     </FiddichStoreContext.Provider>
   )
 }

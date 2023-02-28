@@ -10,7 +10,7 @@ export type StorePlaceTypeHookContext =
       type: 'normal';
     }
   | {
-      type: 'nearest';
+      type: 'hierarchical';
     }
   | {
       type: 'root';

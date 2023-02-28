@@ -1,4 +1,4 @@
-import { globalStoreMap, Store } from './share';
+import { FiddichStateInstance, globalStoreMap, Store } from './share';
 
 export function getNamedStore(name: string): Store {
   const store = globalStoreMap.get(name);
@@ -13,3 +13,7 @@ export function getRootStore(store: Store): Store {
     return store;
   }
 }
+
+export const getOldValue = <T>(instance: FiddichStateInstance<T>) => {
+  return instance.status.type === 'stable' ? instance.status.value : instance.status.type === 'uninitialized' ? undefined : instance.status.oldValue;
+};

@@ -1,6 +1,6 @@
 import { atom, selector, useSetAtom, wrapFiddichRoot } from "fiddich";
-import { FC, Suspense } from "react";
-import { managedPromise, sleep, StateString } from "./share";
+import { FC } from "react";
+import { managedPromise, sleep, StateString, SuspenseWrapper } from "./share";
 
 let resolveRef: () => void | undefined; 
 
@@ -65,10 +65,18 @@ const PromiseStateInternal: FC = (props) => {
         <span>AtomState1 changes after 3s, SeletorState1 changes after 6s </span>
       </p>
       
-      <StateString state={AtomState1}/>
-      <StateString state={SelectorState1}/>
-      <StateString trace={true} state={AtomState1} withTransition={true}/>
-      <StateString state={SelectorState1} withTransition={true}/>
+      <SuspenseWrapper>
+        <StateString state={AtomState1}/>
+      </SuspenseWrapper>
+      <SuspenseWrapper>
+        <StateString state={SelectorState1}/>
+      </SuspenseWrapper>
+      <SuspenseWrapper>
+        <StateString state={AtomState1} option={{noSuspense: true}}/>
+      </SuspenseWrapper>
+      <SuspenseWrapper>
+        <StateString state={SelectorState1} option={{noSuspense: true}}/>
+      </SuspenseWrapper>
     </>
   );
 }

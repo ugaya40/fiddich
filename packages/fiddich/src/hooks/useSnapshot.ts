@@ -25,11 +25,11 @@ export function useSnapshot<T>(state: FiddichState<T>, option?: SnapshotOption):
   return useSnapshotInternal(instance);
 }
 
-export function useNearestSnapshot<T>(state: Atom<T> | AtomFamily<T, any>): T;
-export function useNearestSnapshot<T>(state: Selector<T> | SelectorFamily<T, any>): T;
-export function useNearestSnapshot<T>(state: FiddichState<T>): T;
-export function useNearestSnapshot<T>(state: FiddichState<T>): T {
-  const instance = useInstance(state, { type: 'nearest' });
+export function useHierarchicalSnapshot<T>(state: Atom<T> | AtomFamily<T, any>): T;
+export function useHierarchicalSnapshot<T>(state: Selector<T> | SelectorFamily<T, any>): T;
+export function useHierarchicalSnapshot<T>(state: FiddichState<T>): T;
+export function useHierarchicalSnapshot<T>(state: FiddichState<T>): T {
+  const instance = useInstance(state, { type: 'hierarchical' });
   return useSnapshotInternal(instance);
 }
 

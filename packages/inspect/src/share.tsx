@@ -1,51 +1,191 @@
-import { Atom, AtomFamily, FiddichState, useValue, useNearestValue, useSetAtom, useSetNearestAtom } from "fiddich";
-import { FC, Suspense, useRef } from "react";
+import { Disposable, eventPublisher, EventPublisher, Selector, useInstance } from "fiddich";
+import { Atom, FiddichState, useValue, useSetAtom, AtomValueOption, StorePlaceTypeHookContext, SetAtomOption, FiddichRoot, SubFiddichRoot } from "fiddich";
+import { ComponentProps, FC, Suspense, SuspenseProps, useRef, useState, useCallback, startTransition, useMemo, createContext, useContext, useEffect } from "react";
 
-/* eslint react-hooks/rules-of-hooks: 0 */
+type StateStringPropsType = {
+  state: FiddichState<any>, 
+  option?: AtomValueOption<any>,
+  onSuspense?: () => void
+}
 
-const StateStringInternal: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean, forceNearest?: boolean, trace?: boolean}> = (props) => {
-  const value = props.forceNearest ? 
-    useNearestValue(props.state, {initialValue: props.initialValue, withTransition: props.withTransition}) : 
-    useValue(props.state, {initialValue: props.initialValue, withTransition: props.withTransition});
-  const renderCountRef = useRef(0);
-  renderCountRef.current++;
-  if(props.trace) {
-    console.trace()
+const storePlaceString = (storePlace: StorePlaceTypeHookContext) => {
+  if(storePlace.type === 'normal') {
+    return 'normal';
+  } else if(storePlace.type === 'hierarchical') {
+    return 'hierarchical';
+  } else if(storePlace.type === 'root') {
+    return 'root';
+  } else {
+    return `"${storePlace.name}"`;
   }
-  return(
-    <div style={{backgroundColor: 'gray'}}>
-      <p style={{fontWeight: 'bold'}}>{props.withTransition ? `${props.state.key} value block (With Transition)` : `${props.state.key} value block`}</p>
-      {props.forceNearest && <p style={{fontWeight: 'bold'}}>{'(force Nearest Store)'}</p>}
-      <p>{`render-count: ${renderCountRef.current}`}</p>
-      <p>{value}</p>
-    </div>
-  )
 }
 
-export const StateString: FC<{state: FiddichState<any>, initialValue?: string, withTransition?: boolean, forceNearest?: boolean, trace?: boolean}> = (props) => {
-  return (
-    <Suspense fallback={<p>{`loading...${props.state.key}  ${props.withTransition ? 'with transition': ''}`}</p>}>
-      <StateStringInternal {...props}/>
-    </Suspense>
-  )
+type SuspenseWrapperContextType = {
+  event: EventPublisher<number>
+};
+
+const SuspenseWrapperContext = createContext<SuspenseWrapperContextType | undefined>(undefined);
+
+export const StateString: FC<StateStringPropsType> = (props) => {
+  const suspenseWrapperContext = useContext(SuspenseWrapperContext);
+  try{
+    const instance = useInstance(props.state, props.option?.place ?? {type: 'normal'})
+    
+    useEffect(() => {
+      instance.event.addListener(e => {
+        console.log(props.state.key);
+        console.log(e)
+      })
+    },[instance])
+
+    const value = useValue(props.state, props.option)
+    const storePlace = storePlaceString(props.option?.place ?? {type: 'normal'});
+    const noSuspense = props.option?.noSuspense ?? false;
+
+    const renderCountRef = useRef(0);
+    renderCountRef.current++;
+
+    return(
+      <div style={{backgroundColor: 'silver', border: '1px solid white'}}>
+        <p style={{fontWeight: 'bold'}}>{`${props.state.key} value block`}</p>
+        <div className="simple-table">
+          {
+            (props.state.type === 'selector' || props.state.type === 'selectorFamily') &&
+            <>
+              <div className="header"><span>selector getter :</span></div>
+              {'get' in (props.state as Selector) && <div><span>get</span></div>}
+              {'getAsync' in (props.state as Selector) && <div><span style={{color: 'green'}}>getAsync</span></div>}
+            </>
+          }
+          <div className="header"><span>store :</span></div>
+          <div><span style={{color: storePlace !== 'normal' ? 'green' : 'inherit'}}>{storePlace}</span></div>
+          <div className="header"><span>no-Suspense :</span></div>
+          <div><span  style={{color: noSuspense ? 'green' : 'inherit'}}>{`${noSuspense}`}</span></div>
+          <div className="header"><span>render-count :</span></div>
+          <div><span>{renderCountRef.current}</span></div>
+        </div>
+        <p style={{color: 'mediumblue'}}>{value}</p>
+      </div>
+    )
+  } catch(e) {
+    if(e instanceof Promise) {
+      suspenseWrapperContext!.event.emit(1);
+    }
+    throw e;
+  }
 }
 
-export const ChangeStateButton: FC<{state: Atom<any> | AtomFamily<any>, forceNearest?: boolean}> = (props) => {
-  const setValue = props.forceNearest ? 
-    useSetNearestAtom(props.state): 
-    useSetAtom(props.state);
+type ChangeStateButtonPropsType = {
+  state: Atom<any>, 
+  option?: SetAtomOption<any>
+}
+
+export const ChangeStateButton: FC<ChangeStateButtonPropsType> = (props) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const inputCandidate = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const inputCount = useRef(0);
+
+  const setValue = useSetAtom(props.state, props.option);
   const renderCountRef = useRef(0);
   renderCountRef.current++;
+
+  const storePlace = storePlaceString(props.option?.place ?? {type: 'normal'});
+
   return(
-    <div style={{backgroundColor: 'green'}}>
+    <div style={{backgroundColor: 'gold'}}>
       <p style={{fontWeight: 'bold'}}>{`${props.state.key} change button block`}</p>
-      {props.forceNearest && <p style={{fontWeight: 'bold'}}>{'(force Nearest Store)'}</p>}
-      <p>{`render-count: ${renderCountRef.current}`}</p>
-      <button onClick={() => setValue(Date.now().toString())}>change</button>
+      <div className="simple-table">
+        <div className="header"><span>store :</span></div>
+        <div><span style={{color: storePlace !== 'normal' ? 'green' : 'inherit'}}>{storePlace}</span></div>
+        <div className="header"><span>render-count :</span></div>
+        <div><span>{renderCountRef.current}</span></div>
+      </div>
+      <div style={{display: 'flex'}}>
+        <input defaultValue={inputCandidate[0]} ref={inputRef} type="text" width='100px'/>
+        <button onClick={() => {
+          setValue(inputRef.current!.value);
+          inputCount.current++;
+          inputRef.current!.value = inputCandidate[inputCount.current % 7];
+        }}>change</button>
+      </div>
     </div>
   )
 }
 
+export const FiddichRootWrapper: FC<ComponentProps<typeof FiddichRoot> & {bgcolor?: string, color?: string}> = (props) => {
+  const {children,bgcolor,color, ...other} = props;
+  return (
+    <FiddichRoot {...other}>
+      <div style={{backgroundColor: bgcolor ?? 'whitesmoke'}}>
+        <p style={{color: color ?? 'inherit'}}>
+          <span style={{fontWeight: 'bold'}}>FiddichRoot</span>
+          {props.name != null && <span>{`(${props.name})`}</span>}
+        </p>
+        <div style={{padding: '10px'}}>
+          {props.children}
+        </div>
+      </div>
+    </FiddichRoot>
+  )
+}
+
+export const SubFiddichRootWrapper: FC<ComponentProps<typeof SubFiddichRoot> & {bgcolor?: string, color?: string}> = (props) => {
+  const {children,bgcolor,color, ...other} = props;
+  return (
+    <SubFiddichRoot {...other}>
+      <div style={{backgroundColor: bgcolor ?? 'whitesmoke'}}>
+        <p style={{color: color ?? 'inherit'}}>
+          <span style={{fontWeight: 'bold'}}>SubFiddichRoot</span>
+          {props.name != null && <span>{`(${props.name})`}</span>}
+        </p>
+        <div style={{padding: '10px'}}>
+          {props.children}
+        </div>
+      </div>
+    </SubFiddichRoot>
+  )
+}
+
+const SuspenseCount = () => {
+  const context = useContext(SuspenseWrapperContext);
+  const [count, setCount] = useState(0);
+  const listenerRef = useRef<Disposable | null>(null);
+  useMemo(() => {
+    listenerRef.current = context!.event.addListener(() => {
+      setTimeout(() => setCount(old => old + 1),0);
+    });
+  },[])
+  useEffect(() => {
+    return () => listenerRef.current?.dispose();
+  },[]);
+
+  return <>{`suspense-count : ${count}`}</>
+}
+
+export const SuspenseWrapper: FC<SuspenseProps> = (props) => {
+  const contextValue: SuspenseWrapperContextType = useMemo(() => {
+    const pub = eventPublisher<number>();
+    return {
+      event: pub,
+    }
+  },[]);
+  return (
+    <SuspenseWrapperContext.Provider value={contextValue}>
+      <div style={{backgroundColor: 'gainsboro', border: '1px solid white'}}>
+        <p>
+          <span style={{fontWeight: 'bold'}}>Suspense</span>
+          <span style={{marginLeft: '10px'}}>{<SuspenseCount/>}</span>
+        </p>
+        <Suspense fallback={props.fallback ?? <p>loading...</p>}>
+          <div style={{padding: '5px'}}>
+            {props.children}
+          </div>
+        </Suspense>
+      </div>
+    </SuspenseWrapperContext.Provider>
+  )
+}
 export const sleep = (ms: number) => new Promise(r => setTimeout(r,ms));
 
 export function managedPromise<T>(value: T) {

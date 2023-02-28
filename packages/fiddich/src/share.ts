@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { Atom, AtomEffect, AtomFamily, AtomInstance } from './atom';
+import { Atom, AtomFamily, AtomInstance } from './atom';
 import { Selector, SelectorFamily, SelectorInstance } from './selector';
 
 export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T> | SelectorFamily<T>;
@@ -27,7 +27,7 @@ export type ChangedByPromiseEvent<T = any> = {
   newValue: T;
 };
 
-export type Compare<T> = (oldValue: T | undefined, newValue: T | undefined) => boolean;
+export type Compare<T> = (oldValue: T | undefined, newValue: T) => boolean;
 
 export type UninitializedStatus<T> = {
   type: 'uninitialized';
@@ -72,8 +72,8 @@ export type NormalStorePlaceType = {
   nearestStore: Store;
 };
 
-export type NearestStorePlaceType = {
-  type: 'nearest';
+export type HierarchicalStorePlaceType = {
+  type: 'hierarchical';
   nearestStore: Store;
 };
 
@@ -87,14 +87,8 @@ export type NamedStorePlaceType = {
   name: string;
 };
 
-export type StorePlaceType = NormalStorePlaceType | RootStorePlaceType | NearestStorePlaceType | NamedStorePlaceType;
+export type StorePlaceType = NormalStorePlaceType | RootStorePlaceType | HierarchicalStorePlaceType | NamedStorePlaceType;
 
 export const FiddichStoreContext = createContext<Store | null>(null);
 
-export const globalAtomEffectMap = new Map<string, AtomEffect<any>>();
-
 export const globalStoreMap = new Map<string, Store>();
-
-export const getOldValue = <T>(instance: FiddichStateInstance<T>) => {
-  return instance.status.type === 'stable' ? instance.status.value : instance.status.type === 'uninitialized' ? undefined : instance.status.oldValue;
-};
