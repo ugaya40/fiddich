@@ -1,11 +1,11 @@
-import { Disposable, eventPublisher, EventPublisher, Selector, useInstance } from "fiddich";
+import { Disposable, eventPublisher, EventPublisher, Selector } from "fiddich";
+import { useInstance } from "fiddich";
 import { Atom, FiddichState, useValue, useSetAtom, AtomValueOption, StorePlaceTypeHookContext, SetAtomOption, FiddichRoot, SubFiddichRoot } from "fiddich";
-import { ComponentProps, FC, Suspense, SuspenseProps, useRef, useState, useCallback, startTransition, useMemo, createContext, useContext, useEffect } from "react";
+import { ComponentProps, FC, Suspense, SuspenseProps, useRef, useState, useMemo, createContext, useContext, useEffect, Component, ErrorInfo, ReactNode, useCallback } from "react";
 
 type StateStringPropsType = {
   state: FiddichState<any>, 
   option?: AtomValueOption<any>,
-  onSuspense?: () => void
 }
 
 const storePlaceString = (storePlace: StorePlaceTypeHookContext) => {
@@ -28,19 +28,13 @@ const SuspenseWrapperContext = createContext<SuspenseWrapperContextType | undefi
 
 export const StateString: FC<StateStringPropsType> = (props) => {
   const suspenseWrapperContext = useContext(SuspenseWrapperContext);
-  try{
-    const instance = useInstance(props.state, props.option?.place ?? {type: 'normal'})
-    
-    useEffect(() => {
-      instance.event.addListener(e => {
-        console.log(props.state.key);
-        console.log(e)
-      })
-    },[instance])
-
+  try {
     const value = useValue(props.state, props.option)
     const storePlace = storePlaceString(props.option?.place ?? {type: 'normal'});
     const noSuspense = props.option?.noSuspense ?? false;
+
+    const instance = useInstance(props.state, props.option?.place ?? {type: 'normal'});
+    instance.event.addListener(e => console.log(e))
 
     const renderCountRef = useRef(0);
     renderCountRef.current++;
@@ -53,13 +47,15 @@ export const StateString: FC<StateStringPropsType> = (props) => {
             (props.state.type === 'selector' || props.state.type === 'selectorFamily') &&
             <>
               <div className="header"><span>selector getter :</span></div>
-              {'get' in (props.state as Selector) && <div><span>get</span></div>}
-              {'getAsync' in (props.state as Selector) && <div><span style={{color: 'green'}}>getAsync</span></div>}
+              {'get' in (props.state as Selector) && <div><span style={{color: 'green'}}>get</span></div>}
+              {'getAsync' in (props.state as Selector) && <div><span>getAsync</span></div>}
             </>
           }
+          <div className="header"><span>state-no-suspense :</span></div>
+          <div><span style={{color: props.state.noSuspense ? 'green' : 'inherit'}}>{`${props.state.noSuspense ?? false}`}</span></div>
           <div className="header"><span>store :</span></div>
           <div><span style={{color: storePlace !== 'normal' ? 'green' : 'inherit'}}>{storePlace}</span></div>
-          <div className="header"><span>no-Suspense :</span></div>
+          <div className="header"><span>no-suspense :</span></div>
           <div><span  style={{color: noSuspense ? 'green' : 'inherit'}}>{`${noSuspense}`}</span></div>
           <div className="header"><span>render-count :</span></div>
           <div><span>{renderCountRef.current}</span></div>
@@ -69,7 +65,7 @@ export const StateString: FC<StateStringPropsType> = (props) => {
     )
   } catch(e) {
     if(e instanceof Promise) {
-      suspenseWrapperContext!.event.emit(1);
+      suspenseWrapperContext?.event?.emit(1);
     }
     throw e;
   }
@@ -80,13 +76,15 @@ type ChangeStateButtonPropsType = {
   option?: SetAtomOption<any>
 }
 
+const inputCandidate = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 export const ChangeStateButton: FC<ChangeStateButtonPropsType> = (props) => {
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const inputCandidate = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const promiseInputRef = useRef<HTMLInputElement>(null);
+  const sleepMsRef = useRef<HTMLInputElement>(null);
   const inputCount = useRef(0);
 
-  const setValue = useSetAtom(props.state, props.option);
+  const setAtom = useSetAtom(props.state, props.option);
   const renderCountRef = useRef(0);
   renderCountRef.current++;
 
@@ -101,13 +99,34 @@ export const ChangeStateButton: FC<ChangeStateButtonPropsType> = (props) => {
         <div className="header"><span>render-count :</span></div>
         <div><span>{renderCountRef.current}</span></div>
       </div>
-      <div style={{display: 'flex'}}>
-        <input defaultValue={inputCandidate[0]} ref={inputRef} type="text" width='100px'/>
+      <div style={{display: 'flex', gap: '5px'}}>
+        <input defaultValue={inputCandidate[0]} ref={inputRef} type="text" style={{width: '100px'}}/>
         <button onClick={() => {
-          setValue(inputRef.current!.value);
+          setAtom(inputRef.current!.value);
+          //rerender suppression
           inputCount.current++;
           inputRef.current!.value = inputCandidate[inputCount.current % 7];
-        }}>change</button>
+          promiseInputRef.current!.value = inputCandidate[inputCount.current % 7];
+        }}>change value</button>
+      </div>
+      <div style={{display: 'flex', gap: '5px'}}>
+        <span>sleep:</span>
+          <input ref={sleepMsRef} type="number" defaultValue={1000} style={{width: '60px', textAlign: 'end'}}/>
+        <span>ms</span>
+        <input ref={promiseInputRef} defaultValue={inputCandidate[0]} type="text" style={{width: '100px'}}/>
+        <button onClick={() => {
+          setAtom(async () => {
+            const newValue = promiseInputRef.current!.value;
+            const ms = Number(sleepMsRef.current!.value);
+            await sleep(isNaN(ms) ? 1000 : ms);
+            return newValue
+          });
+          //rerender suppression
+          inputCount.current++;
+          inputRef.current!.value = inputCandidate[inputCount.current % 7];
+          promiseInputRef.current!.value = inputCandidate[inputCount.current % 7];
+        }}>change value by promise(change value after sleep)
+        </button>
       </div>
     </div>
   )
@@ -147,9 +166,28 @@ export const SubFiddichRootWrapper: FC<ComponentProps<typeof SubFiddichRoot> & {
   )
 }
 
+function useSafeState<T>(initialValue: T | (() => T)): [T, (arg: T | ((old: T) => T)) => void] {
+  const mountRef = useRef(false);
+  const [value,setValue] = useState(initialValue);
+  
+  useMemo(() => {
+    mountRef.current = true;
+  },[]);
+
+  const wrappedSetValue = useCallback((arg: T | ((old: T) => T) ) => {
+    if(mountRef.current) setValue(arg);
+  },[]);
+
+  useEffect(() => {
+    return () => {mountRef.current = false;}
+  },[])
+
+  return [value,wrappedSetValue];
+}
+
 const SuspenseCount = () => {
   const context = useContext(SuspenseWrapperContext);
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useSafeState(0);
   const listenerRef = useRef<Disposable | null>(null);
   useMemo(() => {
     listenerRef.current = context!.event.addListener(() => {
@@ -186,6 +224,35 @@ export const SuspenseWrapper: FC<SuspenseProps> = (props) => {
     </SuspenseWrapperContext.Provider>
   )
 }
+
+type ErrorBoundaryPropsType = {
+  fallback?: ReactNode, 
+  children: ReactNode
+}
+
+export class ErrorBoundary extends Component<ErrorBoundaryPropsType, { hasError: boolean }> {
+  constructor(props: ErrorBoundaryPropsType) {
+    super(props);
+    this.state = {
+      hasError: false,
+    };
+  }
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <>{this.props.fallback ?? <p>error</p>}</>;
+    }
+    return <>{this.props.children}</>;
+  }
+}
+
 export const sleep = (ms: number) => new Promise(r => setTimeout(r,ms));
 
 export function managedPromise<T>(value: T) {

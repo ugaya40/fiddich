@@ -9,8 +9,7 @@ const AtomState1 = atom({
 
 const SelectorState1 = selector({
   key: 'SelectorState1',
-  noSuspense: true,
-  getAsync :  async ({get}) => {
+  getAsync:  async({get}) => {
     const atom1 = await get(AtomState1);
     return `selector1 - ${atom1}`
   }
@@ -18,8 +17,9 @@ const SelectorState1 = selector({
 
 const SelectorState2 = selector({
   key: 'SelectorState2',
+  noSuspense: true,
   getAsync: async ({get}) => {
-    await sleep(1000)
+    await sleep(2000)
     const selector1 = await get(SelectorState1);
     return `selector2 - ${selector1}`
   }
@@ -27,7 +27,6 @@ const SelectorState2 = selector({
 
 const SelectorState3 = selector({
   key: 'SelectorState3',
-  noSuspense: true,
   get: ({get}) => {
     const selector2 = get(SelectorState2);
     return `selector3 - ${selector2}`

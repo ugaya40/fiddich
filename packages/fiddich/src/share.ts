@@ -27,6 +27,11 @@ export type ChangedByPromiseEvent<T = any> = {
   newValue: T;
 };
 
+export type ErrorEvent = {
+  type: 'error';
+  error: unknown;
+};
+
 export type Compare<T> = (oldValue: T | undefined, newValue: T) => boolean;
 
 export type UninitializedStatus<T> = {
@@ -51,6 +56,11 @@ export type PendingForSourceStatus<T> = {
 export type StableStatus<T> = {
   type: 'stable';
   value: T;
+};
+
+export type ErrorStatus = {
+  type: 'error';
+  error: unknown;
 };
 
 export type FiddichStateInstance<T = any> = AtomInstance<T> | SelectorInstance<T>;

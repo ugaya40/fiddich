@@ -1,4 +1,4 @@
-import { PendingStatus, Compare, PendingEvent, ChangedEvent, ChangedByPromiseEvent, StableStatus, StorePlaceType, UninitializedStatus } from './share';
+import { PendingStatus, Compare, PendingEvent, ChangedEvent, ChangedByPromiseEvent, StableStatus, StorePlaceType, UninitializedStatus, ErrorStatus, ErrorEvent } from './share';
 import { EventPublisher, eventPublisher } from './event';
 import { getNamedStore, getOldValue, getRootStore } from './util';
 
@@ -160,11 +160,6 @@ const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T |
         type: 'stable',
         value: newValue,
       };
-      atomInstance.event.emit({
-        type: 'change',
-        newValue,
-        oldValue,
-      });
     }
     return;
   }

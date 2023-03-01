@@ -16,6 +16,8 @@ import {
   NamedStorePlaceType,
   UninitializedStatus,
   HierarchicalStorePlaceType,
+  ErrorStatus,
+  ErrorEvent,
 } from './share';
 import { Disposable, eventPublisher, EventPublisher } from './event';
 import { getNamedStore, getOldValue, getRootStore } from './util';
@@ -203,21 +205,14 @@ export const getSelectorInstance = <T>(selector: Selector<T> | SelectorFamily<T>
       resolve();
     });
   } else if ('get' in state) {
-    try {
-      const getterArg = syncGetterArg(selectorInstance, storePlaceType);
+    const getterArg = syncGetterArg(selectorInstance, storePlaceType);
 
-      const value = state.type === 'selectorFamily' ? state.get({ ...getterArg, parameter: state.parameter }) : state.get(getterArg);
-      const stableStatus: StableStatus<T> = {
-        type: 'stable',
-        value,
-      };
-      selectorInstance.status = stableStatus;
-    } catch (e) {
-      if (e instanceof Promise) {
-        selectorInstance.stateListeners.forEach(arg => arg.listener.dispose());
-      }
-      throw e;
-    }
+    const value = state.type === 'selectorFamily' ? state.get({ ...getterArg, parameter: state.parameter }) : state.get(getterArg);
+    const stableStatus: StableStatus<T> = {
+      type: 'stable',
+      value,
+    };
+    selectorInstance.status = stableStatus;
   }
   targetStore.map.set(selectorInstance.state.key, selectorInstance);
 
@@ -372,11 +367,6 @@ const buildGetFunction = <T>(selectorInstance: SelectorInstance<T>, storePlaceTy
                   type: 'stable',
                   value: newValue,
                 };
-                selectorInstance.event.emit({
-                  type: 'change',
-                  newValue,
-                  oldValue,
-                });
               }
               return;
             }
