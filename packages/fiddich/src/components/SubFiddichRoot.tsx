@@ -1,39 +1,24 @@
-import { nanoid } from "nanoid";
 import { ComponentType, FC, ReactNode, useContext, useEffect, useRef } from "react";
-import { FiddichStoreContext, globalStoreMap, SubFiddichStore } from "../share";
+import type { SubFiddichStore } from "../shareTypes";
 import { SelectorInstance } from "../selector";
 import { useRerender } from "../hooks/useRerender";
+import { generateRandomKey } from "../util/util";
+import { FiddichStoreContext } from "../util/const";
 
-export const SubFiddichRoot: FC<{children?: ReactNode, name?: string}> = (props) => {
+export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
 
   const parent = useContext(FiddichStoreContext);
   if(parent == null) throw new Error('SubFiddichRoot can only be used inside FiddichRoot.');
 
   const rerender = useRerender();
-  const storeRef = useRef<SubFiddichStore>({id: nanoid(), map: new Map(), parent, name: props.name});
+  const storeRef = useRef<SubFiddichStore>({id: generateRandomKey(), map: new Map(), parent});
   if(storeRef.current.parent.id !== parent.id) {
     storeRef.current.parent = parent;
     rerender();
   }
 
-  const nameRef = useRef<string | undefined>(undefined);
-
-  if(props.name !== nameRef.current) {
-    if(nameRef.current != null) {
-      globalStoreMap.delete(nameRef.current);
-    }
-    if(props.name != null) {
-      globalStoreMap.set(props.name, storeRef.current);
-    }
-
-    nameRef.current = props.name;
-  }
-
   useEffect(() => {
     return () => {
-      if(nameRef.current != null) {
-        globalStoreMap.delete(nameRef.current);
-      }
       storeRef.current.map.forEach(value => {
         if(value.state.type === 'selector') {
           (value as SelectorInstance<unknown>).stateListeners.forEach(({listener}) => listener.dispose());

@@ -1,5 +1,5 @@
 export { atom, atomFamily } from './atom';
-export type { Atom, AtomFamily, AtomInstance, AtomSetterOrUpdater, AtomFamilySetterOrUpdater } from './atom';
+export type { Atom, AtomFamily, AtomInstance, AtomSetterOrUpdater } from './atom';
 
 export { selector, selectorFamily } from './selector';
 export type { Selector, SelectorInstance } from './selector';
@@ -22,7 +22,7 @@ export { useSnapshot, useHierarchicalSnapshot, useRootSnapshot, useNamedRootSnap
 export type { StorePlaceTypeHookContext } from './hooks/useInstance';
 export { useInstance } from './hooks/useInstance';
 
-export type { Store, FiddichState, FiddichStore, FiddichStateInstance } from './share';
+export type { Store, FiddichState, FiddichStore, FiddichStateInstance } from './shareTypes';
 
-export type { EventPublisher, Disposable, Listener } from './event';
-export { eventPublisher } from './event';
+export type { EventPublisher, Disposable, Listener } from './util/event';
+export { eventPublisher } from './util/event';

@@ -1,28 +1,30 @@
-import { nanoid } from "nanoid";
-import { ComponentType, FC, ReactNode, Suspense, useEffect, useRef } from "react";
-import { FiddichStore, FiddichStoreContext, globalStoreMap } from "../share";
+import { ComponentType, FC, ReactNode, useEffect, useRef } from "react";
+import type { FiddichStore } from "../shareTypes";
 import { SelectorInstance } from "../selector";
+import { getOrAddNamedStore } from "../namedStore";
+import { useRerender } from "../hooks/useRerender";
+import { generateRandomKey } from "../util/util";
+import { FiddichStoreContext } from "../util/const";
 
 export const FiddichRoot: FC<{children?: ReactNode, name?: string}> = (props) => {
-  const storeRef = useRef<FiddichStore>({id: nanoid(), map: new Map(), name: props.name});
-  const nameRef = useRef<string | undefined>(undefined);
+  const storeRef = useRef<FiddichStore>(
+    props.name == null ?
+      {id: generateRandomKey(), map: new Map()} :
+      getOrAddNamedStore(props.name)
+  );
 
-  if(props.name !== nameRef.current) {
-    if(nameRef.current != null) {
-      globalStoreMap.delete(nameRef.current);
-    }
+  const rerender = useRerender();
+  if(storeRef.current.name !== props.name) {
     if(props.name != null) {
-      globalStoreMap.set(props.name, storeRef.current);
+      storeRef.current = getOrAddNamedStore(props.name);
+    } else {
+      storeRef.current = {id: generateRandomKey(), map: new Map()};
     }
-
-    nameRef.current = props.name;
+    rerender();
   }
 
   useEffect(() => {
     return () => {
-      if(nameRef.current != null) {
-        globalStoreMap.delete(nameRef.current);
-      }
       storeRef.current.map.forEach(value => {
         if(value.state.type === 'selector' || value.state.type === 'selectorFamily') {
           (value as SelectorInstance<unknown>).stateListeners.forEach(({listener}) => listener.dispose());

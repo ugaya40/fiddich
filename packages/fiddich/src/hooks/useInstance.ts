@@ -1,7 +1,8 @@
 import { useContext } from 'react';
-import { Atom, AtomFamily, AtomInstance, getAtomInstance } from '../atom';
-import { FiddichStoreContext, FiddichState, FiddichStateInstance } from '../share';
-import { getSelectorInstance, Selector, SelectorFamily, SelectorInstance } from '../selector';
+import { AsyncAtomValueArg, Atom, AtomFamily, AtomInstance, getOrAddAsyncAtomInstance, getOrAddSyncAtomInstance, SyncAtomValueArg } from '../atom';
+import type { FiddichState, FiddichStateInstance } from '../shareTypes';
+import { getOrAddAsyncSelectorInstance, getOrAddSyncSelectorInstance, Selector, SelectorFamily, SelectorInstance } from '../selector';
+import { FiddichStoreContext } from '../util/const';
 
 const noStoreErrorText = 'Component is not inside the FiddichRoot/SubFiddichRoot.';
 
@@ -20,20 +21,28 @@ export type StorePlaceTypeHookContext =
       name: string;
     };
 
-export const useAtomInstance = <T, P>(atom: Atom<T> | AtomFamily<T, P>, storePlace: StorePlaceTypeHookContext, initialValue?: T): AtomInstance<T> => {
+type UseAtomInstanceArgsType<T, P> = {
+  atom: Atom<T> | AtomFamily<T, P>;
+  storePlace: StorePlaceTypeHookContext;
+  initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>;
+};
+
+export function useAtomInstance<T, P>(arg: UseAtomInstanceArgsType<T, P>): AtomInstance<T> {
   const store = useContext(FiddichStoreContext);
   if (store == null) throw new Error(noStoreErrorText);
 
   const storePlaceType =
-    storePlace.type === 'named'
-      ? storePlace
+    arg.storePlace.type === 'named'
+      ? arg.storePlace
       : {
-          ...storePlace,
+          ...arg.storePlace,
           nearestStore: store,
         };
 
-  return getAtomInstance(atom, storePlaceType, initialValue);
-};
+  return 'default' in arg.atom
+    ? getOrAddSyncAtomInstance(arg.atom, storePlaceType, arg.initialValue as SyncAtomValueArg<T>)
+    : getOrAddAsyncAtomInstance(arg.atom, storePlaceType, arg.initialValue as AsyncAtomValueArg<T>);
+}
 
 const useSelectorInstance = <T>(selector: Selector<T> | SelectorFamily<T, any>, storePlace: StorePlaceTypeHookContext): SelectorInstance<T> => {
   const store = useContext(FiddichStoreContext);
@@ -47,15 +56,15 @@ const useSelectorInstance = <T>(selector: Selector<T> | SelectorFamily<T, any>, 
           nearestStore: store,
         };
 
-  return getSelectorInstance(selector, storePlaceType);
+  return 'get' in selector ? getOrAddSyncSelectorInstance(selector, storePlaceType) : getOrAddAsyncSelectorInstance(selector, storePlaceType);
 };
 
-export function useInstance<T>(state: Atom<T> | AtomFamily<T>, storePlace: StorePlaceTypeHookContext, initialValue?: T): AtomInstance<T>;
+export function useInstance<T>(state: Atom<T> | AtomFamily<T>, storePlace: StorePlaceTypeHookContext, initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>): AtomInstance<T>;
 export function useInstance<T>(state: Selector<T> | SelectorFamily<T, any>, storePlace: StorePlaceTypeHookContext): SelectorInstance<T>;
-export function useInstance<T>(state: FiddichState<T>, storePlace: StorePlaceTypeHookContext, initialValue?: T): FiddichStateInstance<T>;
-export function useInstance<T>(state: FiddichState<T>, storePlace: StorePlaceTypeHookContext, initialValue?: T): FiddichStateInstance<T> {
+export function useInstance<T>(state: FiddichState<T>, storePlace: StorePlaceTypeHookContext, initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>): FiddichStateInstance<T>;
+export function useInstance<T>(state: FiddichState<T>, storePlace: StorePlaceTypeHookContext, initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>): FiddichStateInstance<T> {
   if (state.type === 'atom' || state.type === 'atomFamily') {
-    return useAtomInstance(state, storePlace, initialValue);
+    return useAtomInstance({ atom: state, storePlace, initialValue });
   } else {
     return useSelectorInstance(state, storePlace);
   }

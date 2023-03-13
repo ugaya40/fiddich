@@ -4,7 +4,7 @@ import { ChangeStateButton, FiddichRootWrapper, StateString, SubFiddichRootWrapp
 
 const AtomState1 = atom({
   key: 'AtomState1',
-  default: 'atom1 default value',
+  asyncDefault: 'atom1 default value',
 });
 
 const MoveTarget = <SuspenseWrapper><StateString state={AtomState1}/></SuspenseWrapper>

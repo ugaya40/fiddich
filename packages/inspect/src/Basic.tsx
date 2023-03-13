@@ -4,12 +4,12 @@ import { ChangeStateButton, FiddichRootWrapper, sleep, StateString, SuspenseWrap
 
 const AtomState1 = atom({
   key: 'AtomState1',
-  default: 'atom1 default value',
+  asyncDefault: 'atom1 default value',
 });
 
 const SelectorState1 = selector({
   key: 'SelectorState1',
-  getAsync:  async({get}) => {
+  getAsync:  async ({get}) => {
     const atom1 = await get(AtomState1);
     return `selector1 - ${atom1}`
   }
@@ -27,8 +27,8 @@ const SelectorState2 = selector({
 
 const SelectorState3 = selector({
   key: 'SelectorState3',
-  get: ({get}) => {
-    const selector2 = get(SelectorState2);
+  getAsync: async ({get}) => {
+    const selector2 = await get(SelectorState2);
     return `selector3 - ${selector2}`
   }
 });

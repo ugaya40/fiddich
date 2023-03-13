@@ -4,17 +4,17 @@ import { ChangeStateButton, FiddichRootWrapper, StateString, SubFiddichRootWrapp
 
 const AtomState1 = atom({
   key: 'AtomState1',
-  default: 'atom1 default value',
+  asyncDefault: 'atom1 default value',
 });
 
 const AtomState2 = atom({
   key: 'AtomState2',
-  default: 'atom2 default value',
+  asyncDefault: 'atom2 default value',
 });
 
 const AtomState3 = atom({
   key: 'AtomState3',
-  default: 'atom3 default value',
+  asyncDefault: 'atom3 default value',
 });
 
 

@@ -23,15 +23,11 @@
     "pub:internal": "yarn publish",
     "pub": "run-s build copyReadMe pub:internal removeReadMe"
   },
-  "dependencies": {
-    "nanoid": "^4.0.0"
-  },
   "peerDependencies": {
     "react": "^18.2.0"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.1",
-    "@types/nanoid": "^3.0.0",
     "@types/react": "^18.0.27",
     "react": "^18.2.0",
     "rollup": "^2.70.1",

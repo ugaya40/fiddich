@@ -10,8 +10,7 @@ export default {
   },
   external: [
     'react',
-    'react/jsx-runtime',
-    'nanoid'
+    'react/jsx-runtime'
   ],
   plugins: [
     typescript(),

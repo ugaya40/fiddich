@@ -1,60 +1,122 @@
-import { PendingStatus, Compare, PendingEvent, ChangedEvent, ChangedByPromiseEvent, StableStatus, StorePlaceType, UninitializedStatus, ErrorStatus, ErrorEvent } from './share';
-import { EventPublisher, eventPublisher } from './event';
-import { getNamedStore, getOldValue, getRootStore } from './util';
+import type {
+  WaitingStatus,
+  Compare,
+  WaitingEvent,
+  ChangedEvent,
+  ChangedByPromiseEvent,
+  StableStatus,
+  StorePlaceType,
+  WaitingForInitializeStatus,
+  ErrorStatus,
+  ErrorEvent,
+  UnknownStatus,
+  InitializedEvent,
+} from './shareTypes';
+import { EventPublisher, eventPublisher } from './util/event';
+import { defaultCompareFunction, getFiddichInstance, getStableValue, getStoreByStorePlace } from './util/util';
 
-type AtomValueArg<T> = T | Promise<T> | (() => T | Promise<T>);
-type AtomFamilyValueArg<T, P> = T | Promise<T> | ((arg: P) => T | Promise<T>);
+export type SyncAtomValueArg<T> = Awaited<T> | (() => Awaited<T>);
+export type AsyncAtomValueArg<T> = Promise<T> | Awaited<T> | (() => Promise<T> | Awaited<T>);
 
-export type AtomSetterOrUpdaterArg<T> = T | Promise<T> | ((old: T | undefined) => Promise<T> | T);
-export type AtomSetterOrUpdater<T> = (setterOrUpdater: AtomSetterOrUpdaterArg<T>) => void;
-export type AtomFamilySetterOrUpdaterArg<T, P> = T | Promise<T> | ((old: T | undefined, parameter: P) => Promise<T> | T);
-export type AtomFamilySetterOrUpdater<T, P> = (setterOrUpdater: AtomFamilySetterOrUpdaterArg<T, P>) => void;
+export type SyncAtomSetterOrUpdaterArg<T> = T | ((old: T | undefined) => T);
+export type AsyncAtomSetterOrUpdaterArg<T> = T | Promise<T> | ((old: T | undefined) => T | Promise<T>);
+export type AtomSetterOrUpdaterArg<T> = SyncAtomSetterOrUpdaterArg<T> | AsyncAtomSetterOrUpdaterArg<T>;
 
-export type Atom<T = unknown> = {
+export type SyncAtomSetterOrUpdater<T> = (setterOrUpdater: SyncAtomSetterOrUpdaterArg<T>) => void;
+export type AsyncAtomSetterOrUpdater<T> = (setterOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => void;
+export type AtomSetterOrUpdater<T> = SyncAtomSetterOrUpdater<T> | AsyncAtomSetterOrUpdater<T>;
+
+type AtomBase = {
   type: 'atom';
   key: string;
-  default: AtomValueArg<T>;
-  noSuspense?: boolean;
-  compare?: Compare<T>;
+  compare?: Compare;
 };
 
-type AtomArg<T> = {
+export type SyncAtom<T> = AtomBase & {
+  default: SyncAtomValueArg<T>;
+};
+
+export type AsyncAtom<T> = AtomBase & {
+  noSuspense?: boolean;
+  asyncDefault: AsyncAtomValueArg<T>;
+};
+
+export type Atom<T = any> = SyncAtom<T> | AsyncAtom<T>;
+
+type AtomArgBase = {
   key: string;
-  default: AtomValueArg<T>;
-  noSuspense?: boolean;
-  compare?: Compare<T>;
+  compare?: Compare;
 };
 
-export const atom = <T>(arg: AtomArg<T>): Atom<T> => {
+type SyncAtomArg<T> = AtomArgBase & {
+  default: SyncAtomValueArg<T>;
+};
+type AsyncAtomArg<T> = AtomArgBase & {
+  noSuspense?: boolean;
+  asyncDefault: AsyncAtomValueArg<T>;
+};
+
+type AtomArg<T> = SyncAtomArg<T> | AsyncAtomArg<T>;
+
+export function atom<T>(arg: SyncAtomArg<T>): SyncAtom<T>;
+export function atom<T>(arg: AsyncAtomArg<T>): AsyncAtom<T>;
+export function atom<T>(arg: AtomArg<T>): Atom<T>;
+export function atom<T>(arg: AtomArg<T>): Atom<T> {
   const result: Atom<T> = {
     ...arg,
     type: 'atom',
   };
 
   return result;
-};
+}
 
-export type AtomFamily<T = unknown, P = any> = {
+type SyncAtomFamilyValueArg<T, P> = Awaited<T> | ((arg: P) => Awaited<T>);
+type AsyncAtomFamilyValueArg<T, P> = Promise<T> | Awaited<T> | ((arg: P) => Promise<T> | Awaited<T>);
+
+type AtomFamilyBase<P = any> = {
   type: 'atomFamily';
   key: string;
   baseKey: string;
-  default: AtomFamilyValueArg<T, P>;
   parameter: P;
-  noSuspense?: boolean;
-  compare?: Compare<T>;
+  compare?: Compare;
 };
 
-type AtomFamilyArg<T, P> = {
+export type SyncAtomFamily<T, P> = AtomFamilyBase<P> & {
+  default: SyncAtomFamilyValueArg<T, P>;
+};
+
+export type AsyncAtomFamily<T, P> = AtomFamilyBase<P> & {
+  noSuspense?: boolean;
+  asyncDefault: AsyncAtomFamilyValueArg<T, P>;
+};
+
+export type AtomFamily<T = unknown, P = any> = SyncAtomFamily<T, P> | AsyncAtomFamily<T, P>;
+
+type AtomFamilyArgBase<T, P> = {
   key: string;
-  default: AtomFamilyValueArg<T, P>;
   stringfy?: (arg: P) => string;
-  noSuspense?: boolean;
-  compare?: Compare<T>;
+  compare?: Compare;
 };
 
+type SyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
+  default: SyncAtomFamilyValueArg<T, P>;
+};
+
+type AsyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
+  noSuspense?: boolean;
+  asyncDefault: AsyncAtomFamilyValueArg<T, P>;
+};
+
+type AtomFamilyArg<T, P> = SyncAtomFamilyArg<T, P> | AsyncAtomFamilyArg<T, P>;
+
+type SyncAtomFamilyFunction<T = unknown, P = unknown> = (arg: P) => SyncAtomFamily<T, P>;
+type AsyncAtomFamilyFunction<T = unknown, P = unknown> = (arg: P) => AsyncAtomFamily<T, P>;
 type AtomFamilyFunction<T = any, P = any> = (arg: P) => AtomFamily<T, P>;
 
-export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T, P> => {
+export function atomFamily<T, P>(arg: SyncAtomFamilyArg<T, P>): SyncAtomFamilyFunction<T, P>;
+export function atomFamily<T, P>(arg: AsyncAtomFamilyArg<T, P>): AsyncAtomFamilyFunction<T, P>;
+export function atomFamily<T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T, P>;
+export function atomFamily<T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T, P> {
   const { key: baseKey, stringfy, ...other } = arg;
   const result: AtomFamilyFunction<T, P> = parameter => {
     const key = `${baseKey}-familyKey-${stringfy != null ? stringfy(parameter) : `${JSON.stringify(parameter)}`}`;
@@ -68,166 +130,203 @@ export const atomFamily = <T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T
   };
 
   return result;
-};
+}
 
-export type AtomInstance<T = unknown> = {
-  state: Atom<T> | AtomFamily<T, any>;
+type SyncAtomInstanceStatus<T> = UnknownStatus | StableStatus<T> | ErrorStatus;
+type AsyncAtomInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus | StableStatus<T> | WaitingStatus<T> | ErrorStatus;
+
+export type SyncAtomInstanceEvent<T> = InitializedEvent<T> | ChangedEvent<T> | ErrorEvent;
+export type AsyncAtomInstanceEvent<T> = InitializedEvent<T> | WaitingEvent | ChangedByPromiseEvent<T> | ErrorEvent;
+
+export type SyncAtomInstance<T = unknown> = {
+  state: SyncAtom<T> | SyncAtomFamily<T, any>;
   storeId: string;
-  status: UninitializedStatus<T> | StableStatus<T> | PendingStatus<T>;
-  event: EventPublisher<PendingEvent<T> | ChangedEvent<T> | ChangedByPromiseEvent<T>>;
+  status: SyncAtomInstanceStatus<T>;
+  event: EventPublisher<SyncAtomInstanceEvent<T>>;
 };
 
-const getAtomInstanceInternal = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>, storePlaceType: StorePlaceType): AtomInstance<T> | undefined => {
-  if (storePlaceType.type === 'named') {
-    const store = getNamedStore(storePlaceType.name);
-    return store.map.get(atom.key) as AtomInstance<T> | undefined;
-  } else if (storePlaceType.type === 'normal') {
-    const nearestStoreResult = storePlaceType.nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
-    if (nearestStoreResult != null) {
-      return nearestStoreResult;
-    }
-  } else if (storePlaceType.type === 'hierarchical') {
-    const nearestStoreResult = storePlaceType.nearestStore.map.get(atom.key) as AtomInstance<T> | undefined;
-    if (nearestStoreResult != null) {
-      return nearestStoreResult;
-    }
-    if ('parent' in storePlaceType.nearestStore) {
-      return getAtomInstanceInternal(atom, {
-        type: storePlaceType.type,
-        nearestStore: storePlaceType.nearestStore.parent,
-      });
-    }
-  } else if (storePlaceType.type === 'root') {
-    return getRootStore(storePlaceType.nearestStore).map.get(atom.key) as AtomInstance<T> | undefined;
-  }
-
-  return undefined;
+export type AsyncAtomInstance<T = unknown> = {
+  state: AsyncAtom<T> | AsyncAtomFamily<T, any>;
+  storeId: string;
+  status: AsyncAtomInstanceStatus<T>;
+  event: EventPublisher<AsyncAtomInstanceEvent<T>>;
 };
 
-export const getAtomInstance = <T = unknown>(atom: Atom<T> | AtomFamily<T, any>, storePlaceType: StorePlaceType, initialValue?: AtomValueArg<T>): AtomInstance<T> => {
-  const atomInstanceFromStore = getAtomInstanceInternal(atom, storePlaceType);
+export type AtomInstance<T> = SyncAtomInstance<T> | AsyncAtomInstance<T>;
 
-  if (atomInstanceFromStore != null) return atomInstanceFromStore;
-
-  const decidedInitialValue = initialValue ?? atom.default;
-  const parameter = atom.type === 'atomFamily' ? atom.parameter : undefined;
-  const actualInitialValue = typeof decidedInitialValue === 'function' ? (decidedInitialValue as Function)(parameter) : decidedInitialValue;
-  const targetStore =
-    storePlaceType.type === 'named' ? getNamedStore(storePlaceType.name) : storePlaceType.type === 'root' ? getRootStore(storePlaceType.nearestStore) : storePlaceType.nearestStore;
-
-  const status: UninitializedStatus<T> | StableStatus<T> =
-    actualInitialValue instanceof Promise
-      ? {
-          type: 'uninitialized',
-          promise: actualInitialValue,
-          abortRequest: false,
-        }
-      : {
-          type: 'stable',
-          value: actualInitialValue,
-        };
-
-  const newAtomInstance: AtomInstance<T> = {
-    state: atom,
-    event: eventPublisher(),
-    storeId: targetStore.id,
-    status,
-  };
-
-  if (status.type === 'uninitialized') {
-    new Promise<void>(async resolve => {
-      const result = await status.promise!;
-      if (!status.abortRequest) {
-        newAtomInstance.status = {
-          type: 'stable',
-          value: result,
-        };
-      }
-      resolve();
-    });
-  }
-
-  targetStore.map.set(newAtomInstance.state.key, newAtomInstance);
-  return newAtomInstance;
-};
-
-const changeAtomValueInternal = <T>(atomInstance: AtomInstance<T>, oldValue: T | undefined, newValue: T, promise?: Promise<T>) => {
-  const compareFunction: Compare<T> = atomInstance.state.compare ?? ((o, n) => o === n);
-  if (promise == null && compareFunction(oldValue, newValue)) {
-    if (atomInstance.status.type === 'pending') {
-      //For when you interrupt a change in a promise and set a value that is a non-promise.
-      atomInstance.status = {
-        type: 'stable',
-        value: newValue,
-      };
-    }
-    return;
-  }
-
-  atomInstance.status = {
-    type: 'stable',
-    value: newValue,
-  };
-
-  atomInstance.event.emit(
-    promise != null && !atomInstance.state.noSuspense
-      ? {
-          type: 'change by promise',
-          newValue,
-          oldValue,
-          promise,
-        }
-      : {
-          type: 'change',
-          newValue,
-          oldValue,
-        }
-  );
-};
-
-const getNewValue = <T, P>(atomInstance: AtomInstance<T>, valueOrUpdater: AtomSetterOrUpdaterArg<T> | AtomFamilySetterOrUpdaterArg<T, P>, oldValue: T | undefined) => {
-  if (typeof valueOrUpdater === 'function') {
-    if (atomInstance.state.type === 'atom') {
-      return (valueOrUpdater as (old: T | undefined) => T | Promise<T>)(oldValue);
-    } else {
-      const atomFamily = atomInstance.state as AtomFamily<T, P>;
-      return (valueOrUpdater as (old: T | undefined, parameter: P) => T | Promise<T>)(oldValue, atomFamily.parameter);
-    }
+const getNewValueFromSyncAtom = <T>(valueOrUpdater: SyncAtomSetterOrUpdaterArg<T>, oldValue: T | undefined): T => {
+  if (valueOrUpdater instanceof Function) {
+    return valueOrUpdater(oldValue);
   } else {
     return valueOrUpdater;
   }
 };
 
-export const changeAtomValue = <T = unknown, P = unknown>(atomInstance: AtomInstance<T>, valueOrUpdater: AtomSetterOrUpdaterArg<T> | AtomFamilySetterOrUpdaterArg<T, P>) => {
-  if (atomInstance.status.type === 'pending') atomInstance.status.abortRequest = true;
-
-  const oldValue = getOldValue(atomInstance);
-  const newValue = getNewValue(atomInstance, valueOrUpdater, oldValue);
-
-  if (newValue instanceof Promise) {
-    if (!atomInstance.state.noSuspense) {
-      atomInstance.status = {
-        type: 'pending',
-        oldValue,
-        abortRequest: false,
-        promise: newValue,
-      };
-
-      atomInstance.event.emit({
-        type: 'pending',
-        promise: newValue,
-      });
-    }
-
-    new Promise<void>(async resolve => {
-      const status = atomInstance.status as PendingStatus<T>;
-      const newValue = await status.promise;
-      if (!status.abortRequest) {
-        changeAtomValueInternal(atomInstance, oldValue, newValue, status.promise);
-      }
-      resolve();
-    });
+const getNewValueFromAsyncAtom = <T>(valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>, oldValue: T | undefined): T | Promise<T> => {
+  if (valueOrUpdater instanceof Function) {
+    return valueOrUpdater(oldValue);
   } else {
-    changeAtomValueInternal(atomInstance, oldValue, newValue);
+    return valueOrUpdater;
+  }
+};
+
+export const getOrAddAsyncAtomInstance = <T = unknown>(atom: AsyncAtom<T> | AsyncAtomFamily<T, any>, storePlaceType: StorePlaceType, initialValue?: AsyncAtomValueArg<T>) => {
+  const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as AsyncAtomInstance<T> | undefined;
+  if (atomInstanceFromStore != null) return atomInstanceFromStore;
+
+  const parameter = atom.type === 'atomFamily' ? atom.parameter : undefined;
+  const targetStore = getStoreByStorePlace(storePlaceType);
+
+  const atomInstance: AsyncAtomInstance<T> = {
+    state: atom,
+    event: eventPublisher(),
+    storeId: targetStore.id,
+    status: { type: 'unknown' },
+  };
+
+  //The status of instance may be overwritten while waiting for await,
+  //so prepare it as a save destination to determine abortRequest.
+  let waitingForInitializeStatus: WaitingForInitializeStatus | undefined;
+
+  const initializePromise = new Promise<void>(async resolve => {
+    try {
+      const decidedInitialValue = initialValue ?? atom.asyncDefault;
+      const initialValuePromise = decidedInitialValue instanceof Function ? decidedInitialValue(parameter) : decidedInitialValue;
+      const actualInitialValue = await initialValuePromise;
+      if (!waitingForInitializeStatus!.abortRequest) {
+        atomInstance.status = {
+          type: 'stable',
+          value: actualInitialValue,
+        };
+        atomInstance.event.emit({ type: 'initialized', value: actualInitialValue });
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        const errorInfo = { type: 'error', error: e } as const;
+        atomInstance.status = errorInfo;
+        atomInstance.event.emit(errorInfo);
+      } else {
+        throw e;
+      }
+    }
+    resolve();
+  });
+
+  waitingForInitializeStatus = {
+    type: 'waiting for initialize',
+    abortRequest: false,
+    promise: initializePromise,
+  };
+
+  atomInstance.status = waitingForInitializeStatus;
+
+  targetStore.map.set(atomInstance.state.key, atomInstance);
+  return atomInstance;
+};
+
+export const getOrAddSyncAtomInstance = <T = unknown>(atom: SyncAtom<T> | SyncAtomFamily<T, any>, storePlaceType: StorePlaceType, initialValue?: SyncAtomValueArg<T>) => {
+  const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as SyncAtomInstance<T> | undefined;
+  if (atomInstanceFromStore != null) return atomInstanceFromStore;
+
+  const parameter = atom.type === 'atomFamily' ? atom.parameter : undefined;
+  const targetStore = getStoreByStorePlace(storePlaceType);
+
+  const atomInstance: SyncAtomInstance<T> = {
+    state: atom,
+    event: eventPublisher(),
+    storeId: targetStore.id,
+    status: { type: 'unknown' },
+  };
+
+  try {
+    const decidedInitialValue = initialValue ?? atom.default;
+    const actualInitialValue = decidedInitialValue instanceof Function ? decidedInitialValue(parameter) : decidedInitialValue;
+
+    atomInstance.status = {
+      type: 'stable',
+      value: actualInitialValue,
+    };
+
+    atomInstance.event.emit({ type: 'initialized', value: actualInitialValue });
+  } catch (e) {
+    if (e instanceof Error) {
+      const errorInfo = { type: 'error', error: e } as const;
+      atomInstance.status = errorInfo;
+      atomInstance.event.emit(errorInfo);
+    } else {
+      throw e;
+    }
+  }
+
+  targetStore.map.set(atomInstance.state.key, atomInstance);
+  return atomInstance;
+};
+
+export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => {
+  if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
+
+  const oldValue = getStableValue(atomInstance)!;
+
+  //The status of instance may be overwritten while waiting for await,
+  //so prepare it as a save destination to determine abortRequest.
+  let waitingStatus: WaitingStatus<T> | undefined;
+
+  const changeValuePromise = new Promise<void>(async resolve => {
+    try {
+      const newValue = await getNewValueFromAsyncAtom(valueOrUpdater, oldValue);
+      if (!waitingStatus!.abortRequest) {
+        atomInstance.status = {
+          type: 'stable',
+          value: newValue,
+        };
+        atomInstance.event.emit({ type: 'change by promise', oldValue, newValue });
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        const errorInfo = { type: 'error', error: e } as const;
+        atomInstance.status = errorInfo;
+        atomInstance.event.emit(errorInfo);
+      } else {
+        throw e;
+      }
+    }
+    resolve();
+  });
+
+  waitingStatus = {
+    type: 'waiting',
+    abortRequest: false,
+    oldValue,
+    promise: changeValuePromise,
+  };
+
+  atomInstance.status = waitingStatus;
+
+  atomInstance.event.emit({ type: 'waiting', promise: changeValuePromise });
+};
+
+export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T>, valueOrUpdater: SyncAtomSetterOrUpdaterArg<T>) => {
+  if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
+
+  const oldValue = getStableValue(atomInstance)!;
+  try {
+    const newValue = getNewValueFromSyncAtom(valueOrUpdater, oldValue);
+    const compareFunction: Compare = atomInstance.state.compare ?? defaultCompareFunction;
+    if (compareFunction<T>(oldValue, newValue)) return;
+
+    atomInstance.status = {
+      type: 'stable',
+      value: newValue,
+    };
+
+    atomInstance.event.emit({ type: 'change', oldValue, newValue });
+  } catch (e) {
+    if (e instanceof Error) {
+      const errorInfo = { type: 'error', error: e } as const;
+      atomInstance.status = errorInfo;
+      atomInstance.event.emit(errorInfo);
+    } else {
+      throw e;
+    }
   }
 };

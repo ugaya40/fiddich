@@ -1,10 +1,11 @@
 import { atom, selector } from 'fiddich';
 import { FC } from 'react';
-import { ChangeStateButton, ErrorBoundary, FiddichRootWrapper, sleep, StateString, SuspenseWrapper } from './share';
+import { ErrorBoundary } from 'react-error-boundary';
+import { ChangeStateButton, FiddichRootWrapper, StateString, SuspenseWrapper } from './share';
 
 const AtomState1 = atom({
   key: 'AtomState1',
-  default: 'atom1 default value',
+  asyncDefault: 'atom1 default value',
 });
 
 const AtomState2 = atom({
