@@ -12,12 +12,12 @@ const SelectorState1 = selector({
   getAsync:  async ({get}) => {
     const atom1 = await get(AtomState1);
     return `selector1 - ${atom1}`
-  }
+  },
 });
 
 const SelectorState2 = selector({
   key: 'SelectorState2',
-  noSuspense: true,
+  suppressSuspense: true,
   getAsync: async ({get}) => {
     await sleep(2000)
     const selector1 = await get(SelectorState1);

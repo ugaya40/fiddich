@@ -13,7 +13,7 @@ import type {
   InitializedEvent,
 } from './shareTypes';
 import { EventPublisher, eventPublisher } from './util/event';
-import { defaultCompareFunction, getFiddichInstance, getStableValue, getStoreByStorePlace } from './util/util';
+import { defaultCompareFunction, getFiddichInstance, getStableValue, getStoreByStorePlace, StrictUnion } from './util/util';
 
 export type SyncAtomValueArg<T> = Awaited<T> | (() => Awaited<T>);
 export type AsyncAtomValueArg<T> = Promise<T> | Awaited<T> | (() => Promise<T> | Awaited<T>);
@@ -37,7 +37,7 @@ export type SyncAtom<T> = AtomBase & {
 };
 
 export type AsyncAtom<T> = AtomBase & {
-  noSuspense?: boolean;
+  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomValueArg<T>;
 };
 
@@ -52,11 +52,11 @@ type SyncAtomArg<T> = AtomArgBase & {
   default: SyncAtomValueArg<T>;
 };
 type AsyncAtomArg<T> = AtomArgBase & {
-  noSuspense?: boolean;
+  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomValueArg<T>;
 };
 
-type AtomArg<T> = SyncAtomArg<T> | AsyncAtomArg<T>;
+type AtomArg<T> = StrictUnion<SyncAtomArg<T> | AsyncAtomArg<T>>;
 
 export function atom<T>(arg: SyncAtomArg<T>): SyncAtom<T>;
 export function atom<T>(arg: AsyncAtomArg<T>): AsyncAtom<T>;
@@ -86,7 +86,7 @@ export type SyncAtomFamily<T, P> = AtomFamilyBase<P> & {
 };
 
 export type AsyncAtomFamily<T, P> = AtomFamilyBase<P> & {
-  noSuspense?: boolean;
+  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomFamilyValueArg<T, P>;
 };
 
@@ -103,7 +103,7 @@ type SyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
 };
 
 type AsyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
-  noSuspense?: boolean;
+  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomFamilyValueArg<T, P>;
 };
 
@@ -170,7 +170,11 @@ const getNewValueFromAsyncAtom = <T>(valueOrUpdater: AsyncAtomSetterOrUpdaterArg
   }
 };
 
-export const getOrAddAsyncAtomInstance = <T = unknown>(atom: AsyncAtom<T> | AsyncAtomFamily<T, any>, storePlaceType: StorePlaceType, initialValue?: AsyncAtomValueArg<T>) => {
+export const getOrAddAsyncAtomInstance = <T = unknown>(
+  atom: AsyncAtom<T> | AsyncAtomFamily<T, any>,
+  storePlaceType: StorePlaceType,
+  initialValue?: AsyncAtomValueArg<T>
+) => {
   const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as AsyncAtomInstance<T> | undefined;
   if (atomInstanceFromStore != null) return atomInstanceFromStore;
 
@@ -198,7 +202,10 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(atom: AsyncAtom<T> | Asyn
           type: 'stable',
           value: actualInitialValue,
         };
-        atomInstance.event.emit({ type: 'initialized', value: actualInitialValue });
+        atomInstance.event.emit({
+          type: 'initialized',
+          value: actualInitialValue,
+        });
       }
     } catch (e) {
       if (e instanceof Error) {
@@ -224,7 +231,11 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(atom: AsyncAtom<T> | Asyn
   return atomInstance;
 };
 
-export const getOrAddSyncAtomInstance = <T = unknown>(atom: SyncAtom<T> | SyncAtomFamily<T, any>, storePlaceType: StorePlaceType, initialValue?: SyncAtomValueArg<T>) => {
+export const getOrAddSyncAtomInstance = <T = unknown>(
+  atom: SyncAtom<T> | SyncAtomFamily<T, any>,
+  storePlaceType: StorePlaceType,
+  initialValue?: SyncAtomValueArg<T>
+) => {
   const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as SyncAtomInstance<T> | undefined;
   if (atomInstanceFromStore != null) return atomInstanceFromStore;
 
@@ -279,7 +290,11 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valu
           type: 'stable',
           value: newValue,
         };
-        atomInstance.event.emit({ type: 'change by promise', oldValue, newValue });
+        atomInstance.event.emit({
+          type: 'change by promise',
+          oldValue,
+          newValue,
+        });
       }
     } catch (e) {
       if (e instanceof Error) {

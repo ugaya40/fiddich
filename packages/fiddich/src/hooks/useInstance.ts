@@ -59,10 +59,22 @@ const useSelectorInstance = <T>(selector: Selector<T> | SelectorFamily<T, any>, 
   return 'get' in selector ? getOrAddSyncSelectorInstance(selector, storePlaceType) : getOrAddAsyncSelectorInstance(selector, storePlaceType);
 };
 
-export function useInstance<T>(state: Atom<T> | AtomFamily<T>, storePlace: StorePlaceTypeHookContext, initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>): AtomInstance<T>;
+export function useInstance<T>(
+  state: Atom<T> | AtomFamily<T>,
+  storePlace: StorePlaceTypeHookContext,
+  initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>
+): AtomInstance<T>;
 export function useInstance<T>(state: Selector<T> | SelectorFamily<T, any>, storePlace: StorePlaceTypeHookContext): SelectorInstance<T>;
-export function useInstance<T>(state: FiddichState<T>, storePlace: StorePlaceTypeHookContext, initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>): FiddichStateInstance<T>;
-export function useInstance<T>(state: FiddichState<T>, storePlace: StorePlaceTypeHookContext, initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>): FiddichStateInstance<T> {
+export function useInstance<T>(
+  state: FiddichState<T>,
+  storePlace: StorePlaceTypeHookContext,
+  initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>
+): FiddichStateInstance<T>;
+export function useInstance<T>(
+  state: FiddichState<T>,
+  storePlace: StorePlaceTypeHookContext,
+  initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>
+): FiddichStateInstance<T> {
   if (state.type === 'atom' || state.type === 'atomFamily') {
     return useAtomInstance({ atom: state, storePlace, initialValue });
   } else {

@@ -20,7 +20,7 @@ import type {
   SyncFiddichState,
 } from './shareTypes';
 import { Disposable, eventPublisher, EventPublisher } from './util/event';
-import { defaultCompareFunction, getFiddichInstance, getStableValue, getStoreByStorePlace, getValue } from './util/util';
+import { defaultCompareFunction, getFiddichInstance, getStableValue, getStoreByStorePlace, getValue, StrictUnion } from './util/util';
 import { getOrAddAsyncAtomInstance, getOrAddSyncAtomInstance } from './atom';
 import { invalidStatusErrorText, nameAndGlobalNamedStoreMap } from './util/const';
 
@@ -55,27 +55,27 @@ export type SyncSelector<T> = SelectorBase & {
 };
 
 export type AsyncSelector<T> = SelectorBase & {
-  noSuspense?: boolean;
+  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorGetArgsType) => Promise<T>;
 };
 
 export type Selector<T = any> = SyncSelector<T> | AsyncSelector<T>;
 
-type SelectorArgBase<T> = {
+type SelectorArgBase = {
   key: string;
   compare?: Compare;
 };
 
-export type SyncSelectorArg<T> = SelectorArgBase<T> & {
+export type SyncSelectorArg<T> = SelectorArgBase & {
   get: (arg: SyncSelectorGetArgsType) => Awaited<T>;
 };
 
-export type AsyncSelectorArg<T> = SelectorArgBase<T> & {
-  noSuspense?: boolean;
+export type AsyncSelectorArg<T> = SelectorArgBase & {
+  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorGetArgsType) => Promise<T>;
 };
 
-export type SelectorArg<T> = SyncSelectorArg<T> | AsyncSelectorArg<T>;
+export type SelectorArg<T> = StrictUnion<SyncSelectorArg<T> | AsyncSelectorArg<T>>;
 
 export function selector<T>(arg: AsyncSelectorArg<T>): AsyncSelector<T>;
 export function selector<T>(arg: SyncSelectorArg<T>): SyncSelector<T>;
@@ -95,15 +95,19 @@ type SelectorFamilyBase<P = any> = {
   compare?: Compare;
 };
 
-type AsyncSelectorFamilyGetArgsType<P> = AsyncSelectorGetArgsType & { parameter: P };
-type SyncSelectorFamilyGetArgsType<P> = SyncSelectorGetArgsType & { parameter: P };
+type AsyncSelectorFamilyGetArgsType<P> = AsyncSelectorGetArgsType & {
+  parameter: P;
+};
+type SyncSelectorFamilyGetArgsType<P> = SyncSelectorGetArgsType & {
+  parameter: P;
+};
 
 export type SyncSelectorFamily<T, P> = SelectorFamilyBase<P> & {
   get: (arg: SyncSelectorFamilyGetArgsType<P>) => T;
 };
 
 export type AsyncSelectorFamily<T, P> = SelectorFamilyBase<P> & {
-  noSuspense?: boolean;
+  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorFamilyGetArgsType<P>) => Promise<T>;
 };
 
@@ -120,7 +124,7 @@ export type SyncSelectorFamilyArg<T, P> = SelectorFamilyArgBase<P> & {
 };
 
 export type AsyncSelectorFamilyArg<T, P> = SelectorFamilyArgBase<P> & {
-  noSuspense?: boolean;
+  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorFamilyGetArgsType<P>) => Promise<T>;
 };
 
@@ -172,7 +176,10 @@ export type AsyncSelectorInstance<T = unknown> = {
 
 export type SelectorInstance<T = unknown> = SyncSelectorInstance<T> | AsyncSelectorInstance<T>;
 
-export const getOrAddAsyncSelectorInstance = <T>(selector: AsyncSelector<T> | AsyncSelectorFamily<T, any>, storePlaceType: StorePlaceType): AsyncSelectorInstance<T> => {
+export const getOrAddAsyncSelectorInstance = <T>(
+  selector: AsyncSelector<T> | AsyncSelectorFamily<T, any>,
+  storePlaceType: StorePlaceType
+): AsyncSelectorInstance<T> => {
   const selectorInstanceFromStore = getFiddichInstance<T>(selector, storePlaceType) as AsyncSelectorInstance<T> | undefined;
   if (selectorInstanceFromStore != null) return selectorInstanceFromStore;
 
@@ -228,7 +235,10 @@ export const getOrAddAsyncSelectorInstance = <T>(selector: AsyncSelector<T> | As
   return selectorInstance;
 };
 
-export const getOrAddSyncSelectorInstance = <T>(selector: SyncSelector<T> | SyncSelectorFamily<T, any>, storePlaceType: StorePlaceType): SyncSelectorInstance<T> => {
+export const getOrAddSyncSelectorInstance = <T>(
+  selector: SyncSelector<T> | SyncSelectorFamily<T, any>,
+  storePlaceType: StorePlaceType
+): SyncSelectorInstance<T> => {
   const selectorInstanceFromStore = getFiddichInstance<T>(selector, storePlaceType) as SyncSelectorInstance<T> | undefined;
   if (selectorInstanceFromStore != null) return selectorInstanceFromStore;
 
@@ -350,7 +360,11 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
                   type: 'stable',
                   value: newValue,
                 };
-                selectorInstance.event.emit({ type: 'change by promise', oldValue, newValue });
+                selectorInstance.event.emit({
+                  type: 'change by promise',
+                  oldValue,
+                  newValue,
+                });
               }
             } catch (e) {
               if (e instanceof Error) {
@@ -373,10 +387,16 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
 
           selectorInstance.status = waitingStatus;
 
-          selectorInstance.event.emit({ type: 'waiting', promise: waitingPromise });
+          selectorInstance.event.emit({
+            type: 'waiting',
+            promise: waitingPromise,
+          });
         }
       });
-      selectorInstance.stateListeners.set(listenerKey, { instance: sourceInstance, listener });
+      selectorInstance.stateListeners.set(listenerKey, {
+        instance: sourceInstance,
+        listener,
+      });
     }
     return getValue(sourceInstance);
   };
@@ -425,7 +445,10 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
           }
         }
       });
-      selectorInstance.stateListeners.set(listenerKey, { instance: sourceInstance, listener });
+      selectorInstance.stateListeners.set(listenerKey, {
+        instance: sourceInstance,
+        listener,
+      });
     }
 
     if (sourceInstance.status.type === 'stable') {
@@ -442,9 +465,15 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
 
 function syncGetterArg<T>(selectorInstance: SyncSelectorInstance<T>, storePlaceType: StorePlaceType): SyncSelectorGetArgsType {
   const nearestStore = storePlaceType.type === 'named' ? nameAndGlobalNamedStoreMap.get(storePlaceType.name)! : storePlaceType.nearestStore;
-  const normalStorePlace: NormalStorePlaceType = { type: 'normal', nearestStore };
+  const normalStorePlace: NormalStorePlaceType = {
+    type: 'normal',
+    nearestStore,
+  };
   const rootStorePlace: RootStorePlaceType = { type: 'root', nearestStore };
-  const hierarchicalStorePlace: HierarchicalStorePlaceType = { type: 'hierarchical', nearestStore };
+  const hierarchicalStorePlace: HierarchicalStorePlaceType = {
+    type: 'hierarchical',
+    nearestStore,
+  };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
   return {
     get: buildGetFunction(selectorInstance, normalStorePlace),
@@ -466,9 +495,15 @@ function syncGetterArg<T>(selectorInstance: SyncSelectorInstance<T>, storePlaceT
 
 function asyncGetterArg<T>(selectorInstance: AsyncSelectorInstance<T>, storePlaceType: StorePlaceType): AsyncSelectorGetArgsType {
   const nearestStore = storePlaceType.type === 'named' ? nameAndGlobalNamedStoreMap.get(storePlaceType.name)! : storePlaceType.nearestStore;
-  const normalStorePlace: NormalStorePlaceType = { type: 'normal', nearestStore };
+  const normalStorePlace: NormalStorePlaceType = {
+    type: 'normal',
+    nearestStore,
+  };
   const rootStorePlace: RootStorePlaceType = { type: 'root', nearestStore };
-  const hierarchicalStorePlace: HierarchicalStorePlaceType = { type: 'hierarchical', nearestStore };
+  const hierarchicalStorePlace: HierarchicalStorePlaceType = {
+    type: 'hierarchical',
+    nearestStore,
+  };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
   return {
     get: buildGetAsyncFunction(selectorInstance, normalStorePlace),

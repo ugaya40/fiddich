@@ -27,8 +27,8 @@ const SelectorState1 = selector({
 
 const SelectorState2 = selector({
   key: 'SelectorState2',
-  noSuspense: true,
-  get: ({get}) => {
+  suppressSuspense: true,
+  getAsync: async ({get}) => {
     const atom2 = get(AtomState2);
     return `selector2 - ${atom2}`
   }

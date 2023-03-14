@@ -1,7 +1,8 @@
 {
   "name": "fiddich",
-  "version": "0.1.21",
+  "version": "0.2.0",
   "module": "dist/index.js",
+  "type": "module",
   "types": "dist/index.d.ts",
   "author": "Masanori Onoue <ugaya40@hotmail.com> (https://github.com/ugaya40)",
   "license": "MIT",
@@ -30,8 +31,8 @@
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@types/react": "^18.0.27",
     "react": "^18.2.0",
-    "rollup": "^2.70.1",
+    "rollup": "^3.19.1",
     "rollup-plugin-terser": "^7.0.2",
-    "rollup-plugin-typescript2": "^0.31.2"
+    "rollup-plugin-typescript2": "^0.34.1"
   }
 }

@@ -1,10 +1,18 @@
 import { AsyncAtom, AsyncAtomFamily, AsyncAtomInstance, changeAsyncAtomValue, changeSyncAtomValue, SyncAtom, SyncAtomFamily, SyncAtomInstance } from './atom';
-import { AsyncSelector, AsyncSelectorFamily, AsyncSelectorInstance, getOrAddStateInstance, SyncSelector, SyncSelectorFamily, SyncSelectorInstance } from './selector';
+import {
+  AsyncSelector,
+  AsyncSelectorFamily,
+  AsyncSelectorInstance,
+  getOrAddStateInstance,
+  SyncSelector,
+  SyncSelectorFamily,
+  SyncSelectorInstance,
+} from './selector';
 import type { AsyncAtomOperator, AsyncSelectorOperator, FiddichState, FiddichStore, SyncAtomOperator, SyncSelectorOperator } from './shareTypes';
 import { idAndGlobalNamedStoreMap, nameAndGlobalNamedStoreMap } from './util/const';
 import { generateRandomKey, getStableValue, getValue } from './util/util';
 
-export function createNewNamedStore(name: string): FiddichStore {
+function createNewNamedStore(name: string): FiddichStore {
   const newStore = { id: generateRandomKey(), map: new Map(), name: name };
   nameAndGlobalNamedStoreMap.set(name, newStore);
   idAndGlobalNamedStoreMap.set(newStore.id, newStore);
@@ -16,15 +24,9 @@ export function getOrAddNamedStore(name: string): FiddichStore {
   return existsStore != null ? existsStore : createNewNamedStore(name);
 }
 
-export function getNamedStore(name: string): FiddichStore {
+function getNamedStore(name: string): FiddichStore {
   const store = nameAndGlobalNamedStoreMap.get(name);
   if (store == null) throw new Error(`Store named '${name}' not found.`);
-  return store;
-}
-
-export function getNamedStoreByStoreId(storeId: string): FiddichStore {
-  const store = idAndGlobalNamedStoreMap.get(storeId);
-  if (store == null) throw new Error(`StoreId '${storeId}' not found.`);
   return store;
 }
 
@@ -45,7 +47,10 @@ class StoreOperator {
   state<T>(state: AsyncSelector<T> | AsyncSelectorFamily<T, any>): AsyncSelectorOperator<T>;
   state<T>(state: FiddichState<T>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T>;
   state<T>(state: FiddichState<T>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T> {
-    const instance = getOrAddStateInstance(state, { type: 'normal', nearestStore: this.store });
+    const instance = getOrAddStateInstance(state, {
+      type: 'normal',
+      nearestStore: this.store,
+    });
     if (state.type === 'atom' || state.type === 'atomFamily') {
       if ('default' in state) {
         const syncAtomInstance = instance as SyncAtomInstance<T>;
@@ -84,6 +89,6 @@ class StoreOperator {
   }
 }
 
-export function namedRoot(name: string): StoreOperator {
+export function namedStore(name: string): StoreOperator {
   return new StoreOperator(getOrAddNamedStore(name));
 }

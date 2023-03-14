@@ -30,33 +30,29 @@ export const StateString: FC<StateStringPropsType> = (props) => {
   try {
     const value = useValue(props.state, props.option)
     const storePlace = storePlaceString(props.option?.place ?? {type: 'normal'});
-    const noSuspense = props.option?.noSuspense ?? false;
+    const suppressSuspense = props.option?.suppressSuspense ?? false;
 
     const renderCountRef = useRef(0);
     renderCountRef.current++;
+
+    const isAsync = 'asyncDefault' in props.state || 'getAsync' in props.state;
 
     return(
       <div style={{backgroundColor: 'silver', border: '1px solid white'}}>
         <p style={{fontWeight: 'bold'}}>{`${props.state.key} value block`}</p>
         <div className="simple-table">
-          {
-            (props.state.type === 'selector' || props.state.type === 'selectorFamily') &&
-            <>
-              <div className="header"><span>selector getter :</span></div>
-              {'get' in (props.state as Selector) && <div><span style={{color: 'green'}}>get</span></div>}
-              {'getAsync' in (props.state as Selector) && <div><span>getAsync</span></div>}
-            </>
-          }
+          <div className="header"><span>state-type :</span></div>
+          <div><span style={{color: isAsync ? 'green' : 'inherit'}}>{`${isAsync ? 'async' : 'sync'}`}</span></div>
           {('asyncDefault' in props.state || 'getAsync' in props.state) && 
             <>
               <div className="header"><span>state-no-suspense :</span></div>
-              <div><span style={{color: props.state.noSuspense ? 'green' : 'inherit'}}>{`${props.state.noSuspense ?? false}`}</span></div>
+              <div><span style={{color: props.state.suppressSuspense ? 'green' : 'inherit'}}>{`${props.state.suppressSuspense ?? false}`}</span></div>
             </>
           }
           <div className="header"><span>store :</span></div>
           <div><span style={{color: storePlace !== 'normal' ? 'green' : 'inherit'}}>{storePlace}</span></div>
           <div className="header"><span>no-suspense :</span></div>
-          <div><span  style={{color: noSuspense ? 'green' : 'inherit'}}>{`${noSuspense}`}</span></div>
+          <div><span  style={{color: suppressSuspense ? 'green' : 'inherit'}}>{`${suppressSuspense}`}</span></div>
           <div className="header"><span>render-count :</span></div>
           <div><span>{renderCountRef.current}</span></div>
         </div>
@@ -110,26 +106,28 @@ export const ChangeStateButton: FC<ChangeStateButtonPropsType> = (props) => {
           promiseInputRef.current!.value = inputCandidate[inputCount.current % 7];
         }}>change value</button>
       </div>
-      <div style={{display: 'flex', gap: '5px'}}>
-        <span>sleep:</span>
-          <input ref={sleepMsRef} type="number" defaultValue={1000} style={{width: '60px', textAlign: 'end'}}/>
-        <span>ms</span>
-        <input ref={promiseInputRef} defaultValue={inputCandidate[0]} type="text" style={{width: '100px'}}/>
-        <button onClick={() => {
-          const setAtomAsyncValue = setAtom as (arg: (old: string) => Promise<string>) => void;
-          setAtomAsyncValue(async () => {
-            const newValue = promiseInputRef.current!.value;
-            const ms = Number(sleepMsRef.current!.value);
-            await sleep(isNaN(ms) ? 1000 : ms);
-            return newValue
-          });
-          //rerender suppression
-          inputCount.current++;
-          inputRef.current!.value = inputCandidate[inputCount.current % 7];
-          promiseInputRef.current!.value = inputCandidate[inputCount.current % 7];
-        }}>change value by promise(change value after sleep)
-        </button>
-      </div>
+      {'asyncDefault' in props.state && 
+        <div style={{display: 'flex', gap: '5px'}}>
+          <span>sleep:</span>
+            <input ref={sleepMsRef} type="number" defaultValue={1000} style={{width: '60px', textAlign: 'end'}}/>
+          <span>ms</span>
+          <input ref={promiseInputRef} defaultValue={inputCandidate[0]} type="text" style={{width: '100px'}}/>
+          <button onClick={() => {
+            const setAtomAsyncValue = setAtom as (arg: (old: string) => Promise<string>) => void;
+            setAtomAsyncValue(async () => {
+              const newValue = promiseInputRef.current!.value;
+              const ms = Number(sleepMsRef.current!.value);
+              await sleep(isNaN(ms) ? 1000 : ms);
+              return newValue
+            });
+            //rerender suppression
+            inputCount.current++;
+            inputRef.current!.value = inputCandidate[inputCount.current % 7];
+            promiseInputRef.current!.value = inputCandidate[inputCount.current % 7];
+          }}>change value by promise(change value after sleep)
+          </button>
+        </div>
+      }
     </div>
   )
 }
@@ -209,8 +207,3 @@ export const SuspenseWrapper: FC<SuspenseProps> = (props) => {
 }
 
 export const sleep = (ms: number) => new Promise(r => setTimeout(r,ms));
-
-export function managedPromise<T>(value: T) {
-  let resolveFunc: ((value: T) => void) | undefined = undefined;
-  return [new Promise<T>(resolve => {resolveFunc = resolve}), () => resolveFunc!(value) ] as const
-}

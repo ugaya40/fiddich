@@ -1,5 +1,9 @@
-import type { Compare, FiddichState, FiddichStateInstance, FiddichStore, Store, StorePlaceType } from '../shareTypes';
+import type { Compare, FiddichState, FiddichStateInstance, Store, StorePlaceType } from '../shareTypes';
 import { idAndGlobalNamedStoreMap, invalidStatusErrorText, nameAndGlobalNamedStoreMap } from './const';
+
+type UnionKeys<T> = T extends T ? keyof T : never;
+type StrictUnionHelper<T, TAll> = T extends T ? T & Partial<Record<Exclude<UnionKeys<TAll>, keyof T>, undefined>> : never;
+export type StrictUnion<T> = StrictUnionHelper<T, T>;
 
 export const defaultCompareFunction: Compare = <T>(oldValue: T | undefined, newValue: T) => oldValue === newValue;
 
@@ -89,7 +93,7 @@ function generateRandomString(length: number): string {
   return truncatedHexString;
 }
 
-export const generateRandomKey = () => generateRandomString(8);
+export const generateRandomKey = () => generateRandomString(16);
 
 export class StateInstanceError extends Error {
   state: FiddichState<any>;
