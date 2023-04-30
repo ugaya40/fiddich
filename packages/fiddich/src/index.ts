@@ -36,12 +36,13 @@ export type {
   FiddichState,
   FiddichStore,
   FiddichStateInstance,
-  InitializedEvent,
-  WaitingEvent,
-  ChangedByPromiseEvent,
-  ChangedEvent,
-  ErrorEvent,
-  ResetEvent,
+  InitializedEventArg,
+  WaitingEventArg,
+  ChangedByPromiseEventArg,
+  ChangedEventArg,
+  ErrorEventArg,
+  ResetEventArg,
+  InstanceEventArgs,
 } from './shareTypes';
 
 export { namedStore, deleteNamedStoreIfExists, getNamedStore } from './namedStore';
@@ -89,3 +90,13 @@ export type { StorePlaceTypeHookContext } from './hooks/useInstance';
 export { useInstance } from './hooks/useInstance';
 
 export { useNearestStore, useContextStore, useRootStore } from './hooks/useStore';
+
+export type {
+  StoreInfoEventArg,
+  StateInstanceInfoEventArg,
+  AtomInfoEventArg,
+  SelectorInfoEventArg,
+  UseValueInfoEventArg,
+  InfoEventArgs,
+} from './globalFiddichEvent';
+export { globalFiddichEvent } from './globalFiddichEvent';

@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { ChangedByPromiseEvent, ChangedEvent, ErrorEvent, FiddichStateInstance, InitializedEvent, ResetEvent, WaitingEvent } from "../src";
+import { ChangedByPromiseEventArg, ChangedEventArg, ErrorEventArg, FiddichStateInstance, InitializedEventArg, ResetEventArg, WaitingEventArg } from "../src";
 import { waitFor } from "@testing-library/react";
 
 //mock
@@ -31,12 +31,12 @@ export function managedPromise<T>() {
 }
 
 type InstanceEventHistoryType<T> = {
-  reset?: ResetEvent;
-  initialized?: InitializedEvent<T>;
-  waiting?: WaitingEvent;
-  changed?: ChangedEvent;
-  changedByPromise?: ChangedByPromiseEvent<T>;
-  error?: ErrorEvent;
+  reset?: ResetEventArg;
+  initialized?: InitializedEventArg<T>;
+  waiting?: WaitingEventArg;
+  changed?: ChangedEventArg;
+  changedByPromise?: ChangedByPromiseEventArg<T>;
+  error?: ErrorEventArg;
 }
 
 export function instanceEventHistory<T>(instance: FiddichStateInstance<T>): InstanceEventHistoryType<T>[] {

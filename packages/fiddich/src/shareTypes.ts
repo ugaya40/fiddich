@@ -32,36 +32,38 @@ export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T> | SelectorFa
 export type SyncFiddichState<T> = SyncAtom<T> | SyncAtomFamily<T, any> | SyncSelector<T> | SyncSelectorFamily<T, any>;
 export type AsyncFiddichState<T> = AsyncAtom<T> | AsyncAtomFamily<T, any> | AsyncSelector<T> | AsyncSelectorFamily<T, any>;
 
-export type ResetEvent = {
+export type ResetEventArg = {
   type: 'reset';
 };
 
-export type InitializedEvent<T = any> = {
+export type InitializedEventArg<T = any> = {
   type: 'initialized';
   value: T;
 };
 
-export type WaitingEvent = {
+export type WaitingEventArg = {
   type: 'waiting';
   promise: Promise<void>;
 };
 
-export type ChangedEvent<T = any> = {
+export type ChangedEventArg<T = any> = {
   type: 'change';
   oldValue: T | undefined;
   newValue: T;
 };
 
-export type ChangedByPromiseEvent<T = any> = {
+export type ChangedByPromiseEventArg<T = any> = {
   type: 'change by promise';
   oldValue: T | undefined;
   newValue: T;
 };
 
-export type ErrorEvent = {
+export type ErrorEventArg = {
   type: 'error';
   error: Error;
 };
+
+export type InstanceEventArgs = InitializedEventArg | ChangedEventArg | ResetEventArg | ErrorEventArg | WaitingEventArg | ChangedByPromiseEventArg;
 
 export type Compare<T> = (oldValue: T | undefined, newValue: T) => boolean;
 

@@ -3,9 +3,9 @@ import type {
   FiddichStateInstance,
   WaitingStatus,
   Compare,
-  WaitingEvent,
-  ChangedEvent,
-  ChangedByPromiseEvent,
+  WaitingEventArg,
+  ChangedEventArg,
+  ChangedByPromiseEventArg,
   StableStatus,
   StorePlaceType,
   NormalStorePlaceType,
@@ -14,13 +14,13 @@ import type {
   WaitingForInitializeStatus,
   HierarchicalStorePlaceType,
   ErrorStatus,
-  ErrorEvent,
-  InitializedEvent,
+  ErrorEventArg,
+  InitializedEventArg,
   UnknownStatus,
   SyncFiddichState,
   Store,
   ContextStorePlaceType,
-  ResetEvent,
+  ResetEventArg,
 } from './shareTypes';
 import { Disposable, eventPublisher, EventPublisher } from './util/event';
 import { generateRandomKey, lazyFunction } from './util/util';
@@ -44,6 +44,7 @@ import {
 } from './util/stateUtil';
 import { getContextStore, getNewValueStore, getRootStore } from './util/storeUtil';
 import { getNamedStore } from './namedStore';
+import { instanceInfoEventEmitter, selectorInstanceInfoEventEmitter } from './globalFiddichEvent';
 
 export type GetState = <TSource>(arg: SyncFiddichState<TSource>) => TSource;
 export type GetStateAsync = <TSource>(arg: FiddichState<TSource>) => Promise<TSource>;
@@ -214,8 +215,8 @@ export function selectorFamily<T, P>(arg: SelectorFamilyArg<T, P>): SelectorFami
 type SyncSelectorInstanceStatus<T> = UnknownStatus | StableStatus<T> | ErrorStatus;
 type AsyncSelectorInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus | StableStatus<T> | WaitingStatus<T> | ErrorStatus;
 
-export type SyncSelectorInstanceEvent<T> = InitializedEvent<T> | ChangedEvent<T> | ErrorEvent | ResetEvent;
-export type AsyncSelectorInstanceEvent<T> = InitializedEvent<T> | WaitingEvent | ChangedByPromiseEvent<T> | ErrorEvent | ResetEvent;
+export type SyncSelectorInstanceEvent<T> = InitializedEventArg<T> | ChangedEventArg<T> | ErrorEventArg | ResetEventArg;
+export type AsyncSelectorInstanceEvent<T> = InitializedEventArg<T> | WaitingEventArg | ChangedByPromiseEventArg<T> | ErrorEventArg | ResetEventArg;
 
 export type SyncSelectorInstance<T = unknown> = {
   id: string;
@@ -248,6 +249,7 @@ const initializeAsyncSelector = <T>(selectorInstance: AsyncSelectorInstance<T>) 
 
   const initializePromise = new Promise<void>(async resolve => {
     try {
+      selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
       const value = await (asyncSelector.type === 'selectorFamily'
         ? asyncSelector.getAsync({ ...getterArg, param: asyncSelector.parameter })
         : asyncSelector.getAsync(getterArg));
@@ -313,6 +315,8 @@ export const getOrAddAsyncSelectorInstance = <T>(
     stateListeners: new Map<string, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
   };
 
+  selectorInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(selectorInstance, event));
+
   targetStore.event.addListener(event => {
     if (event === 'destroy') {
       selectorInstance.stateListeners.forEach(({ listener }) => listener.dispose());
@@ -328,6 +332,7 @@ export const getOrAddAsyncSelectorInstance = <T>(
   initializeAsyncSelector(selectorInstance);
 
   targetStore.map.set(selectorInstance.state.key, selectorInstance);
+  instanceInfoEventEmitter.fireInstanceCreated(selectorInstance);
   return selectorInstance;
 };
 
@@ -335,6 +340,7 @@ const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T>) =>
   const syncSelector = selectorInstance.state as SyncSelector<T> | SyncSelectorFamily<T, any>;
   const getterArg = syncGetterArg(selectorInstance);
   try {
+    selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
     const value = syncSelector.type === 'selectorFamily' ? syncSelector.get({ ...getterArg, param: syncSelector.parameter }) : syncSelector.get(getterArg);
 
     selectorInstance.status = {
@@ -388,6 +394,8 @@ export const getOrAddSyncSelectorInstance = <T>(
     stateListeners: new Map<string, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
   };
 
+  selectorInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(selectorInstance, event));
+
   targetStore.event.addListener(event => {
     if (event === 'destroy') {
       selectorInstance.stateListeners.forEach(({ listener }) => listener.dispose());
@@ -403,6 +411,7 @@ export const getOrAddSyncSelectorInstance = <T>(
   initializeSyncSelector(selectorInstance);
 
   targetStore.map.set(selectorInstance.state.key, selectorInstance);
+  instanceInfoEventEmitter.fireInstanceCreated(selectorInstance);
   return selectorInstance;
 };
 
@@ -439,6 +448,7 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
 
           const waitingPromise = new Promise<void>(async resolve => {
             try {
+              selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
               const newValue = await (state.type === 'selectorFamily'
                 ? state.getAsync({
                     ...getterArg,
@@ -531,6 +541,7 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
 
         if (event.type === 'change' || event.type === 'change by promise' || event.type === 'error') {
           try {
+            selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
             const newValue = state.type === 'selectorFamily' ? state.get({ ...getterArg, param: state.parameter }) : state.get(getterArg);
 
             if (event.type === 'change') {

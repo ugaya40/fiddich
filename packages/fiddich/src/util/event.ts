@@ -28,6 +28,7 @@ export const eventPublisher = <T>(): EventPublisher<T> => {
     },
     removeListener,
     emit: (event: T): void => {
+      if (syncListeners.length === 0) return;
       [...syncListeners].forEach(listener => listener(event));
     },
   };

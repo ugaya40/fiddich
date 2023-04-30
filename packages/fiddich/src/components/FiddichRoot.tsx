@@ -5,6 +5,7 @@ import { generateRandomKey } from "../util/util";
 import { FiddichStoreContext } from "../util/const";
 import { useChangedValue } from "../hooks/useChangedValue";
 import { eventPublisher } from "../util/event";
+import { storeInfoEventEmitter } from "../globalFiddichEvent";
 
 export const FiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (props) => {
   const storeRef = useRef<FiddichStore>({
@@ -34,7 +35,11 @@ export const FiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (pro
   });
 
   useEffect(() => {
-    return () => storeRef.current.event.emit('destroy');
+    storeInfoEventEmitter.fireStoreCreated(storeRef.current);
+    return () => {
+      storeRef.current.event.emit('destroy');
+      storeInfoEventEmitter.fireStoreDestroyed(storeRef.current);
+    };
   },[]);
 
   return (

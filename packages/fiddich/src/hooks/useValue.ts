@@ -5,9 +5,14 @@ import { Selector, SelectorFamily } from '../selector';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useRerenderAsync } from './useRerender';
 import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
+import { useValueInfoEventEmitter } from '../globalFiddichEvent';
 
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, suppressSuspense?: boolean): T => {
-  const rerender = useRerenderAsync();
+  const rerenderPure = useRerenderAsync();
+  const rerender = () => {
+    rerenderPure();
+    useValueInfoEventEmitter.fireRequestRerender(stateInstance);
+  };
   const compare = stateInstance.state.compare ?? defaultCompareFunction;
   const suppressSuspenseValue = suppressSuspense || ('suppressSuspense' in stateInstance.state && stateInstance.state.suppressSuspense);
 
@@ -34,17 +39,21 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
   }, [stateInstance, stateInstance.store.id, suppressSuspenseValue]);
 
   if (stateInstance.status.type === 'stable') {
+    useValueInfoEventEmitter.fireReturnValue(stateInstance, stateInstance.status.value);
     return stateInstance.status.value;
   } else if ('abortRequest' in stateInstance.status) {
     // Even if this state suppresses Suspense,
     // the waiting status may be exposed by a re-rendering by another StateInstance.value.
     // In that case, the old value should be returned.
     if (suppressSuspenseValue && stateInstance.status.type === 'waiting') {
+      useValueInfoEventEmitter.fireReturnValue(stateInstance, stateInstance.status.oldValue);
       return stateInstance.status.oldValue;
     } else {
+      useValueInfoEventEmitter.fireThrowPromise(stateInstance, stateInstance.status.promise);
       throw stateInstance.status.promise;
     }
   } else if (stateInstance.status.type === 'error') {
+    useValueInfoEventEmitter.fireThrowError(stateInstance, stateInstance.status.error);
     throw stateInstance.status.error;
   } else {
     throw new Error(invalidStatusErrorText);

@@ -1,21 +1,22 @@
 import type {
   WaitingStatus,
   Compare,
-  WaitingEvent,
-  ChangedEvent,
-  ChangedByPromiseEvent,
+  WaitingEventArg,
+  ChangedEventArg,
+  ChangedByPromiseEventArg,
   StableStatus,
   StorePlaceType,
   WaitingForInitializeStatus,
   ErrorStatus,
-  ErrorEvent,
+  ErrorEventArg,
   UnknownStatus,
-  InitializedEvent,
+  InitializedEventArg,
   Store,
-  ResetEvent,
+  ResetEventArg,
 } from './shareTypes';
 import { defaultCompareFunction } from './util/const';
 import { EventPublisher, eventPublisher } from './util/event';
+import { atomInstanceInfoEventEmitter, instanceInfoEventEmitter } from './globalFiddichEvent';
 import { EffectsType, NotFunction, StateInstanceError, StrictUnion, effectsArgBase, getFiddichInstance, getStableValue } from './util/stateUtil';
 import { getNewValueStore } from './util/storeUtil';
 import { generateRandomKey } from './util/util';
@@ -148,8 +149,8 @@ export function atomFamily<T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T
 type SyncAtomInstanceStatus<T> = UnknownStatus | StableStatus<T> | ErrorStatus;
 type AsyncAtomInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus | StableStatus<T> | WaitingStatus<T> | ErrorStatus;
 
-export type SyncAtomInstanceEvent<T> = InitializedEvent<T> | ChangedEvent<T> | ErrorEvent | ResetEvent;
-export type AsyncAtomInstanceEvent<T> = InitializedEvent<T> | WaitingEvent | ChangedByPromiseEvent<T> | ErrorEvent | ResetEvent;
+export type SyncAtomInstanceEvent<T> = InitializedEventArg<T> | ChangedEventArg<T> | ErrorEventArg | ResetEventArg;
+export type AsyncAtomInstanceEvent<T> = InitializedEventArg<T> | WaitingEventArg | ChangedByPromiseEventArg<T> | ErrorEventArg | ResetEventArg;
 
 export type SyncAtomInstance<T = unknown> = {
   id: string;
@@ -305,6 +306,8 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(
     status: { type: 'unknown' },
   };
 
+  atomInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(atomInstance, event));
+
   targetStore.event.addListener(event => {
     if (event === 'destroy') {
       if (atomInstance.state.effects?.destroy != null) {
@@ -319,6 +322,7 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(
   initializeAsyncAtom(atomInstance, initialValue);
 
   targetStore.map.set(atomInstance.state.key, atomInstance);
+  instanceInfoEventEmitter.fireInstanceCreated(atomInstance);
   return atomInstance;
 };
 
@@ -340,6 +344,8 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
     status: { type: 'unknown' },
   };
 
+  atomInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(atomInstance, event));
+
   targetStore.event.addListener(event => {
     if (event === 'destroy') {
       if (atomInstance.state.effects?.destroy != null) {
@@ -354,10 +360,12 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
   initializeSyncAtom(atomInstance, initialValue);
 
   targetStore.map.set(atomInstance.state.key, atomInstance);
+  instanceInfoEventEmitter.fireInstanceCreated(atomInstance);
   return atomInstance;
 };
 
 export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => {
+  atomInstanceInfoEventEmitter.fireTrySetValue(atomInstance);
   if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
 
   const oldValue = getStableValue(atomInstance)!;
@@ -426,6 +434,7 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valu
 };
 
 export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T>, valueOrUpdater: SyncAtomSetterOrUpdaterArg<T>) => {
+  atomInstanceInfoEventEmitter.fireTrySetValue(atomInstance);
   if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
 
   const oldValue = getStableValue(atomInstance)!;
