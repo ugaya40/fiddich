@@ -9,9 +9,9 @@ import { useValueInfoEventEmitter } from '../globalFiddichEvent';
 
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, suppressSuspense?: boolean): T => {
   const rerenderPure = useRerenderAsync();
-  const rerender = () => {
+  const rerender = (reason: 'waiting' | 'change' | 'change by promise' | 'reset' | 'error') => {
     rerenderPure();
-    useValueInfoEventEmitter.fireRequestRerender(stateInstance);
+    useValueInfoEventEmitter.fireRequestRerender(stateInstance, reason);
   };
   const compare = stateInstance.state.compare ?? defaultCompareFunction;
   const suppressSuspenseValue = suppressSuspense || ('suppressSuspense' in stateInstance.state && stateInstance.state.suppressSuspense);
@@ -21,17 +21,17 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
       if (suppressSuspenseValue) {
         if (event.type === 'change by promise' || event.type === 'change') {
           if (!compare(event.oldValue, event.newValue)) {
-            rerender();
+            rerender(event.type);
           }
         }
       } else {
         if (event.type === 'waiting' || event.type === 'change') {
-          rerender();
+          rerender(event.type);
         }
       }
 
-      if (event.type === 'reset') {
-        rerender();
+      if (event.type === 'reset' || event.type === 'error') {
+        rerender(event.type);
       }
     });
 

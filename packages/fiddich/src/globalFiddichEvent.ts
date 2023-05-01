@@ -58,6 +58,7 @@ export type UseValueInfoEventArg =
   | {
       type: 'request rerender';
       instanceInfo: StateInstanceInfo;
+      reason: 'change' | 'change by promise' | 'reset' | 'waiting' | 'error';
     }
   | {
       type: 'return value';
@@ -129,7 +130,8 @@ export const selectorInstanceInfoEventEmitter = {
 };
 
 export const useValueInfoEventEmitter = {
-  fireRequestRerender: (instance: FiddichStateInstance) => globalFiddichEvent.emit({ type: 'request rerender', instanceInfo: instanceInfo(instance) }),
+  fireRequestRerender: (instance: FiddichStateInstance, reason: 'change' | 'change by promise' | 'reset' | 'waiting' | 'error') =>
+    globalFiddichEvent.emit({ type: 'request rerender', instanceInfo: instanceInfo(instance), reason }),
   fireReturnValue: (instance: FiddichStateInstance, value: any) =>
     globalFiddichEvent.emit({ type: 'return value', instanceInfo: instanceInfo(instance), value }),
   fireThrowError: (instance: FiddichStateInstance, error: any) => globalFiddichEvent.emit({ type: 'throw error', instanceInfo: instanceInfo(instance), error }),
