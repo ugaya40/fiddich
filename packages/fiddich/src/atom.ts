@@ -306,6 +306,7 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(
     status: { type: 'unknown' },
   };
 
+  instanceInfoEventEmitter.fireInstanceCreated(atomInstance);
   atomInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(atomInstance, event));
 
   targetStore.event.addListener(event => {
@@ -322,7 +323,7 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(
   initializeAsyncAtom(atomInstance, initialValue);
 
   targetStore.map.set(atomInstance.state.key, atomInstance);
-  instanceInfoEventEmitter.fireInstanceCreated(atomInstance);
+  instanceInfoEventEmitter.fireInstanceRegistered(atomInstance);
   return atomInstance;
 };
 
@@ -344,6 +345,7 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
     status: { type: 'unknown' },
   };
 
+  instanceInfoEventEmitter.fireInstanceCreated(atomInstance);
   atomInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(atomInstance, event));
 
   targetStore.event.addListener(event => {
@@ -360,7 +362,7 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
   initializeSyncAtom(atomInstance, initialValue);
 
   targetStore.map.set(atomInstance.state.key, atomInstance);
-  instanceInfoEventEmitter.fireInstanceCreated(atomInstance);
+  instanceInfoEventEmitter.fireInstanceRegistered(atomInstance);
   return atomInstance;
 };
 

@@ -42,6 +42,10 @@ export type StateInstanceInfoEventArg =
       type: 'state instance event fired';
       instanceInfo: StateInstanceInfo;
       event: InstanceEventArgs;
+    }
+  | {
+      type: 'state instance registered';
+      instanceInfo: StateInstanceInfo;
     };
 
 export type AtomInfoEventArg = {
@@ -118,6 +122,8 @@ export const instanceInfoEventEmitter = {
   fireInstanceCreated: (instance: FiddichStateInstance) => globalFiddichEvent.emit({ type: 'state instance created', instanceInfo: instanceInfo(instance) }),
   fireInstanceEventFired: (instance: FiddichStateInstance, event: InstanceEventArgs) =>
     globalFiddichEvent.emit({ type: 'state instance event fired', instanceInfo: instanceInfo(instance), event }),
+  fireInstanceRegistered: (instance: FiddichStateInstance) =>
+    globalFiddichEvent.emit({ type: 'state instance registered', instanceInfo: instanceInfo(instance) }),
 };
 
 export const atomInstanceInfoEventEmitter = {

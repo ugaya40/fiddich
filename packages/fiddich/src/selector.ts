@@ -315,6 +315,7 @@ export const getOrAddAsyncSelectorInstance = <T>(
     stateListeners: new Map<string, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
   };
 
+  instanceInfoEventEmitter.fireInstanceCreated(selectorInstance);
   selectorInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(selectorInstance, event));
 
   targetStore.event.addListener(event => {
@@ -332,7 +333,7 @@ export const getOrAddAsyncSelectorInstance = <T>(
   initializeAsyncSelector(selectorInstance);
 
   targetStore.map.set(selectorInstance.state.key, selectorInstance);
-  instanceInfoEventEmitter.fireInstanceCreated(selectorInstance);
+  instanceInfoEventEmitter.fireInstanceRegistered(selectorInstance);
   return selectorInstance;
 };
 
@@ -394,6 +395,7 @@ export const getOrAddSyncSelectorInstance = <T>(
     stateListeners: new Map<string, { instance: FiddichStateInstance<any>; listener: Disposable }>(),
   };
 
+  instanceInfoEventEmitter.fireInstanceCreated(selectorInstance);
   selectorInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(selectorInstance, event));
 
   targetStore.event.addListener(event => {
@@ -411,7 +413,7 @@ export const getOrAddSyncSelectorInstance = <T>(
   initializeSyncSelector(selectorInstance);
 
   targetStore.map.set(selectorInstance.state.key, selectorInstance);
-  instanceInfoEventEmitter.fireInstanceCreated(selectorInstance);
+  instanceInfoEventEmitter.fireInstanceRegistered(selectorInstance);
   return selectorInstance;
 };
 
