@@ -1,6 +1,5 @@
-import { ComponentType, FC, ReactNode, useContext, useEffect, useRef } from "react";
+import { ComponentType, FC, ReactNode, useContext, useEffect, useMemo, useRef } from "react";
 import type { FiddichStore } from "../shareTypes";
-import { SelectorInstance } from "../selector";
 import { generateRandomKey } from "../util/util";
 import { FiddichStoreContext } from "../util/const";
 import { useChangedValue } from "../hooks/useChangedValue";
@@ -14,6 +13,8 @@ export const FiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (pro
     event: eventPublisher(), 
     children: [], 
     contextKey: props.contextKey});
+  
+  useMemo(() => storeInfoEventEmitter.fireStoreCreated(storeRef.current),[]);
 
   const parent = useContext(FiddichStoreContext);
 
@@ -35,7 +36,6 @@ export const FiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (pro
   });
 
   useEffect(() => {
-    storeInfoEventEmitter.fireStoreCreated(storeRef.current);
     return () => {
       storeRef.current.event.emit('destroy');
       storeInfoEventEmitter.fireStoreDestroyed(storeRef.current);
