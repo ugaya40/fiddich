@@ -1,11 +1,35 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { AsyncAtom, AsyncAtomFamily, AsyncAtomValueArg, Atom, AtomFamily, SyncAtom, SyncAtomFamily, SyncAtomValueArg } from '../atom';
 import type { FiddichState, FiddichStateInstance } from '../shareTypes';
 import { Selector, SelectorFamily } from '../selector';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useRerenderAsync } from './useRerender';
 import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
-import { useValueInfoEventEmitter } from '../globalFiddichEvent';
+import { RequestRerenderReason, useValueInfoEventEmitter } from '../globalFiddichEvent';
+import { getComponentNameIfDEV } from '../util/util';
+
+function returnValueForUseValue<T>(componentName: string | undefined, stateInstance: FiddichStateInstance<T>, suppressSuspenseValue: boolean) {
+  if (stateInstance.status.type === 'stable') {
+    useValueInfoEventEmitter.fireReturnValue(componentName, stateInstance, stateInstance.status.value);
+    return stateInstance.status.value;
+  } else if ('abortRequest' in stateInstance.status) {
+    // Even if this state suppresses Suspense,
+    // the waiting status may be exposed by a re-rendering by another StateInstance.value.
+    // In that case, the old value should be returned.
+    if (suppressSuspenseValue && stateInstance.status.type === 'waiting') {
+      useValueInfoEventEmitter.fireReturnValue(componentName, stateInstance, stateInstance.status.oldValue);
+      return stateInstance.status.oldValue;
+    } else {
+      useValueInfoEventEmitter.fireThrowPromise(componentName, stateInstance, stateInstance.status.promise);
+      throw stateInstance.status.promise;
+    }
+  } else if (stateInstance.status.type === 'error') {
+    useValueInfoEventEmitter.fireThrowError(componentName, stateInstance, stateInstance.status.error);
+    throw stateInstance.status.error;
+  } else {
+    throw new Error(invalidStatusErrorText);
+  }
+}
 
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, suppressSuspense?: boolean): T => {
   // Why not use useSyncExternalStore?
@@ -14,16 +38,17 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
   // as of 2023-05-05, it may lead to multiple snapshot retrievals. This can negatively impact the developer's
   // ability to understand data flow with globalFiddichEvent. Therefore, we are not adopting the useSyncExternalStore
   // implementation at this time.
-
   const rerenderPure = useRerenderAsync();
-  const rerender = (reason: 'waiting' | 'change' | 'change by promise' | 'reset' | 'error') => {
-    rerenderPure();
-    useValueInfoEventEmitter.fireRequestRerender(stateInstance, reason);
-  };
   const compare = stateInstance.state.compare ?? defaultCompareFunction;
-  const suppressSuspenseValue = suppressSuspense || ('suppressSuspense' in stateInstance.state && stateInstance.state.suppressSuspense);
+  const suppressSuspenseValue = (suppressSuspense ?? false) || ('suppressSuspense' in stateInstance.state && (stateInstance.state.suppressSuspense ?? false));
+
+  const componentName = useMemo(() => getComponentNameIfDEV(),[]);
 
   useEffect(() => {
+    const rerender = (reason: RequestRerenderReason) => {
+      rerenderPure();
+      useValueInfoEventEmitter.fireRequestRerender(componentName, stateInstance, reason);
+    };
     const listener = stateInstance.event.addListener(event => {
       if (suppressSuspenseValue) {
         if (event.type === 'change by promise' || event.type === 'change') {
@@ -43,28 +68,9 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
     });
 
     return () => listener.dispose();
-  }, [stateInstance, stateInstance.store.id, suppressSuspenseValue]);
+  }, [stateInstance, compare, suppressSuspenseValue]);
 
-  if (stateInstance.status.type === 'stable') {
-    useValueInfoEventEmitter.fireReturnValue(stateInstance, stateInstance.status.value);
-    return stateInstance.status.value;
-  } else if ('abortRequest' in stateInstance.status) {
-    // Even if this state suppresses Suspense,
-    // the waiting status may be exposed by a re-rendering by another StateInstance.value.
-    // In that case, the old value should be returned.
-    if (suppressSuspenseValue && stateInstance.status.type === 'waiting') {
-      useValueInfoEventEmitter.fireReturnValue(stateInstance, stateInstance.status.oldValue);
-      return stateInstance.status.oldValue;
-    } else {
-      useValueInfoEventEmitter.fireThrowPromise(stateInstance, stateInstance.status.promise);
-      throw stateInstance.status.promise;
-    }
-  } else if (stateInstance.status.type === 'error') {
-    useValueInfoEventEmitter.fireThrowError(stateInstance, stateInstance.status.error);
-    throw stateInstance.status.error;
-  } else {
-    throw new Error(invalidStatusErrorText);
-  }
+  return returnValueForUseValue(componentName, stateInstance, suppressSuspenseValue);
 };
 
 export type SelectorValueOption = {

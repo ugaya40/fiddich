@@ -16,7 +16,7 @@ import type {
 } from './shareTypes';
 import { defaultCompareFunction } from './util/const';
 import { EventPublisher, eventPublisher } from './util/event';
-import { atomInstanceInfoEventEmitter, instanceInfoEventEmitter } from './globalFiddichEvent';
+import { instanceInfoEventEmitter, atomInstanceInfoEventEmitter } from './globalFiddichEvent';
 import { EffectsType, NotFunction, StateInstanceError, StrictUnion, effectsArgBase, getFiddichInstance, getStableValue } from './util/stateUtil';
 import { getNewValueStore } from './util/storeUtil';
 import { generateRandomKey } from './util/util';
@@ -206,8 +206,9 @@ const initializeAsyncAtom = <T>(atomInstance: AsyncAtomInstance<T>, initialValue
         };
 
         if (atomInstance.state.effects?.init != null) {
+          atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'init');
           atomInstance.state.effects.init({
-            ...effectsArgBase(atomInstance.store),
+            ...effectsArgBase(atomInstance, 'init'),
             value: actualInitialValue,
           });
         }
@@ -225,8 +226,9 @@ const initializeAsyncAtom = <T>(atomInstance: AsyncAtomInstance<T>, initialValue
         atomInstance.event.emit(errorInfo);
 
         if (atomInstance.state.effects?.error != null) {
+          atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
           atomInstance.state.effects.error({
-            ...effectsArgBase(atomInstance.store),
+            ...effectsArgBase(atomInstance, 'error'),
             error,
             oldValue: undefined,
           });
@@ -261,8 +263,9 @@ const initializeSyncAtom = <T>(atomInstance: SyncAtomInstance<T>, initialValue?:
     };
 
     if (atomInstance.state.effects?.init != null) {
+      atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'init');
       atomInstance.state.effects.init({
-        ...effectsArgBase(atomInstance.store),
+        ...effectsArgBase(atomInstance, 'init'),
         value: actualInitialValue,
       });
     }
@@ -276,8 +279,9 @@ const initializeSyncAtom = <T>(atomInstance: SyncAtomInstance<T>, initialValue?:
       atomInstance.event.emit(errorInfo);
 
       if (atomInstance.state.effects?.error != null) {
+        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
         atomInstance.state.effects.error({
-          ...effectsArgBase(atomInstance.store),
+          ...effectsArgBase(atomInstance, 'error'),
           error,
           oldValue: undefined,
         });
@@ -310,10 +314,11 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(
   atomInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(atomInstance, event));
 
   targetStore.event.addListener(event => {
-    if (event === 'destroy') {
-      if (atomInstance.state.effects?.destroy != null) {
-        atomInstance.state.effects.destroy({
-          ...effectsArgBase(atomInstance.store),
+    if (event === 'finalize') {
+      if (atomInstance.state.effects?.finalize != null) {
+        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'finalize');
+        atomInstance.state.effects.finalize({
+          ...effectsArgBase(atomInstance, 'finalize'),
           lastValue: getStableValue(atomInstance),
         });
       }
@@ -349,10 +354,11 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
   atomInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(atomInstance, event));
 
   targetStore.event.addListener(event => {
-    if (event === 'destroy') {
-      if (atomInstance.state.effects?.destroy != null) {
-        atomInstance.state.effects.destroy({
-          ...effectsArgBase(atomInstance.store),
+    if (event === 'finalize') {
+      if (atomInstance.state.effects?.finalize != null) {
+        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'finalize');
+        atomInstance.state.effects.finalize({
+          ...effectsArgBase(atomInstance, 'finalize'),
           lastValue: getStableValue(atomInstance),
         });
       }
@@ -367,7 +373,6 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
 };
 
 export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => {
-  atomInstanceInfoEventEmitter.fireTrySetValue(atomInstance);
   if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
 
   const oldValue = getStableValue(atomInstance)!;
@@ -393,8 +398,9 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valu
 
         if (atomInstance.state.effects?.change != null) {
           if (atomInstance.state.compare == null || !atomInstance.state.compare(oldValue, newValue)) {
+            atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'change');
             atomInstance.state.effects.change({
-              ...effectsArgBase(atomInstance.store),
+              ...effectsArgBase(atomInstance, 'change'),
               oldValue,
               newValue,
             });
@@ -409,8 +415,9 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valu
         atomInstance.event.emit(errorInfo);
 
         if (atomInstance.state.effects?.error != null) {
+          atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
           atomInstance.state.effects.error({
-            ...effectsArgBase(atomInstance.store),
+            ...effectsArgBase(atomInstance, 'error'),
             error,
             oldValue,
           });
@@ -436,7 +443,6 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valu
 };
 
 export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T>, valueOrUpdater: SyncAtomSetterOrUpdaterArg<T>) => {
-  atomInstanceInfoEventEmitter.fireTrySetValue(atomInstance);
   if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
 
   const oldValue = getStableValue(atomInstance)!;
@@ -453,8 +459,9 @@ export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T>, valueO
 
     if (atomInstance.state.effects?.change != null) {
       if (atomInstance.state.compare == null || !atomInstance.state.compare(oldValue, newValue)) {
+        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'change');
         atomInstance.state.effects.change({
-          ...effectsArgBase(atomInstance.store),
+          ...effectsArgBase(atomInstance, 'change'),
           oldValue,
           newValue,
         });
@@ -468,8 +475,9 @@ export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T>, valueO
       atomInstance.event.emit(errorInfo);
 
       if (atomInstance.state.effects?.error != null) {
+        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
         atomInstance.state.effects.error({
-          ...effectsArgBase(atomInstance.store),
+          ...effectsArgBase(atomInstance, 'error'),
           error,
           oldValue,
         });

@@ -50,7 +50,7 @@ test('independentAtom basic', () => {
   expect(instance1.status.type).toBe('stable');
   expect(namedStore(store).state(atom1).get()).toBe(`result:3`);
 
-  // store destroy
+  // store finalize
   deleteNamedStoreIfExists(store);
   testEvent.emit(4);
 

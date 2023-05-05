@@ -3,6 +3,8 @@ import { Store } from '../shareTypes';
 import { FiddichStoreContext, noStoreErrorText } from '../util/const';
 import { resetStoreStates } from '../util/stateUtil';
 import { getContextStore, getRootStore } from '../util/storeUtil';
+import { useStoreInfoEventEmitter } from '../globalFiddichEvent';
+import { getComponentNameIfDEV } from '../util/util';
 
 type StoreOperatorForReset = {
   store: Store;
@@ -10,10 +12,14 @@ type StoreOperatorForReset = {
 };
 
 function useStoreOperator(store: Store): StoreOperatorForReset {
+  const componentName = useMemo(() => getComponentNameIfDEV(),[]);
   return useMemo(() => {
     return {
       store,
-      resetStates: (recursive: boolean) => resetStoreStates(store, recursive),
+      resetStates: (recursive: boolean) => {
+        resetStoreStates(store, recursive);
+        useStoreInfoEventEmitter.fireResetStates(componentName, store, recursive);
+      },
     };
   }, [store.id]);
 }

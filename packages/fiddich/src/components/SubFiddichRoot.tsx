@@ -42,7 +42,7 @@ export const SubFiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (
 
   useEffect(() => {
     return () => {
-      storeRef.current.event.emit('destroy');
+      storeRef.current.event.emit('finalize');
       storeInfoEventEmitter.fireStoreDestroyed(storeRef.current);
     };
   },[]);

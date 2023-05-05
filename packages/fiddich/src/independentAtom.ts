@@ -23,7 +23,7 @@ export const independentAtom = <T>(arg: IndependentAtomArg<T>) => {
         }
         cleaner = registerTrigger((newValue: T) => setSyncAtom(atomState, newValue));
       },
-      destroy: () => {
+      finalize: () => {
         if (cleaner != null) {
           cleaner();
         }

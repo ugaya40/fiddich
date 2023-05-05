@@ -31,7 +31,7 @@ export function deleteNamedStoreIfExists(name: string): void {
   if (store != null) {
     nameAndGlobalNamedStoreMap.delete(name);
     idAndGlobalNamedStoreMap.delete(store.id);
-    store.event.emit('destroy');
+    store.event.emit('finalize');
     storeInfoEventEmitter.fireStoreDestroyed(store);
   }
 }

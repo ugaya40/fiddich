@@ -32,6 +32,8 @@ import {
   SetSyncAtom,
   StateInstanceError,
   StrictUnion,
+  SubOperationExecutionContext,
+  buildResetStatesFunction,
   buildSetAsyncAtomFunction,
   buildSetSyncAtomFunction,
   buildSnapshotFunction,
@@ -40,7 +42,6 @@ import {
   getOrAddStateInstance,
   getStableValue,
   getValue,
-  resetStoreStates,
 } from './util/stateUtil';
 import { getContextStore, getNewValueStore, getRootStore } from './util/storeUtil';
 import { getNamedStore } from './namedStore';
@@ -249,7 +250,7 @@ const initializeAsyncSelector = <T>(selectorInstance: AsyncSelectorInstance<T>) 
 
   const initializePromise = new Promise<void>(async resolve => {
     try {
-      selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
+      selectorInstanceInfoEventEmitter.fireTryGetValueWhenInitialize(selectorInstance);
       const value = await (asyncSelector.type === 'selectorFamily'
         ? asyncSelector.getAsync({ ...getterArg, param: asyncSelector.parameter })
         : asyncSelector.getAsync(getterArg));
@@ -261,8 +262,9 @@ const initializeAsyncSelector = <T>(selectorInstance: AsyncSelectorInstance<T>) 
         selectorInstance.event.emit({ type: 'initialized', value: value });
 
         if (selectorInstance.state.effects?.init != null) {
+          selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'init');
           selectorInstance.state.effects.init({
-            ...effectsArgBase(selectorInstance.store),
+            ...effectsArgBase(selectorInstance, 'init'),
             value,
           });
         }
@@ -275,8 +277,9 @@ const initializeAsyncSelector = <T>(selectorInstance: AsyncSelectorInstance<T>) 
         selectorInstance.event.emit(errorInfo);
 
         if (selectorInstance.state.effects?.error != null) {
+          selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
           selectorInstance.state.effects.error({
-            ...effectsArgBase(selectorInstance.store),
+            ...effectsArgBase(selectorInstance, 'error'),
             error,
             oldValue: undefined,
           });
@@ -319,11 +322,12 @@ export const getOrAddAsyncSelectorInstance = <T>(
   selectorInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(selectorInstance, event));
 
   targetStore.event.addListener(event => {
-    if (event === 'destroy') {
+    if (event === 'finalize') {
       selectorInstance.stateListeners.forEach(({ listener }) => listener.dispose());
-      if (selectorInstance.state.effects?.destroy != null) {
-        selectorInstance.state.effects.destroy({
-          ...effectsArgBase(selectorInstance.store),
+      if (selectorInstance.state.effects?.finalize != null) {
+        selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'finalize');
+        selectorInstance.state.effects.finalize({
+          ...effectsArgBase(selectorInstance, 'finalize'),
           lastValue: getStableValue(selectorInstance),
         });
       }
@@ -341,7 +345,7 @@ const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T>) =>
   const syncSelector = selectorInstance.state as SyncSelector<T> | SyncSelectorFamily<T, any>;
   const getterArg = syncGetterArg(selectorInstance);
   try {
-    selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
+    selectorInstanceInfoEventEmitter.fireTryGetValueWhenInitialize(selectorInstance);
     const value = syncSelector.type === 'selectorFamily' ? syncSelector.get({ ...getterArg, param: syncSelector.parameter }) : syncSelector.get(getterArg);
 
     selectorInstance.status = {
@@ -352,8 +356,9 @@ const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T>) =>
     selectorInstance.event.emit({ type: 'initialized', value: value });
 
     if (selectorInstance.state.effects?.init != null) {
+      selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'init');
       selectorInstance.state.effects.init({
-        ...effectsArgBase(selectorInstance.store),
+        ...effectsArgBase(selectorInstance, 'init'),
         value,
       });
     }
@@ -365,8 +370,9 @@ const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T>) =>
       selectorInstance.event.emit(errorInfo);
 
       if (selectorInstance.state.effects?.error != null) {
+        selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
         selectorInstance.state.effects.error({
-          ...effectsArgBase(selectorInstance.store),
+          ...effectsArgBase(selectorInstance, 'error'),
           error,
           oldValue: undefined,
         });
@@ -399,11 +405,12 @@ export const getOrAddSyncSelectorInstance = <T>(
   selectorInstance.event.addListener(event => instanceInfoEventEmitter.fireInstanceEventFired(selectorInstance, event));
 
   targetStore.event.addListener(event => {
-    if (event === 'destroy') {
+    if (event === 'finalize') {
       selectorInstance.stateListeners.forEach(({ listener }) => listener.dispose());
-      if (selectorInstance.state.effects?.destroy != null) {
-        selectorInstance.state.effects.destroy({
-          ...effectsArgBase(selectorInstance.store),
+      if (selectorInstance.state.effects?.finalize != null) {
+        selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'finalize');
+        selectorInstance.state.effects.finalize({
+          ...effectsArgBase(selectorInstance, 'finalize'),
           lastValue: getStableValue(selectorInstance),
         });
       }
@@ -450,7 +457,7 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
 
           const waitingPromise = new Promise<void>(async resolve => {
             try {
-              selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
+              selectorInstanceInfoEventEmitter.fireTryGetValueWhenSourceChanged(selectorInstance, sourceInstance);
               const newValue = await (state.type === 'selectorFamily'
                 ? state.getAsync({
                     ...getterArg,
@@ -471,8 +478,9 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
 
                 if (selectorInstance.state.effects?.change != null) {
                   if (selectorInstance.state.compare == null || !selectorInstance.state.compare(oldValue, newValue)) {
+                    selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'change');
                     selectorInstance.state.effects.change({
-                      ...effectsArgBase(selectorInstance.store),
+                      ...effectsArgBase(selectorInstance, 'change'),
                       oldValue,
                       newValue,
                     });
@@ -487,8 +495,9 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
                 selectorInstance.event.emit(errorInfo);
 
                 if (selectorInstance.state.effects?.error != null) {
+                  selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
                   selectorInstance.state.effects.error({
-                    ...effectsArgBase(selectorInstance.store),
+                    ...effectsArgBase(selectorInstance, 'error'),
                     error,
                     oldValue: undefined,
                   });
@@ -543,7 +552,7 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
 
         if (event.type === 'change' || event.type === 'change by promise' || event.type === 'error') {
           try {
-            selectorInstanceInfoEventEmitter.fireTryGetValue(selectorInstance);
+            selectorInstanceInfoEventEmitter.fireTryGetValueWhenSourceChanged(selectorInstance, sourceInstance);
             const newValue = state.type === 'selectorFamily' ? state.get({ ...getterArg, param: state.parameter }) : state.get(getterArg);
 
             if (event.type === 'change') {
@@ -560,8 +569,9 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
 
             if (selectorInstance.state.effects?.change != null) {
               if (selectorInstance.state.compare == null || !selectorInstance.state.compare(oldValue, newValue)) {
+                selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'change');
                 selectorInstance.state.effects.change({
-                  ...effectsArgBase(selectorInstance.store),
+                  ...effectsArgBase(selectorInstance, 'change'),
                   oldValue,
                   newValue,
                 });
@@ -575,8 +585,9 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
               selectorInstance.event.emit(errorInfo);
 
               if (selectorInstance.state.effects?.error != null) {
+                selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
                 selectorInstance.state.effects.error({
-                  ...effectsArgBase(selectorInstance.store),
+                  ...effectsArgBase(selectorInstance, 'error'),
                   error,
                   oldValue: undefined,
                 });
@@ -618,38 +629,43 @@ function syncGetterArg<T>(selectorInstance: SyncSelectorInstance<T>): SyncSelect
   };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
   const contextStorePlace: (key: string) => ContextStorePlaceType = (key: string) => ({ type: 'context', nearestStore, key });
+
+  const subOperationContext: SubOperationExecutionContext = {
+    type: 'selector get',
+    instance: selectorInstance,
+  };
   return {
     get: lazyFunction(() => buildGetFunction(selectorInstance, normalStorePlace)),
     snapshot: lazyFunction(() => buildSnapshotFunction(normalStorePlace)),
-    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace)),
-    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace)),
-    resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(nearestStore, recursive)),
+    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace, subOperationContext)),
+    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace, subOperationContext)),
+    resetStates: lazyFunction(() => buildResetStatesFunction(nearestStore, subOperationContext)),
     root: {
       get: lazyFunction(() => buildGetFunction(selectorInstance, rootStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(rootStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace)),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getRootStore(nearestStore), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace, subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace, subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getRootStore(nearestStore), subOperationContext)),
     },
     hierarchical: {
       get: lazyFunction(() => buildGetFunction(selectorInstance, hierarchicalStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(hierarchicalStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
     },
     named: (name: string) => ({
       get: lazyFunction(() => buildGetFunction(selectorInstance, namedStorePlace(name))),
       snapshot: lazyFunction(() => buildSnapshotFunction(namedStorePlace(name))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name))),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name))),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getNamedStore(name), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name), subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name), subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getNamedStore(name), subOperationContext)),
     }),
     context: (key: string) => ({
       get: lazyFunction(() => buildGetFunction(selectorInstance, contextStorePlace(key))),
       snapshot: lazyFunction(() => buildSnapshotFunction(contextStorePlace(key))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key))),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key))),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getContextStore(key, nearestStore), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key), subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getContextStore(key, nearestStore), subOperationContext)),
     }),
   };
 }
@@ -667,38 +683,43 @@ function asyncGetterArg<T>(selectorInstance: AsyncSelectorInstance<T>): AsyncSel
   };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
   const contextStorePlace: (key: string) => ContextStorePlaceType = (key: string) => ({ type: 'context', nearestStore, key });
+
+  const subOperationContext: SubOperationExecutionContext = {
+    type: 'selector get',
+    instance: selectorInstance,
+  };
   return {
     get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, normalStorePlace)),
     snapshot: lazyFunction(() => buildSnapshotFunction(normalStorePlace)),
-    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace)),
-    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace)),
-    resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(nearestStore, recursive)),
+    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace, subOperationContext)),
+    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace, subOperationContext)),
+    resetStates: lazyFunction(() => buildResetStatesFunction(nearestStore, subOperationContext)),
     root: {
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, rootStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(rootStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace)),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getRootStore(nearestStore), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace, subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace, subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getRootStore(nearestStore), subOperationContext)),
     },
     hierarchical: {
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, hierarchicalStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(hierarchicalStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
     },
     named: (name: string) => ({
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, namedStorePlace(name))),
       snapshot: lazyFunction(() => buildSnapshotFunction(namedStorePlace(name))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name))),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name))),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getNamedStore(name), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name), subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name), subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getNamedStore(name), subOperationContext)),
     }),
     context: (key: string) => ({
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, contextStorePlace(key))),
       snapshot: lazyFunction(() => buildSnapshotFunction(contextStorePlace(key))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key))),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key))),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getContextStore(key, nearestStore), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key), subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getContextStore(key, nearestStore), subOperationContext)),
     }),
   };
 }

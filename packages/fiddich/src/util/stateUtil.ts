@@ -12,6 +12,7 @@ import {
   getOrAddSyncAtomInstance,
   resetAtom,
 } from '../atom';
+import { EffectStringType, operationInEffectInfoEventEmitter, operationInGetValueInfoEventEmitter } from '../globalFiddichEvent';
 import { getNamedStore } from '../namedStore';
 import { SelectorInstance, getOrAddAsyncSelectorInstance, getOrAddSyncSelectorInstance, resetSelector } from '../selector';
 import {
@@ -162,26 +163,59 @@ export const buildSnapshotFunction = (storePlaceType: StorePlaceType): GetSnapsh
   return snapshotFunction;
 };
 
-export const buildSetSyncAtomFunction = (storePlaceType: StorePlaceType): SetSyncAtom => {
+export type SubOperationExecutionContext =
+  | {
+      type: 'instance effect';
+      effectType: EffectStringType;
+      instance: FiddichStateInstance<any>;
+    }
+  | {
+      type: 'selector get';
+      instance: SelectorInstance<any>;
+    };
+
+export const buildSetSyncAtomFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): SetSyncAtom => {
   const setAtomFunction: SetSyncAtom = <TSource>(
     atom: SyncAtom<TSource> | SyncAtomFamily<TSource, any>,
     setterOrUpdater: SyncAtomSetterOrUpdaterArg<TSource>
   ) => {
     const targetInstance = getOrAddSyncAtomInstance(atom, storePlaceType);
+    if (context.type === 'instance effect') {
+      operationInEffectInfoEventEmitter.fireTrySetValueToAtom(context.instance, targetInstance, context.effectType);
+    } else if (context.type === 'selector get') {
+      operationInGetValueInfoEventEmitter.fireTrySetValueToAtom(context.instance, targetInstance);
+    }
     changeSyncAtomValue(targetInstance, setterOrUpdater);
   };
   return setAtomFunction;
 };
 
-export const buildSetAsyncAtomFunction = (storePlaceType: StorePlaceType): SetAsyncAtom => {
+export const buildSetAsyncAtomFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): SetAsyncAtom => {
   const setAtomFunction: SetAsyncAtom = <TSource>(
     atom: AsyncAtom<TSource> | AsyncAtomFamily<TSource, any>,
     setterOrUpdater: AsyncAtomSetterOrUpdaterArg<TSource>
   ) => {
     const targetInstance = getOrAddAsyncAtomInstance(atom, storePlaceType);
+    if (context.type === 'instance effect') {
+      operationInEffectInfoEventEmitter.fireTrySetValueToAtom(context.instance, targetInstance, context.effectType);
+    } else if (context.type === 'selector get') {
+      operationInGetValueInfoEventEmitter.fireTrySetValueToAtom(context.instance, targetInstance);
+    }
     changeAsyncAtomValue(targetInstance, setterOrUpdater);
   };
   return setAtomFunction;
+};
+
+export const buildResetStatesFunction = (store: Store, context: SubOperationExecutionContext): ResetStates => {
+  const resetStatesFunction = (recursive: boolean) => {
+    resetStoreStates(store, recursive);
+    if (context.type === 'instance effect') {
+      operationInEffectInfoEventEmitter.fireResetStates(context.instance, store, context.effectType, recursive);
+    } else if (context.type === 'selector get') {
+      operationInGetValueInfoEventEmitter.fireResetStates(context.instance, store, recursive);
+    }
+  };
+  return resetStatesFunction;
 };
 
 export type GetSnapshot = <TSource>(arg: FiddichState<TSource>) => TSource | undefined;
@@ -222,49 +256,55 @@ export type EffectsType<T> = {
   init?: (arg: InitEffectArgType<T>) => void;
   change?: (arg: ChangeEffectArgType<T>) => void;
   error?: (arg: ErrorEffectArgType<T>) => void;
-  destroy?: (arg: DestroyEffectArgType<T>) => void;
+  finalize?: (arg: DestroyEffectArgType<T>) => void;
 };
 
-export const effectsArgBase = <T>(nearestStore: Store): EffectArgTypeBase => {
+export const effectsArgBase = (mainInstance: FiddichStateInstance<any>, effectType: EffectStringType): EffectArgTypeBase => {
   const normalStorePlace: NormalStorePlaceType = {
     type: 'normal',
-    nearestStore,
+    nearestStore: mainInstance.store,
   };
-  const rootStorePlace: RootStorePlaceType = { type: 'root', nearestStore };
+  const rootStorePlace: RootStorePlaceType = { type: 'root', nearestStore: mainInstance.store };
   const hierarchicalStorePlace: HierarchicalStorePlaceType = {
     type: 'hierarchical',
-    nearestStore,
+    nearestStore: mainInstance.store,
   };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
-  const contextStorePlace: (key: string) => ContextStorePlaceType = (key: string) => ({ type: 'context', nearestStore, key });
+  const contextStorePlace: (key: string) => ContextStorePlaceType = (key: string) => ({ type: 'context', nearestStore: mainInstance.store, key });
+
+  const subOperationContext: SubOperationExecutionContext = {
+    type: 'instance effect',
+    effectType,
+    instance: mainInstance,
+  };
 
   return {
     snapshot: lazyFunction(() => buildSnapshotFunction(normalStorePlace)),
-    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace)),
-    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace)),
-    resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(nearestStore, recursive)),
+    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace, subOperationContext)),
+    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace, subOperationContext)),
+    resetStates: lazyFunction(() => buildResetStatesFunction(mainInstance.store, subOperationContext)),
     root: {
       snapshot: lazyFunction(() => buildSnapshotFunction(rootStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace)),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getRootStore(nearestStore), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace, subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace, subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getRootStore(mainInstance.store), subOperationContext)),
     },
     hierarchical: {
       snapshot: lazyFunction(() => buildSnapshotFunction(hierarchicalStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
     },
     named: (name: string) => ({
       snapshot: lazyFunction(() => buildSnapshotFunction(namedStorePlace(name))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name))),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name))),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getNamedStore(name), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name), subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name), subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getNamedStore(name), subOperationContext)),
     }),
     context: (key: string) => ({
       snapshot: lazyFunction(() => buildSnapshotFunction(contextStorePlace(key))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key))),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key))),
-      resetStates: lazyFunction(() => (recursive: boolean) => resetStoreStates(getContextStore(key, nearestStore), recursive)),
+      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key), subOperationContext)),
+      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
+      resetStates: lazyFunction(() => buildResetStatesFunction(getContextStore(key, mainInstance.store), subOperationContext)),
     }),
   };
 };

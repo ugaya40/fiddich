@@ -101,7 +101,7 @@ type StoreBase = {
   map: Map<string, FiddichStateInstance>;
   contextKey?: string;
   children: Store[];
-  event: EventPublisher<'destroy'>;
+  event: EventPublisher<'finalize'>;
 };
 
 export type FiddichStore = StoreBase & {

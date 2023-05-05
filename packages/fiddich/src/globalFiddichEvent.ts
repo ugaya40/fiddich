@@ -14,7 +14,7 @@ export type StoreInfoEventArg =
       storeInfo: StoreInfo;
     }
   | {
-      type: 'store destroyed';
+      type: 'store finalized';
       storeInfo: StoreInfo;
     };
 
@@ -48,39 +48,98 @@ export type StateInstanceInfoEventArg =
       instanceInfo: StateInstanceInfo;
     };
 
-export type AtomInfoEventArg = {
-  type: 'atom instance try setValue';
-  instanceInfo: AtomInstanceInfo;
-};
-
 export type SelectorInfoEventArg = {
   type: 'selector instance try getValue';
   instanceInfo: SelectorInstanceInfo;
+  reason:
+    | { type: 'initialize' }
+    | {
+        type: 'source instance changed';
+        sourceInstanceInfo: StateInstanceInfo;
+      };
+};
+
+export type EffectStringType = 'init' | 'change' | 'error' | 'finalize';
+
+export type EffectInfoEventArg = {
+  type: 'state instance effect';
+  effectType: EffectStringType;
+  instanceInfo: StateInstanceInfo;
+};
+
+export type SetAtomOperationInfoEventArg = {
+  type: 'atom instance try setValue';
+  source:
+    | {
+        type: 'setAtom hooks';
+        componentName: string | undefined;
+      }
+    | {
+        type: 'instance effect';
+        effectType: EffectStringType;
+        instanceInfo: StateInstanceInfo;
+      }
+    | {
+        type: 'selector get';
+        selectorInfo: SelectorInstanceInfo;
+      };
+  targetAtomInstanceInfo: AtomInstanceInfo;
+};
+
+export type ResetStoreOperationInfoEventArg = {
+  type: 'reset store';
+  source:
+    | {
+        type: 'useStore';
+        componentName: string | undefined;
+      }
+    | {
+        type: 'instance effect';
+        effectType: EffectStringType;
+        instanceInfo: StateInstanceInfo;
+      }
+    | {
+        type: 'selector get';
+        selectorInfo: SelectorInstanceInfo;
+      };
+  targetStore: StoreInfo;
+  isRecursive: boolean;
 };
 
 export type UseValueInfoEventArg =
   | {
       type: 'request rerender';
+      componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       reason: 'change' | 'change by promise' | 'reset' | 'waiting' | 'error';
     }
   | {
       type: 'return value';
+      componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       value: any;
     }
   | {
       type: 'throw error';
+      componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       error: any;
     }
   | {
       type: 'throw promise';
+      componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       promise: Promise<any>;
     };
 
-export type InfoEventArgs = StoreInfoEventArg | StateInstanceInfoEventArg | AtomInfoEventArg | SelectorInfoEventArg | UseValueInfoEventArg;
+export type InfoEventArgs =
+  | StoreInfoEventArg
+  | StateInstanceInfoEventArg
+  | EffectInfoEventArg
+  | SetAtomOperationInfoEventArg
+  | ResetStoreOperationInfoEventArg
+  | SelectorInfoEventArg
+  | UseValueInfoEventArg;
 
 const storeInfo = (store: Store): StoreInfo => {
   if ('parent' in store) {
@@ -115,7 +174,7 @@ export const globalFiddichEvent = eventPublisher<InfoEventArgs>();
 
 export const storeInfoEventEmitter = {
   fireStoreCreated: (store: Store) => globalFiddichEvent.emit({ type: 'store created', storeInfo: storeInfo(store) }),
-  fireStoreDestroyed: (store: Store) => globalFiddichEvent.emit({ type: 'store destroyed', storeInfo: storeInfo(store) }),
+  fireStoreDestroyed: (store: Store) => globalFiddichEvent.emit({ type: 'store finalized', storeInfo: storeInfo(store) }),
 };
 
 export const instanceInfoEventEmitter = {
@@ -126,21 +185,89 @@ export const instanceInfoEventEmitter = {
     globalFiddichEvent.emit({ type: 'state instance registered', instanceInfo: instanceInfo(instance) }),
 };
 
+export const useSetAtomInfoEventEmitter = {
+  fireTrySetValue: (componentName: string | undefined, instance: AtomInstance<any>) =>
+    globalFiddichEvent.emit({
+      type: 'atom instance try setValue',
+      source: { type: 'setAtom hooks', componentName },
+      targetAtomInstanceInfo: instanceInfo(instance),
+    }),
+};
+
+export const useStoreInfoEventEmitter = {
+  fireResetStates: (componentName: string | undefined, targetStore: Store, isRecursive: boolean) =>
+    globalFiddichEvent.emit({
+      type: 'reset store',
+      source: { type: 'useStore', componentName },
+      isRecursive,
+      targetStore: storeInfo(targetStore),
+    }),
+};
+
+export const operationInEffectInfoEventEmitter = {
+  fireTrySetValueToAtom: (instance: FiddichStateInstance<any>, targetInstance: AtomInstance<any>, effectType: EffectStringType) =>
+    globalFiddichEvent.emit({
+      type: 'atom instance try setValue',
+      source: { type: 'instance effect', instanceInfo: instanceInfo(instance), effectType },
+      targetAtomInstanceInfo: instanceInfo(targetInstance),
+    }),
+  fireResetStates: (instance: FiddichStateInstance<any>, targetStore: Store, effectType: EffectStringType, isRecursive: boolean) =>
+    globalFiddichEvent.emit({
+      type: 'reset store',
+      isRecursive,
+      source: { type: 'instance effect', instanceInfo: instanceInfo(instance), effectType },
+      targetStore: storeInfo(targetStore),
+    }),
+};
+
+export const operationInGetValueInfoEventEmitter = {
+  fireTrySetValueToAtom: (instance: SelectorInstance<any>, targetInstance: AtomInstance<any>) =>
+    globalFiddichEvent.emit({
+      type: 'atom instance try setValue',
+      source: { type: 'selector get', selectorInfo: instanceInfo(instance) },
+      targetAtomInstanceInfo: instanceInfo(targetInstance),
+    }),
+  fireResetStates: (instance: SelectorInstance<any>, targetStore: Store, isRecursive: boolean) =>
+    globalFiddichEvent.emit({
+      type: 'reset store',
+      source: { type: 'selector get', selectorInfo: instanceInfo(instance) },
+      targetStore: storeInfo(targetStore),
+      isRecursive,
+    }),
+};
+
 export const atomInstanceInfoEventEmitter = {
-  fireTrySetValue: (instance: AtomInstance<any>) => globalFiddichEvent.emit({ type: 'atom instance try setValue', instanceInfo: instanceInfo(instance) }),
+  fireEffects: (instance: AtomInstance<any>, effectType: EffectStringType) =>
+    globalFiddichEvent.emit({ type: 'state instance effect', effectType, instanceInfo: instanceInfo(instance) }),
 };
 
 export const selectorInstanceInfoEventEmitter = {
-  fireTryGetValue: (instance: SelectorInstance<any>) =>
-    globalFiddichEvent.emit({ type: 'selector instance try getValue', instanceInfo: instanceInfo(instance) }),
+  fireEffects: (instance: SelectorInstance<any>, effectType: EffectStringType) =>
+    globalFiddichEvent.emit({ type: 'state instance effect', effectType, instanceInfo: instanceInfo(instance) }),
+
+  fireTryGetValueWhenInitialize: (instance: SelectorInstance<any>) =>
+    globalFiddichEvent.emit({ type: 'selector instance try getValue', reason: { type: 'initialize' }, instanceInfo: instanceInfo(instance) }),
+
+  fireTryGetValueWhenSourceChanged: (instance: SelectorInstance<any>, sourceInstance: FiddichStateInstance<any>) =>
+    globalFiddichEvent.emit({
+      type: 'selector instance try getValue',
+      reason: {
+        type: 'source instance changed',
+        sourceInstanceInfo: instanceInfo(sourceInstance),
+      },
+      instanceInfo: instanceInfo(instance),
+    }),
 };
 
+export type RequestRerenderReason = 'change' | 'change by promise' | 'reset' | 'waiting' | 'error';
+
 export const useValueInfoEventEmitter = {
-  fireRequestRerender: (instance: FiddichStateInstance, reason: 'change' | 'change by promise' | 'reset' | 'waiting' | 'error') =>
-    globalFiddichEvent.emit({ type: 'request rerender', instanceInfo: instanceInfo(instance), reason }),
-  fireReturnValue: (instance: FiddichStateInstance, value: any) =>
-    globalFiddichEvent.emit({ type: 'return value', instanceInfo: instanceInfo(instance), value }),
-  fireThrowError: (instance: FiddichStateInstance, error: any) => globalFiddichEvent.emit({ type: 'throw error', instanceInfo: instanceInfo(instance), error }),
-  fireThrowPromise: (instance: FiddichStateInstance, promise: Promise<any>) =>
-    globalFiddichEvent.emit({ type: 'throw promise', instanceInfo: instanceInfo(instance), promise }),
+  fireRequestRerender: (componentName: string | undefined, instance: FiddichStateInstance, reason: RequestRerenderReason) =>
+    globalFiddichEvent.emit({ type: 'request rerender', componentName, instanceInfo: instanceInfo(instance), reason }),
+  fireReturnValue: (componentName: string | undefined, instance: FiddichStateInstance, value: any) =>
+    globalFiddichEvent.emit({ type: 'return value', componentName, instanceInfo: instanceInfo(instance), value }),
+  fireThrowError: (componentName: string | undefined, instance: FiddichStateInstance, error: any) =>
+    globalFiddichEvent.emit({ type: 'throw error', componentName, instanceInfo: instanceInfo(instance), error }),
+  fireThrowPromise: (componentName: string | undefined, instance: FiddichStateInstance, promise: Promise<any>) =>
+    globalFiddichEvent.emit({ type: 'throw promise', componentName, instanceInfo: instanceInfo(instance), promise }),
 };

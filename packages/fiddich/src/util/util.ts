@@ -1,3 +1,6 @@
+import React from 'react';
+import { isDEV } from './const';
+
 function generateRandomString(length: number): string {
   const array = new Uint8Array(Math.ceil(length / 2));
   window.crypto.getRandomValues(array);
@@ -17,4 +20,16 @@ export function lazyFunction<TFunc extends (...args: any[]) => any>(func: () => 
     }
     return result(...args);
   }) as TFunc;
+}
+
+export function getComponentNameIfDEV(): string | undefined {
+  if (!isDEV) {
+    return undefined;
+  } else if ((window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__?.renderers != null) {
+    const base = (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__.renderers.values().next().value;
+    return base?.getCurrentFiber?.()?.type?.name as string;
+  } else if ((React as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED) {
+    const result = (React as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED?.ReactCurrentOwner?.current?.type?.name;
+    return result;
+  }
 }

@@ -12,3 +12,5 @@ export const nameAndGlobalNamedStoreMap = new Map<string, FiddichStore>();
 export const idAndGlobalNamedStoreMap = new Map<string, FiddichStore>();
 
 export const FiddichStoreContext = createContext<Store | null>(null);
+
+export const isDEV = process.env.NODE_ENV === 'development';

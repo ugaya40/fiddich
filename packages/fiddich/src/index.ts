@@ -94,7 +94,9 @@ export { useNearestStore, useContextStore, useRootStore } from './hooks/useStore
 export type {
   StoreInfoEventArg,
   StateInstanceInfoEventArg,
-  AtomInfoEventArg,
+  EffectInfoEventArg,
+  ResetStoreOperationInfoEventArg,
+  SetAtomOperationInfoEventArg,
   SelectorInfoEventArg,
   UseValueInfoEventArg,
   InfoEventArgs,

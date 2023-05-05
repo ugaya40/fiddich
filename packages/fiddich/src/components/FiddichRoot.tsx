@@ -37,7 +37,7 @@ export const FiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (pro
 
   useEffect(() => {
     return () => {
-      storeRef.current.event.emit('destroy');
+      storeRef.current.event.emit('finalize');
       storeInfoEventEmitter.fireStoreDestroyed(storeRef.current);
     };
   },[]);
