@@ -8,6 +8,13 @@ import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
 import { useValueInfoEventEmitter } from '../globalFiddichEvent';
 
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, suppressSuspense?: boolean): T => {
+  // Why not use useSyncExternalStore?
+  //
+  // Although using useSyncExternalStore wouldn't cause any additional renderings compared to the current method,
+  // as of 2023-05-05, it may lead to multiple snapshot retrievals. This can negatively impact the developer's
+  // ability to understand data flow with globalFiddichEvent. Therefore, we are not adopting the useSyncExternalStore
+  // implementation at this time.
+
   const rerenderPure = useRerenderAsync();
   const rerender = (reason: 'waiting' | 'change' | 'change by promise' | 'reset' | 'error') => {
     rerenderPure();
