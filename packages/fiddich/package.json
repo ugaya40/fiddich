@@ -1,6 +1,6 @@
 {
   "name": "fiddich",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -23,7 +23,7 @@
     "copyReadMe": "node -e \"require('fs').copyFileSync('../../README.md','README.md')\"",
     "removeReadMe": "node -e \"require('fs').unlinkSync('README.md')\"",
     "pub:internal": "yarn publish",
-    "pub": "run-s build copyReadMe pub:internal removeReadMe",
+    "pub": "run-s test build copyReadMe pub:internal removeReadMe",
     "test": "jest"
   },
   "peerDependencies": {
