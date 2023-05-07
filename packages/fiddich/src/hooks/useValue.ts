@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { AsyncAtom, AsyncAtomFamily, AsyncAtomValueArg, Atom, AtomFamily, SyncAtom, SyncAtomFamily, SyncAtomValueArg } from '../atom';
 import type { FiddichState, FiddichStateInstance } from '../shareTypes';
 import { Selector, SelectorFamily } from '../selector';
@@ -6,7 +6,7 @@ import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useRerenderAsync } from './useRerender';
 import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
 import { RequestRerenderReason, useValueInfoEventEmitter } from '../globalFiddichEvent';
-import { getComponentNameIfDEV } from '../util/util';
+import { useComponentNameIfDev } from './useComponentNameIfDev';
 
 function returnValueForUseValue<T>(componentName: string | undefined, stateInstance: FiddichStateInstance<T>, suppressSuspenseValue: boolean) {
   if (stateInstance.status.type === 'stable') {
@@ -42,7 +42,7 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
   const compare = stateInstance.state.compare ?? defaultCompareFunction;
   const suppressSuspenseValue = (suppressSuspense ?? false) || ('suppressSuspense' in stateInstance.state && (stateInstance.state.suppressSuspense ?? false));
 
-  const componentName = useMemo(() => getComponentNameIfDEV(),[]);
+  const componentName = useComponentNameIfDev();
 
   useEffect(() => {
     const rerender = (reason: RequestRerenderReason) => {

@@ -3,12 +3,20 @@ export type {
   Atom,
   AtomFamily,
   AtomInstance,
+  AtomArg,
+  AtomFamilyArg,
   AtomSetterOrUpdater,
   SyncAtom,
   SyncAtomFamily,
+  SyncAtomInstance,
+  SyncAtomArg,
+  SyncAtomFamilyArg,
   SyncAtomSetterOrUpdater,
   AsyncAtom,
   AsyncAtomFamily,
+  AsyncAtomInstance,
+  AsyncAtomArg,
+  AsyncAtomFamilyArg,
   AsyncAtomSetterOrUpdater,
   SyncAtomFamilyFunction,
   AsyncAtomFamilyFunction,
@@ -20,12 +28,18 @@ export type {
   Selector,
   SelectorFamily,
   SelectorInstance,
+  SelectorArg,
+  SelectorFamilyArg,
   SyncSelector,
   SyncSelectorFamily,
   SyncSelectorInstance,
+  SyncSelectorArg,
+  SyncSelectorFamilyArg,
   AsyncSelector,
   AsyncSelectorFamily,
   AsyncSelectorInstance,
+  AsyncSelectorArg,
+  AsyncSelectorFamilyArg,
   SyncSelectorFamilyFunction,
   AsyncSelectorFamilyFunction,
   SelectorFamilyFunction,
@@ -47,8 +61,15 @@ export type {
 
 export { namedStore, deleteNamedStoreIfExists, getNamedStore } from './namedStore';
 
-export type { IndependentAtomArg } from './independentAtom';
-export { independentAtom } from './independentAtom';
+export type {
+  SyncIndependentAtomArg,
+  AsyncIndependentAtomArg,
+  IndependentAtomArg,
+  SyncIndependentAtomFamilyArg,
+  AsyncIndependentAtomFamilyArg,
+  IndependentAtomFamilyArg,
+} from './independentAtom';
+export { independentAtom, independentAtomFamily } from './independentAtom';
 
 export { defaultCompareFunction } from './util/const';
 

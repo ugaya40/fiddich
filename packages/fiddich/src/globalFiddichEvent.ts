@@ -108,25 +108,25 @@ export type ResetStoreOperationInfoEventArg = {
 
 export type UseValueInfoEventArg =
   | {
-      type: 'request rerender';
+      type: 'useValue request rerender';
       componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       reason: 'change' | 'change by promise' | 'reset' | 'waiting' | 'error';
     }
   | {
-      type: 'return value';
+      type: 'useValue return value';
       componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       value: any;
     }
   | {
-      type: 'throw error';
+      type: 'useValue throw error';
       componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       error: any;
     }
   | {
-      type: 'throw promise';
+      type: 'useValue throw promise';
       componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
       promise: Promise<any>;
@@ -236,15 +236,12 @@ export const operationInGetValueInfoEventEmitter = {
     }),
 };
 
-export const atomInstanceInfoEventEmitter = {
-  fireEffects: (instance: AtomInstance<any>, effectType: EffectStringType) =>
+export const stateInstanceInfoEventEmitter = {
+  fireEffects: (instance: FiddichStateInstance<any>, effectType: EffectStringType) =>
     globalFiddichEvent.emit({ type: 'state instance effect', effectType, instanceInfo: instanceInfo(instance) }),
 };
 
 export const selectorInstanceInfoEventEmitter = {
-  fireEffects: (instance: SelectorInstance<any>, effectType: EffectStringType) =>
-    globalFiddichEvent.emit({ type: 'state instance effect', effectType, instanceInfo: instanceInfo(instance) }),
-
   fireTryGetValueWhenInitialize: (instance: SelectorInstance<any>) =>
     globalFiddichEvent.emit({ type: 'selector instance try getValue', reason: { type: 'initialize' }, instanceInfo: instanceInfo(instance) }),
 
@@ -263,11 +260,11 @@ export type RequestRerenderReason = 'change' | 'change by promise' | 'reset' | '
 
 export const useValueInfoEventEmitter = {
   fireRequestRerender: (componentName: string | undefined, instance: FiddichStateInstance, reason: RequestRerenderReason) =>
-    globalFiddichEvent.emit({ type: 'request rerender', componentName, instanceInfo: instanceInfo(instance), reason }),
+    globalFiddichEvent.emit({ type: 'useValue request rerender', componentName, instanceInfo: instanceInfo(instance), reason }),
   fireReturnValue: (componentName: string | undefined, instance: FiddichStateInstance, value: any) =>
-    globalFiddichEvent.emit({ type: 'return value', componentName, instanceInfo: instanceInfo(instance), value }),
+    globalFiddichEvent.emit({ type: 'useValue return value', componentName, instanceInfo: instanceInfo(instance), value }),
   fireThrowError: (componentName: string | undefined, instance: FiddichStateInstance, error: any) =>
-    globalFiddichEvent.emit({ type: 'throw error', componentName, instanceInfo: instanceInfo(instance), error }),
+    globalFiddichEvent.emit({ type: 'useValue throw error', componentName, instanceInfo: instanceInfo(instance), error }),
   fireThrowPromise: (componentName: string | undefined, instance: FiddichStateInstance, promise: Promise<any>) =>
-    globalFiddichEvent.emit({ type: 'throw promise', componentName, instanceInfo: instanceInfo(instance), promise }),
+    globalFiddichEvent.emit({ type: 'useValue throw promise', componentName, instanceInfo: instanceInfo(instance), promise }),
 };

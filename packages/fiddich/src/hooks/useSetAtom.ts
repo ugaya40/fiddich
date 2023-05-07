@@ -1,4 +1,4 @@
-import { useCallback, useContext, useMemo } from 'react';
+import { useCallback, useContext } from 'react';
 import {
   Atom,
   AtomFamily,
@@ -23,13 +23,13 @@ import {
 import { FiddichStoreContext, noStoreErrorText } from '../util/const';
 import { StorePlaceTypeHookContext, useAtomInstance } from './useInstance';
 import { useSetAtomInfoEventEmitter } from '../globalFiddichEvent';
-import { getComponentNameIfDEV } from '../util/util';
+import { useComponentNameIfDev } from './useComponentNameIfDev';
 
 export const useSetAtomInternal = <T>(atomInstance: AtomInstance<T>): AtomSetterOrUpdater<T> => {
   const store = useContext(FiddichStoreContext);
   if (store == null) throw new Error(noStoreErrorText);
 
-  const componentName = useMemo(() => getComponentNameIfDEV(),[]);
+  const componentName = useComponentNameIfDev();
 
   const setFunc = useCallback(
     (valueOrUpdater: AtomSetterOrUpdaterArg<T>) => {

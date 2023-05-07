@@ -12,7 +12,7 @@ import {
   getOrAddSyncAtomInstance,
   resetAtom,
 } from '../atom';
-import { EffectStringType, operationInEffectInfoEventEmitter, operationInGetValueInfoEventEmitter } from '../globalFiddichEvent';
+import { EffectStringType, operationInEffectInfoEventEmitter, operationInGetValueInfoEventEmitter, stateInstanceInfoEventEmitter } from '../globalFiddichEvent';
 import { getNamedStore } from '../namedStore';
 import { SelectorInstance, getOrAddAsyncSelectorInstance, getOrAddSyncSelectorInstance, resetSelector } from '../selector';
 import {
@@ -248,7 +248,7 @@ export type ErrorEffectArgType<T> = EffectArgTypeBase & {
   error: unknown;
 };
 
-export type DestroyEffectArgType<T> = EffectArgTypeBase & {
+export type FinalizeEffectArgType<T> = EffectArgTypeBase & {
   lastValue: T | undefined;
 };
 
@@ -256,7 +256,81 @@ export type EffectsType<T> = {
   init?: (arg: InitEffectArgType<T>) => void;
   change?: (arg: ChangeEffectArgType<T>) => void;
   error?: (arg: ErrorEffectArgType<T>) => void;
-  finalize?: (arg: DestroyEffectArgType<T>) => void;
+  finalize?: (arg: FinalizeEffectArgType<T>) => void;
+};
+
+export type FamilyEffectsTypes<T, P> = { [K in keyof EffectsType<T>]?: (arg: Parameters<NonNullable<EffectsType<T>[K]>>[0] & { parameter: P }) => void };
+
+export const fireInitEffect = <T>(stateInstance: FiddichStateInstance<T>, initialValue: T) => {
+  if (stateInstance.state.effects?.init == null) return;
+  stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'init');
+  if ('parameter' in stateInstance.state) {
+    stateInstance.state.effects.init({
+      ...effectsArgBase(stateInstance, 'init'),
+      parameter: stateInstance.state.parameter,
+      value: initialValue,
+    });
+  } else {
+    stateInstance.state.effects.init({
+      ...effectsArgBase(stateInstance, 'init'),
+      value: initialValue,
+    });
+  }
+};
+
+export const fireChangeEffect = <T>(stateInstance: FiddichStateInstance<T>, oldValue: T | undefined, newValue: T) => {
+  if (stateInstance.state.effects?.change == null) return;
+  stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'change');
+  if ('parameter' in stateInstance.state) {
+    stateInstance.state.effects.change({
+      ...effectsArgBase(stateInstance, 'change'),
+      parameter: stateInstance.state.parameter,
+      oldValue,
+      newValue,
+    });
+  } else {
+    stateInstance.state.effects.change({
+      ...effectsArgBase(stateInstance, 'change'),
+      oldValue,
+      newValue,
+    });
+  }
+};
+
+export const fireErrorEffect = <T>(stateInstance: FiddichStateInstance<T>, oldValue: T | undefined, error: unknown) => {
+  if (stateInstance.state.effects?.error == null) return;
+  stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'error');
+  if ('parameter' in stateInstance.state) {
+    stateInstance.state.effects.error({
+      ...effectsArgBase(stateInstance, 'error'),
+      parameter: stateInstance.state.parameter,
+      error,
+      oldValue,
+    });
+  } else {
+    stateInstance.state.effects.error({
+      ...effectsArgBase(stateInstance, 'error'),
+      error,
+      oldValue,
+    });
+  }
+};
+
+export const fireFinalizeEffect = <T>(stateInstance: FiddichStateInstance<T>) => {
+  if (stateInstance.state.effects?.finalize == null) return;
+  stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'finalize');
+  if ('parameter' in stateInstance.state) {
+    stateInstance.state.effects.finalize({
+      ...effectsArgBase(stateInstance, 'finalize'),
+      parameter: stateInstance.state.parameter,
+      lastValue: getStableValue(stateInstance),
+    });
+  } else {
+    stateInstance.state.effects.finalize({
+      ...effectsArgBase(stateInstance, 'finalize'),
+      lastValue: getStableValue(stateInstance),
+    });
+  }
 };
 
 export const effectsArgBase = (mainInstance: FiddichStateInstance<any>, effectType: EffectStringType): EffectArgTypeBase => {

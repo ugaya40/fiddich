@@ -16,8 +16,20 @@ import type {
 } from './shareTypes';
 import { defaultCompareFunction } from './util/const';
 import { EventPublisher, eventPublisher } from './util/event';
-import { instanceInfoEventEmitter, atomInstanceInfoEventEmitter } from './globalFiddichEvent';
-import { EffectsType, NotFunction, StateInstanceError, StrictUnion, effectsArgBase, getFiddichInstance, getStableValue } from './util/stateUtil';
+import { instanceInfoEventEmitter } from './globalFiddichEvent';
+import {
+  EffectsType,
+  FamilyEffectsTypes,
+  NotFunction,
+  StateInstanceError,
+  StrictUnion,
+  fireChangeEffect,
+  fireErrorEffect,
+  fireFinalizeEffect,
+  fireInitEffect,
+  getFiddichInstance,
+  getStableValue,
+} from './util/stateUtil';
 import { getNewValueStore } from './util/storeUtil';
 import { generateRandomKey } from './util/util';
 
@@ -57,15 +69,15 @@ type AtomArgBase<T> = {
   effects?: EffectsType<T>;
 };
 
-type SyncAtomArg<T> = AtomArgBase<T> & {
+export type SyncAtomArg<T> = AtomArgBase<T> & {
   default: SyncAtomValueArg<T>;
 };
-type AsyncAtomArg<T> = AtomArgBase<T> & {
+export type AsyncAtomArg<T> = AtomArgBase<T> & {
   suppressSuspense?: boolean;
   asyncDefault: AsyncAtomValueArg<T>;
 };
 
-type AtomArg<T> = StrictUnion<SyncAtomArg<T> | AsyncAtomArg<T>>;
+export type AtomArg<T> = StrictUnion<SyncAtomArg<T> | AsyncAtomArg<T>>;
 
 export function atom<T>(arg: SyncAtomArg<T>): SyncAtom<T>;
 export function atom<T>(arg: AsyncAtomArg<T>): AsyncAtom<T>;
@@ -89,8 +101,9 @@ type AtomFamilyBase<T = any, P = any> = {
   name?: string;
   baseKey: string;
   parameter: P;
+  parameterString: string;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  effects?: FamilyEffectsTypes<T, P>;
 };
 
 export type SyncAtomFamily<T, P> = AtomFamilyBase<T, P> & {
@@ -104,23 +117,23 @@ export type AsyncAtomFamily<T, P> = AtomFamilyBase<T, P> & {
 
 export type AtomFamily<T = unknown, P = any> = SyncAtomFamily<T, P> | AsyncAtomFamily<T, P>;
 
-type AtomFamilyArgBase<T, P> = {
+export type AtomFamilyArgBase<T, P> = {
   name?: string;
   stringfy?: (arg: P) => string;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  effects?: FamilyEffectsTypes<T, P>;
 };
 
-type SyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
+export type SyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
   default: SyncAtomFamilyValueArg<T, P>;
 };
 
-type AsyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
+export type AsyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
   suppressSuspense?: boolean;
   asyncDefault: AsyncAtomFamilyValueArg<T, P>;
 };
 
-type AtomFamilyArg<T, P> = SyncAtomFamilyArg<T, P> | AsyncAtomFamilyArg<T, P>;
+export type AtomFamilyArg<T, P> = SyncAtomFamilyArg<T, P> | AsyncAtomFamilyArg<T, P>;
 
 export type SyncAtomFamilyFunction<T = unknown, P = unknown> = (arg: P) => SyncAtomFamily<T, P>;
 export type AsyncAtomFamilyFunction<T = unknown, P = unknown> = (arg: P) => AsyncAtomFamily<T, P>;
@@ -133,11 +146,14 @@ export function atomFamily<T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T
   const baseKey = generateRandomKey();
   const { stringfy, ...other } = arg;
   const result: AtomFamilyFunction<T, P> = parameter => {
-    const key = `${baseKey}-familyKey-${stringfy != null ? stringfy(parameter) : `${JSON.stringify(parameter)}`}`;
+    const parameterString = stringfy != null ? stringfy(parameter) : `${JSON.stringify(parameter)}`;
+    const key = `${baseKey}-familyKey-${parameterString}`;
     return {
       ...other,
       parameter,
+      stringfy,
       key,
+      parameterString,
       baseKey,
       type: 'atomFamily',
     };
@@ -205,13 +221,7 @@ const initializeAsyncAtom = <T>(atomInstance: AsyncAtomInstance<T>, initialValue
           value: actualInitialValue,
         };
 
-        if (atomInstance.state.effects?.init != null) {
-          atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'init');
-          atomInstance.state.effects.init({
-            ...effectsArgBase(atomInstance, 'init'),
-            value: actualInitialValue,
-          });
-        }
+        fireInitEffect(atomInstance, actualInitialValue);
 
         atomInstance.event.emit({
           type: 'initialized',
@@ -223,16 +233,8 @@ const initializeAsyncAtom = <T>(atomInstance: AsyncAtomInstance<T>, initialValue
         const error = new StateInstanceError(atomInstance, e);
         const errorInfo = { type: 'error', error } as const;
         atomInstance.status = errorInfo;
+        fireErrorEffect(atomInstance, undefined, error);
         atomInstance.event.emit(errorInfo);
-
-        if (atomInstance.state.effects?.error != null) {
-          atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
-          atomInstance.state.effects.error({
-            ...effectsArgBase(atomInstance, 'error'),
-            error,
-            oldValue: undefined,
-          });
-        }
       } else {
         throw e;
       }
@@ -262,13 +264,7 @@ const initializeSyncAtom = <T>(atomInstance: SyncAtomInstance<T>, initialValue?:
       value: actualInitialValue,
     };
 
-    if (atomInstance.state.effects?.init != null) {
-      atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'init');
-      atomInstance.state.effects.init({
-        ...effectsArgBase(atomInstance, 'init'),
-        value: actualInitialValue,
-      });
-    }
+    fireInitEffect(atomInstance, actualInitialValue);
 
     atomInstance.event.emit({ type: 'initialized', value: actualInitialValue });
   } catch (e) {
@@ -276,16 +272,8 @@ const initializeSyncAtom = <T>(atomInstance: SyncAtomInstance<T>, initialValue?:
       const error = new StateInstanceError(atomInstance, e);
       const errorInfo = { type: 'error', error } as const;
       atomInstance.status = errorInfo;
+      fireErrorEffect(atomInstance, undefined, error);
       atomInstance.event.emit(errorInfo);
-
-      if (atomInstance.state.effects?.error != null) {
-        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
-        atomInstance.state.effects.error({
-          ...effectsArgBase(atomInstance, 'error'),
-          error,
-          oldValue: undefined,
-        });
-      }
     } else {
       throw e;
     }
@@ -315,13 +303,7 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(
 
   targetStore.event.addListener(event => {
     if (event === 'finalize') {
-      if (atomInstance.state.effects?.finalize != null) {
-        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'finalize');
-        atomInstance.state.effects.finalize({
-          ...effectsArgBase(atomInstance, 'finalize'),
-          lastValue: getStableValue(atomInstance),
-        });
-      }
+      fireFinalizeEffect(atomInstance);
     }
   });
 
@@ -355,13 +337,7 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
 
   targetStore.event.addListener(event => {
     if (event === 'finalize') {
-      if (atomInstance.state.effects?.finalize != null) {
-        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'finalize');
-        atomInstance.state.effects.finalize({
-          ...effectsArgBase(atomInstance, 'finalize'),
-          lastValue: getStableValue(atomInstance),
-        });
-      }
+      fireFinalizeEffect(atomInstance);
     }
   });
 
@@ -390,38 +366,21 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valu
           value: newValue,
         };
 
+        fireChangeEffect(atomInstance, oldValue, newValue);
+
         atomInstance.event.emit({
           type: 'change by promise',
           oldValue,
           newValue,
         });
-
-        if (atomInstance.state.effects?.change != null) {
-          if (atomInstance.state.compare == null || !atomInstance.state.compare(oldValue, newValue)) {
-            atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'change');
-            atomInstance.state.effects.change({
-              ...effectsArgBase(atomInstance, 'change'),
-              oldValue,
-              newValue,
-            });
-          }
-        }
       }
     } catch (e) {
       if (e instanceof Error) {
         const error = new StateInstanceError(atomInstance, e);
         const errorInfo = { type: 'error', error } as const;
         atomInstance.status = errorInfo;
+        fireErrorEffect(atomInstance, oldValue, error);
         atomInstance.event.emit(errorInfo);
-
-        if (atomInstance.state.effects?.error != null) {
-          atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
-          atomInstance.state.effects.error({
-            ...effectsArgBase(atomInstance, 'error'),
-            error,
-            oldValue,
-          });
-        }
       } else {
         throw e;
       }
@@ -455,33 +414,15 @@ export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T>, valueO
       type: 'stable',
       value: newValue,
     };
+    fireChangeEffect(atomInstance, oldValue, newValue);
     atomInstance.event.emit({ type: 'change', oldValue, newValue });
-
-    if (atomInstance.state.effects?.change != null) {
-      if (atomInstance.state.compare == null || !atomInstance.state.compare(oldValue, newValue)) {
-        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'change');
-        atomInstance.state.effects.change({
-          ...effectsArgBase(atomInstance, 'change'),
-          oldValue,
-          newValue,
-        });
-      }
-    }
   } catch (e) {
     if (e instanceof Error) {
       const error = new StateInstanceError(atomInstance, e);
       const errorInfo = { type: 'error', error } as const;
       atomInstance.status = errorInfo;
+      fireErrorEffect(atomInstance, oldValue, error);
       atomInstance.event.emit(errorInfo);
-
-      if (atomInstance.state.effects?.error != null) {
-        atomInstanceInfoEventEmitter.fireEffects(atomInstance, 'error');
-        atomInstance.state.effects.error({
-          ...effectsArgBase(atomInstance, 'error'),
-          error,
-          oldValue,
-        });
-      }
     } else {
       throw e;
     }

@@ -27,6 +27,7 @@ import { generateRandomKey, lazyFunction } from './util/util';
 import { defaultCompareFunction, invalidStatusErrorText } from './util/const';
 import {
   EffectsType,
+  FamilyEffectsTypes,
   GetSnapshot,
   SetAsyncAtom,
   SetSyncAtom,
@@ -38,6 +39,10 @@ import {
   buildSetSyncAtomFunction,
   buildSnapshotFunction,
   effectsArgBase,
+  fireChangeEffect,
+  fireErrorEffect,
+  fireFinalizeEffect,
+  fireInitEffect,
   getFiddichInstance,
   getOrAddStateInstance,
   getStableValue,
@@ -150,8 +155,9 @@ type SelectorFamilyBase<T = any, P = any> = {
   name?: string;
   baseKey: string;
   parameter: P;
+  parameterString: string;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  effects?: FamilyEffectsTypes<T, P>;
 };
 
 type AsyncSelectorFamilyGetArgsType<T, P> = AsyncSelectorGetArgsType & {
@@ -176,7 +182,7 @@ type SelectorFamilyArgBase<T, P> = {
   name?: string;
   stringfy?: (arg: P) => string;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  effects?: FamilyEffectsTypes<T, P>;
 };
 
 export type SyncSelectorFamilyArg<T, P> = SelectorFamilyArgBase<T, P> & {
@@ -200,11 +206,13 @@ export function selectorFamily<T, P>(arg: SelectorFamilyArg<T, P>): SelectorFami
   const baseKey = generateRandomKey();
   const { stringfy, ...other } = arg;
   const result: SelectorFamilyFunction<T, P> = parameter => {
-    const key = `${baseKey}-familyKey-${stringfy != null ? stringfy(parameter) : `${parameter}`}`;
+    const parameterString = stringfy != null ? stringfy(parameter) : `${JSON.stringify(parameter)}`;
+    const key = `${baseKey}-familyKey-${parameterString}`;
     return {
       ...other,
       key,
       baseKey,
+      parameterString,
       parameter,
       type: 'selectorFamily',
     };
@@ -259,31 +267,16 @@ const initializeAsyncSelector = <T>(selectorInstance: AsyncSelectorInstance<T>) 
           type: 'stable',
           value: value,
         };
+        fireInitEffect(selectorInstance, value);
         selectorInstance.event.emit({ type: 'initialized', value: value });
-
-        if (selectorInstance.state.effects?.init != null) {
-          selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'init');
-          selectorInstance.state.effects.init({
-            ...effectsArgBase(selectorInstance, 'init'),
-            value,
-          });
-        }
       }
     } catch (e) {
       if (e instanceof Error) {
         const error = new StateInstanceError(selectorInstance, e);
         const errorInfo = { type: 'error', error } as const;
         selectorInstance.status = errorInfo;
+        fireErrorEffect(selectorInstance, undefined, error);
         selectorInstance.event.emit(errorInfo);
-
-        if (selectorInstance.state.effects?.error != null) {
-          selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
-          selectorInstance.state.effects.error({
-            ...effectsArgBase(selectorInstance, 'error'),
-            error,
-            oldValue: undefined,
-          });
-        }
       } else {
         throw e;
       }
@@ -324,13 +317,7 @@ export const getOrAddAsyncSelectorInstance = <T>(
   targetStore.event.addListener(event => {
     if (event === 'finalize') {
       selectorInstance.stateListeners.forEach(({ listener }) => listener.dispose());
-      if (selectorInstance.state.effects?.finalize != null) {
-        selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'finalize');
-        selectorInstance.state.effects.finalize({
-          ...effectsArgBase(selectorInstance, 'finalize'),
-          lastValue: getStableValue(selectorInstance),
-        });
-      }
+      fireFinalizeEffect(selectorInstance);
     }
   });
 
@@ -352,31 +339,15 @@ const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T>) =>
       type: 'stable',
       value: value,
     };
-
+    fireInitEffect(selectorInstance, value);
     selectorInstance.event.emit({ type: 'initialized', value: value });
-
-    if (selectorInstance.state.effects?.init != null) {
-      selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'init');
-      selectorInstance.state.effects.init({
-        ...effectsArgBase(selectorInstance, 'init'),
-        value,
-      });
-    }
   } catch (e) {
     if (e instanceof Error) {
       const error = new StateInstanceError(selectorInstance, e);
       const errorInfo = { type: 'error', error } as const;
       selectorInstance.status = errorInfo;
+      fireErrorEffect(selectorInstance, undefined, error);
       selectorInstance.event.emit(errorInfo);
-
-      if (selectorInstance.state.effects?.error != null) {
-        selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
-        selectorInstance.state.effects.error({
-          ...effectsArgBase(selectorInstance, 'error'),
-          error,
-          oldValue: undefined,
-        });
-      }
     } else {
       throw e;
     }
@@ -407,13 +378,7 @@ export const getOrAddSyncSelectorInstance = <T>(
   targetStore.event.addListener(event => {
     if (event === 'finalize') {
       selectorInstance.stateListeners.forEach(({ listener }) => listener.dispose());
-      if (selectorInstance.state.effects?.finalize != null) {
-        selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'finalize');
-        selectorInstance.state.effects.finalize({
-          ...effectsArgBase(selectorInstance, 'finalize'),
-          lastValue: getStableValue(selectorInstance),
-        });
-      }
+      fireFinalizeEffect(selectorInstance);
     }
   });
 
@@ -470,38 +435,22 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
                   type: 'stable',
                   value: newValue,
                 };
+
+                fireChangeEffect(selectorInstance, oldValue, newValue);
+
                 selectorInstance.event.emit({
                   type: 'change by promise',
                   oldValue,
                   newValue,
                 });
-
-                if (selectorInstance.state.effects?.change != null) {
-                  if (selectorInstance.state.compare == null || !selectorInstance.state.compare(oldValue, newValue)) {
-                    selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'change');
-                    selectorInstance.state.effects.change({
-                      ...effectsArgBase(selectorInstance, 'change'),
-                      oldValue,
-                      newValue,
-                    });
-                  }
-                }
               }
             } catch (e) {
               if (e instanceof Error) {
                 const error = new StateInstanceError(selectorInstance, e);
                 const errorInfo = { type: 'error', error } as const;
                 selectorInstance.status = errorInfo;
+                fireErrorEffect(selectorInstance, oldValue, error);
                 selectorInstance.event.emit(errorInfo);
-
-                if (selectorInstance.state.effects?.error != null) {
-                  selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
-                  selectorInstance.state.effects.error({
-                    ...effectsArgBase(selectorInstance, 'error'),
-                    error,
-                    oldValue: undefined,
-                  });
-                }
               } else {
                 throw e;
               }
@@ -565,33 +514,15 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
               type: 'stable',
               value: newValue,
             };
+            fireChangeEffect(selectorInstance, oldValue, newValue);
             selectorInstance.event.emit({ type: 'change', oldValue, newValue });
-
-            if (selectorInstance.state.effects?.change != null) {
-              if (selectorInstance.state.compare == null || !selectorInstance.state.compare(oldValue, newValue)) {
-                selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'change');
-                selectorInstance.state.effects.change({
-                  ...effectsArgBase(selectorInstance, 'change'),
-                  oldValue,
-                  newValue,
-                });
-              }
-            }
           } catch (e) {
             if (e instanceof Error) {
               const error = new StateInstanceError(selectorInstance, e);
               const errorInfo = { type: 'error', error } as const;
               selectorInstance.status = errorInfo;
+              fireErrorEffect(selectorInstance, undefined, error);
               selectorInstance.event.emit(errorInfo);
-
-              if (selectorInstance.state.effects?.error != null) {
-                selectorInstanceInfoEventEmitter.fireEffects(selectorInstance, 'error');
-                selectorInstance.state.effects.error({
-                  ...effectsArgBase(selectorInstance, 'error'),
-                  error,
-                  oldValue: undefined,
-                });
-              }
             } else {
               throw e;
             }
