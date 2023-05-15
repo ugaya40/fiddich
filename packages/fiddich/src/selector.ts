@@ -21,6 +21,7 @@ import type {
   Store,
   ContextStorePlaceType,
   ResetEventArg,
+  CellFactory,
 } from './shareTypes';
 import { Disposable, eventPublisher, EventPublisher } from './util/event';
 import { generateRandomKey, lazyFunction } from './util/util';
@@ -38,7 +39,6 @@ import {
   buildSetAsyncAtomFunction,
   buildSetSyncAtomFunction,
   buildSnapshotFunction,
-  effectsArgBase,
   fireChangeEffect,
   fireErrorEffect,
   fireFinalizeEffect,
@@ -55,7 +55,7 @@ import { instanceInfoEventEmitter, selectorInstanceInfoEventEmitter } from './gl
 export type GetState = <TSource>(arg: SyncFiddichState<TSource>) => TSource;
 export type GetStateAsync = <TSource>(arg: FiddichState<TSource>) => Promise<TSource>;
 
-type AsyncSelectorGetArgsType = {
+type AsyncSelectorGetArgsType<TCell> = {
   get: GetStateAsync;
   snapshot: GetSnapshot;
   setSyncAtom: SetSyncAtom;
@@ -77,8 +77,9 @@ type AsyncSelectorGetArgsType = {
     setAsyncAtom: SetAsyncAtom;
     resetStates: (recursive: boolean) => void;
   };
+  cell: TCell;
 };
-type SyncSelectorGetArgsType = {
+type SyncSelectorGetArgsType<TCell> = {
   get: GetState;
   snapshot: GetSnapshot;
   setSyncAtom: SetSyncAtom;
@@ -100,116 +101,124 @@ type SyncSelectorGetArgsType = {
     setAsyncAtom: SetAsyncAtom;
     resetStates: (recursive: boolean) => void;
   };
+  cell: TCell;
 };
 
-type SelectorBase<T> = {
+type SelectorBase<T, TCell> = {
   type: 'selector';
   key: string;
   name?: string;
+  cell: CellFactory<TCell>;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  effects?: EffectsType<T, TCell>;
 };
 
-export type SyncSelector<T> = SelectorBase<T> & {
-  get: (arg: SyncSelectorGetArgsType) => Awaited<T>;
+export type SyncSelector<T, TCell = undefined> = SelectorBase<T, TCell> & {
+  get: (arg: SyncSelectorGetArgsType<TCell>) => Awaited<T>;
 };
 
-export type AsyncSelector<T> = SelectorBase<T> & {
+export type AsyncSelector<T, TCell = undefined> = SelectorBase<T, TCell> & {
   suppressSuspense?: boolean;
-  getAsync: (arg: AsyncSelectorGetArgsType) => Promise<T>;
+  getAsync: (arg: AsyncSelectorGetArgsType<TCell>) => Promise<T>;
 };
 
-export type Selector<T = any> = SyncSelector<T> | AsyncSelector<T>;
+export type Selector<T = any, TCell = undefined> = SyncSelector<T, TCell> | AsyncSelector<T, TCell>;
 
-type SelectorArgBase<T> = {
+type SelectorArgBase<T, TCell> = {
   name?: string;
+  cell?: CellFactory<TCell>;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  effects?: EffectsType<T, TCell>;
 };
 
-export type SyncSelectorArg<T> = SelectorArgBase<T> & {
-  get: (arg: SyncSelectorGetArgsType) => Awaited<T>;
+export type SyncSelectorArg<T, TCell = undefined> = SelectorArgBase<T, TCell> & {
+  get: (arg: SyncSelectorGetArgsType<TCell>) => Awaited<T>;
 };
 
-export type AsyncSelectorArg<T> = SelectorArgBase<T> & {
+export type AsyncSelectorArg<T, TCell = undefined> = SelectorArgBase<T, TCell> & {
   suppressSuspense?: boolean;
-  getAsync: (arg: AsyncSelectorGetArgsType) => Promise<T>;
+  getAsync: (arg: AsyncSelectorGetArgsType<TCell>) => Promise<T>;
 };
 
-export type SelectorArg<T> = StrictUnion<SyncSelectorArg<T> | AsyncSelectorArg<T>>;
+export type SelectorArg<T, TCell = any> = StrictUnion<SyncSelectorArg<T, TCell> | AsyncSelectorArg<T, TCell>>;
 
-export function selector<T>(arg: AsyncSelectorArg<T>): AsyncSelector<T>;
-export function selector<T>(arg: SyncSelectorArg<T>): SyncSelector<T>;
-export function selector<T>(arg: SelectorArg<T>): Selector<T>;
-export function selector<T>(arg: SelectorArg<T>): Selector<T> {
+export function selector<T, TCell = undefined>(arg: AsyncSelectorArg<T, TCell>): AsyncSelector<T, TCell>;
+export function selector<T, TCell = undefined>(arg: SyncSelectorArg<T, TCell>): SyncSelector<T, TCell>;
+export function selector<T, TCell = undefined>(arg: SelectorArg<T, TCell>): Selector<T, TCell>;
+export function selector<T, TCell = undefined>(arg: SelectorArg<T, TCell>): Selector<T, TCell> {
+  const { cell, ...other } = arg;
   return {
     key: generateRandomKey(),
     type: 'selector',
-    ...arg,
+    cell: (cell ?? (() => undefined)) as CellFactory<TCell>,
+    ...other,
   };
 }
 
-type SelectorFamilyBase<T = any, P = any> = {
+type SelectorFamilyBase<T = unknown, P = unknown, TCell = any> = {
   type: 'selectorFamily';
   key: string;
   name?: string;
   baseKey: string;
   parameter: P;
+  cell: CellFactory<TCell>;
   parameterString: string;
   compare?: Compare<T>;
-  effects?: FamilyEffectsTypes<T, P>;
+  effects?: FamilyEffectsTypes<T, P, TCell>;
 };
 
-type AsyncSelectorFamilyGetArgsType<T, P> = AsyncSelectorGetArgsType & {
+type AsyncSelectorFamilyGetArgsType<T, P, TCell> = AsyncSelectorGetArgsType<TCell> & {
   param: P;
 };
-type SyncSelectorFamilyGetArgsType<T, P> = SyncSelectorGetArgsType & {
+type SyncSelectorFamilyGetArgsType<T, P, TCell> = SyncSelectorGetArgsType<TCell> & {
   param: P;
 };
 
-export type SyncSelectorFamily<T, P> = SelectorFamilyBase<T, P> & {
-  get: (arg: SyncSelectorFamilyGetArgsType<T, P>) => T;
+export type SyncSelectorFamily<T = unknown, P = unknown, TCell = undefined> = SelectorFamilyBase<T, P, TCell> & {
+  get: (arg: SyncSelectorFamilyGetArgsType<T, P, TCell>) => T;
 };
 
-export type AsyncSelectorFamily<T, P> = SelectorFamilyBase<T, P> & {
+export type AsyncSelectorFamily<T = unknown, P = unknown, TCell = undefined> = SelectorFamilyBase<T, P, TCell> & {
   suppressSuspense?: boolean;
-  getAsync: (arg: AsyncSelectorFamilyGetArgsType<T, P>) => Promise<T>;
+  getAsync: (arg: AsyncSelectorFamilyGetArgsType<T, P, TCell>) => Promise<T>;
 };
 
-export type SelectorFamily<T = unknown, P = any> = SyncSelectorFamily<T, P> | AsyncSelectorFamily<T, P>;
+export type SelectorFamily<T = unknown, P = unknown, TCell = undefined> = SyncSelectorFamily<T, P, TCell> | AsyncSelectorFamily<T, P, TCell>;
 
-type SelectorFamilyArgBase<T, P> = {
+type SelectorFamilyArgBase<T, P, TCell> = {
   name?: string;
   stringfy?: (arg: P) => string;
+  cell?: CellFactory<TCell>;
   compare?: Compare<T>;
-  effects?: FamilyEffectsTypes<T, P>;
+  effects?: FamilyEffectsTypes<T, P, TCell>;
 };
 
-export type SyncSelectorFamilyArg<T, P> = SelectorFamilyArgBase<T, P> & {
-  get: (arg: SyncSelectorFamilyGetArgsType<T, P>) => Awaited<T>;
+export type SyncSelectorFamilyArg<T, P, TCell> = SelectorFamilyArgBase<T, P, TCell> & {
+  get: (arg: SyncSelectorFamilyGetArgsType<T, P, TCell>) => Awaited<T>;
 };
 
-export type AsyncSelectorFamilyArg<T, P> = SelectorFamilyArgBase<T, P> & {
+export type AsyncSelectorFamilyArg<T, P, TCell> = SelectorFamilyArgBase<T, P, TCell> & {
   suppressSuspense?: boolean;
-  getAsync: (arg: AsyncSelectorFamilyGetArgsType<T, P>) => Promise<T>;
+  getAsync: (arg: AsyncSelectorFamilyGetArgsType<T, P, TCell>) => Promise<T>;
 };
 
-export type SelectorFamilyArg<T, P> = SyncSelectorFamilyArg<T, P> | AsyncSelectorFamilyArg<T, P>;
+export type SelectorFamilyArg<T, P, TCell> = SyncSelectorFamilyArg<T, P, TCell> | AsyncSelectorFamilyArg<T, P, TCell>;
 
-export type SyncSelectorFamilyFunction<T = unknown, P = unknown> = (arg: P) => SyncSelectorFamily<T, P>;
-export type AsyncSelectorFamilyFunction<T = unknown, P = unknown> = (arg: P) => AsyncSelectorFamily<T, P>;
-export type SelectorFamilyFunction<T = unknown, P = unknown> = (arg: P) => SelectorFamily<T, P>;
+export type SyncSelectorFamilyFunction<T = unknown, P = unknown, TCell = undefined> = (arg: P) => SyncSelectorFamily<T, P, TCell>;
+export type AsyncSelectorFamilyFunction<T = unknown, P = unknown, TCell = undefined> = (arg: P) => AsyncSelectorFamily<T, P, TCell>;
+export type SelectorFamilyFunction<T = unknown, P = unknown, TCell = undefined> = (arg: P) => SelectorFamily<T, P, TCell>;
 
-export function selectorFamily<T, P>(arg: SyncSelectorFamilyArg<T, P>): SyncSelectorFamilyFunction<T, P>;
-export function selectorFamily<T, P>(arg: AsyncSelectorFamilyArg<T, P>): AsyncSelectorFamilyFunction<T, P>;
-export function selectorFamily<T, P>(arg: SelectorFamilyArg<T, P>): SelectorFamilyFunction<T, P> {
+export function selectorFamily<T, P, TCell = undefined>(arg: SyncSelectorFamilyArg<T, P, TCell>): SyncSelectorFamilyFunction<T, P, TCell>;
+export function selectorFamily<T, P, TCell = undefined>(arg: AsyncSelectorFamilyArg<T, P, TCell>): AsyncSelectorFamilyFunction<T, P, TCell>;
+export function selectorFamily<T, P, TCell = undefined>(arg: SelectorFamilyArg<T, P, TCell>): SelectorFamilyFunction<T, P, TCell> {
   const baseKey = generateRandomKey();
-  const { stringfy, ...other } = arg;
-  const result: SelectorFamilyFunction<T, P> = parameter => {
+  const { stringfy, cell, ...other } = arg;
+  const result: SelectorFamilyFunction<T, P, TCell> = parameter => {
     const parameterString = stringfy != null ? stringfy(parameter) : `${JSON.stringify(parameter)}`;
     const key = `${baseKey}-familyKey-${parameterString}`;
     return {
       ...other,
+      cell: (cell ?? (() => undefined)) as CellFactory<TCell>,
       key,
       baseKey,
       parameterString,
@@ -227,25 +236,27 @@ type AsyncSelectorInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus
 export type SyncSelectorInstanceEvent<T> = InitializedEventArg<T> | ChangedEventArg<T> | ErrorEventArg | ResetEventArg;
 export type AsyncSelectorInstanceEvent<T> = InitializedEventArg<T> | WaitingEventArg | ChangedByPromiseEventArg<T> | ErrorEventArg | ResetEventArg;
 
-export type SyncSelectorInstance<T = unknown> = {
+export type SyncSelectorInstance<T = unknown, TCell = any> = {
   id: string;
-  state: SyncSelector<T> | SyncSelectorFamily<T, any>;
+  state: SyncSelector<T, TCell> | SyncSelectorFamily<T, any, TCell>;
+  cell: TCell;
   store: Store;
   event: EventPublisher<SyncSelectorInstanceEvent<T>>;
   stateListeners: Map<string, { instance: FiddichStateInstance<any>; listener: Disposable }>;
   status: SyncSelectorInstanceStatus<T>;
 };
 
-export type AsyncSelectorInstance<T = unknown> = {
+export type AsyncSelectorInstance<T = unknown, TCell = any> = {
   id: string;
-  state: AsyncSelector<T> | AsyncSelectorFamily<T, any>;
+  state: AsyncSelector<T, TCell> | AsyncSelectorFamily<T, any, TCell>;
+  cell: TCell;
   store: Store;
   event: EventPublisher<AsyncSelectorInstanceEvent<T>>;
   stateListeners: Map<string, { instance: FiddichStateInstance<any>; listener: Disposable }>;
   status: AsyncSelectorInstanceStatus<T>;
 };
 
-export type SelectorInstance<T = unknown> = SyncSelectorInstance<T> | AsyncSelectorInstance<T>;
+export type SelectorInstance<T = any, TCell = any> = SyncSelectorInstance<T, TCell> | AsyncSelectorInstance<T, TCell>;
 
 const initializeAsyncSelector = <T>(selectorInstance: AsyncSelectorInstance<T>) => {
   const asyncSelector = selectorInstance.state as AsyncSelector<T> | AsyncSelectorFamily<T, any>;
@@ -293,18 +304,19 @@ const initializeAsyncSelector = <T>(selectorInstance: AsyncSelectorInstance<T>) 
   selectorInstance.status = waitingForInitializeStatus;
 };
 
-export const getOrAddAsyncSelectorInstance = <T>(
-  selector: AsyncSelector<T> | AsyncSelectorFamily<T, any>,
+export const getOrAddAsyncSelectorInstance = <T, TCell>(
+  selector: AsyncSelector<T, TCell> | AsyncSelectorFamily<T, any, TCell>,
   storePlaceType: StorePlaceType
-): AsyncSelectorInstance<T> => {
-  const selectorInstanceFromStore = getFiddichInstance<T>(selector, storePlaceType) as AsyncSelectorInstance<T> | undefined;
+): AsyncSelectorInstance<T, TCell> => {
+  const selectorInstanceFromStore = getFiddichInstance(selector, storePlaceType) as AsyncSelectorInstance<T, TCell> | undefined;
   if (selectorInstanceFromStore != null) return selectorInstanceFromStore;
 
   const targetStore = getNewValueStore(storePlaceType);
 
-  const selectorInstance: AsyncSelectorInstance<T> = {
+  const selectorInstance: AsyncSelectorInstance<T, TCell> = {
     id: generateRandomKey(),
     state: selector,
+    cell: selector.cell?.() as TCell,
     event: eventPublisher(),
     store: targetStore,
     status: { type: 'unknown' },
@@ -328,7 +340,7 @@ export const getOrAddAsyncSelectorInstance = <T>(
   return selectorInstance;
 };
 
-const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T>) => {
+const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T, any>) => {
   const syncSelector = selectorInstance.state as SyncSelector<T> | SyncSelectorFamily<T, any>;
   const getterArg = syncGetterArg(selectorInstance);
   try {
@@ -354,18 +366,19 @@ const initializeSyncSelector = <T>(selectorInstance: SyncSelectorInstance<T>) =>
   }
 };
 
-export const getOrAddSyncSelectorInstance = <T>(
-  selector: SyncSelector<T> | SyncSelectorFamily<T, any>,
+export const getOrAddSyncSelectorInstance = <T, TCell>(
+  selector: SyncSelector<T, TCell> | SyncSelectorFamily<T, any, TCell>,
   storePlaceType: StorePlaceType
-): SyncSelectorInstance<T> => {
-  const selectorInstanceFromStore = getFiddichInstance<T>(selector, storePlaceType) as SyncSelectorInstance<T> | undefined;
+): SyncSelectorInstance<T, TCell> => {
+  const selectorInstanceFromStore = getFiddichInstance<T, TCell>(selector, storePlaceType) as SyncSelectorInstance<T, TCell> | undefined;
   if (selectorInstanceFromStore != null) return selectorInstanceFromStore;
 
   const targetStore = getNewValueStore(storePlaceType);
 
-  const selectorInstance: SyncSelectorInstance<T> = {
+  const selectorInstance: SyncSelectorInstance<T, TCell> = {
     id: generateRandomKey(),
     state: selector,
+    cell: selector.cell?.() as TCell,
     event: eventPublisher(),
     store: targetStore,
     status: { type: 'unknown' },
@@ -404,7 +417,7 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
     const sourceInstance = getOrAddStateInstance(state, storePlaceType);
     const listenerKey = getStateListenerKey(sourceInstance, storePlaceType);
     const existingListener = selectorInstance.stateListeners.get(listenerKey);
-    const getterArg = asyncGetterArg<T>(selectorInstance);
+    const getterArg = asyncGetterArg<T, any>(selectorInstance);
 
     if (existingListener == null || existingListener.instance !== sourceInstance) {
       existingListener?.listener?.dispose?.();
@@ -490,7 +503,7 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
     const compareFunction: Compare<T> = selectorInstance.state.compare ?? defaultCompareFunction;
     const listenerKey = getStateListenerKey(sourceInstance, storePlaceType);
     const existingListener = selectorInstance.stateListeners.get(listenerKey);
-    const getterArg = syncGetterArg<T>(selectorInstance);
+    const getterArg = syncGetterArg<T, any>(selectorInstance);
 
     if (existingListener == null || existingListener.instance !== sourceInstance) {
       existingListener?.listener?.dispose?.();
@@ -547,7 +560,7 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
   return getFunction;
 };
 
-function syncGetterArg<T>(selectorInstance: SyncSelectorInstance<T>): SyncSelectorGetArgsType {
+function syncGetterArg<T, TCell>(selectorInstance: SyncSelectorInstance<T, TCell>): SyncSelectorGetArgsType<TCell> {
   const nearestStore = selectorInstance.store;
   const normalStorePlace: NormalStorePlaceType = {
     type: 'normal',
@@ -598,10 +611,11 @@ function syncGetterArg<T>(selectorInstance: SyncSelectorInstance<T>): SyncSelect
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
       resetStates: lazyFunction(() => buildResetStatesFunction(getContextStore(key, nearestStore), subOperationContext)),
     }),
+    cell: selectorInstance.cell,
   };
 }
 
-function asyncGetterArg<T>(selectorInstance: AsyncSelectorInstance<T>): AsyncSelectorGetArgsType {
+function asyncGetterArg<T, TCell>(selectorInstance: AsyncSelectorInstance<T, TCell>): AsyncSelectorGetArgsType<TCell> {
   const nearestStore = selectorInstance.store;
   const normalStorePlace: NormalStorePlaceType = {
     type: 'normal',
@@ -652,6 +666,7 @@ function asyncGetterArg<T>(selectorInstance: AsyncSelectorInstance<T>): AsyncSel
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
       resetStates: lazyFunction(() => buildResetStatesFunction(getContextStore(key, nearestStore), subOperationContext)),
     }),
+    cell: selectorInstance.cell,
   };
 }
 

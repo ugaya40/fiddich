@@ -24,7 +24,7 @@ export type StorePlaceTypeHookContext =
     };
 
 type UseAtomInstanceArgsType<T, P> = {
-  atom: Atom<T> | AtomFamily<T, P>;
+  atom: Atom<T> | AtomFamily<T, P, any>;
   storePlace: StorePlaceTypeHookContext;
   initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>;
 };

@@ -39,19 +39,19 @@ export function deleteNamedStoreIfExists(name: string): void {
 class StoreOperator {
   constructor(public store: FiddichStore) {}
 
-  state<T>(state: SyncAtom<T> | SyncAtomFamily<T, any>): SyncAtomOperator<T>;
-  state<T>(state: AsyncAtom<T> | AsyncAtomFamily<T, any>): AsyncAtomOperator<T>;
-  state<T>(state: SyncSelector<T> | SyncSelectorFamily<T, any>): SyncSelectorOperator<T>;
-  state<T>(state: AsyncSelector<T> | AsyncSelectorFamily<T, any>): AsyncSelectorOperator<T>;
-  state<T>(state: FiddichState<T>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T>;
-  state<T>(state: FiddichState<T>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T> {
+  state<T, TCell>(state: SyncAtom<T, TCell> | SyncAtomFamily<T, any, TCell>): SyncAtomOperator<T>;
+  state<T, TCell>(state: AsyncAtom<T, TCell> | AsyncAtomFamily<T, any, TCell>): AsyncAtomOperator<T>;
+  state<T, TCell>(state: SyncSelector<T, TCell> | SyncSelectorFamily<T, any, TCell>): SyncSelectorOperator<T>;
+  state<T, TCell>(state: AsyncSelector<T, TCell> | AsyncSelectorFamily<T, any, TCell>): AsyncSelectorOperator<T>;
+  state<T, TCell>(state: FiddichState<T, TCell>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T>;
+  state<T, TCell>(state: FiddichState<T, TCell>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T> {
     const instance = getOrAddStateInstance(state, {
       type: 'normal',
       nearestStore: this.store,
     });
     if (state.type === 'atom' || state.type === 'atomFamily') {
       if ('default' in state) {
-        const syncAtomInstance = instance as SyncAtomInstance<T>;
+        const syncAtomInstance = instance as SyncAtomInstance<T, TCell>;
         return {
           state,
           event: syncAtomInstance.event,
@@ -60,7 +60,7 @@ class StoreOperator {
           instance: syncAtomInstance,
         } as SyncAtomOperator<T>;
       } else {
-        const asyncAtomInstance = instance as AsyncAtomInstance<T>;
+        const asyncAtomInstance = instance as AsyncAtomInstance<T, TCell>;
         return {
           state,
           event: asyncAtomInstance.event,

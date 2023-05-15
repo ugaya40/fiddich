@@ -28,9 +28,17 @@ import {
   SyncSelectorInstanceEvent,
 } from './selector';
 
-export type FiddichState<T> = Atom<T> | AtomFamily<T> | Selector<T> | SelectorFamily<T>;
-export type SyncFiddichState<T> = SyncAtom<T> | SyncAtomFamily<T, any> | SyncSelector<T> | SyncSelectorFamily<T, any>;
-export type AsyncFiddichState<T> = AsyncAtom<T> | AsyncAtomFamily<T, any> | AsyncSelector<T> | AsyncSelectorFamily<T, any>;
+export type FiddichState<T = any, TCell = any> = Atom<T, TCell> | AtomFamily<T, any, TCell> | Selector<T, TCell> | SelectorFamily<T, any, TCell>;
+export type SyncFiddichState<T = any, TCell = any> =
+  | SyncAtom<T, TCell>
+  | SyncAtomFamily<T, any, TCell>
+  | SyncSelector<T, TCell>
+  | SyncSelectorFamily<T, any, TCell>;
+export type AsyncFiddichState<T = any, TCell = any> =
+  | AsyncAtom<T, TCell>
+  | AsyncAtomFamily<T, any, TCell>
+  | AsyncSelector<T, TCell>
+  | AsyncSelectorFamily<T, any, TCell>;
 
 export type ResetEventArg = {
   type: 'reset';
@@ -94,7 +102,9 @@ export type ErrorStatus = {
   error: Error;
 };
 
-export type FiddichStateInstance<T = any> = AtomInstance<T> | SelectorInstance<T>;
+export type CellFactory<T> = () => T;
+
+export type FiddichStateInstance<T = any, TCell = any> = AtomInstance<T, TCell> | SelectorInstance<T, TCell>;
 
 type StoreBase = {
   id: string;

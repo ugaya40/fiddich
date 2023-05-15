@@ -64,17 +64,17 @@ export function independentAtom<T>(arg: IndependentAtomArg<T>) {
   return atomState;
 }
 
-export type SyncIndependentAtomFamilyArg<T, P> = SyncAtomFamilyArg<T, P> & {
+export type SyncIndependentAtomFamilyArg<T, P> = SyncAtomFamilyArg<T, P, any> & {
   registerTrigger: (change: ChangeValue<T>) => Cleanup | void;
 };
 
-export type AsyncIndependentAtomFamilyArg<T, P> = AsyncAtomFamilyArg<T, P> & {
+export type AsyncIndependentAtomFamilyArg<T, P> = AsyncAtomFamilyArg<T, P, any> & {
   registerTrigger: (change: ChangeValue<T>) => Cleanup | void;
 };
 
 export type IndependentAtomFamilyArg<T, P> = SyncIndependentAtomFamilyArg<T, P> | AsyncIndependentAtomFamilyArg<T, P>;
 
-type FamilyEffectArg<T, P, A extends keyof EffectsType<T>> = Parameters<NonNullable<FamilyEffectsTypes<T, P>[A]>>[0];
+type FamilyEffectArg<T, P, A extends keyof EffectsType<T>> = Parameters<NonNullable<FamilyEffectsTypes<T, P, any>[A]>>[0];
 
 export function independentAtomFamily<T, P>(arg: SyncIndependentAtomFamilyArg<T, P>): SyncAtomFamilyFunction<T, P>;
 export function independentAtomFamily<T, P>(arg: AsyncIndependentAtomFamilyArg<T, P>): AsyncAtomFamilyFunction<T, P>;

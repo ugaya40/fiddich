@@ -13,6 +13,7 @@ import type {
   InitializedEventArg,
   Store,
   ResetEventArg,
+  CellFactory,
 } from './shareTypes';
 import { defaultCompareFunction } from './util/const';
 import { EventPublisher, eventPublisher } from './util/event';
@@ -44,48 +45,52 @@ export type SyncAtomSetterOrUpdater<T> = (setterOrUpdater: SyncAtomSetterOrUpdat
 export type AsyncAtomSetterOrUpdater<T> = (setterOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => void;
 export type AtomSetterOrUpdater<T> = SyncAtomSetterOrUpdater<T> | AsyncAtomSetterOrUpdater<T>;
 
-type AtomBase<T> = {
+type AtomBase<T, TCell> = {
   type: 'atom';
   key: string;
   name?: string;
+  cell: CellFactory<TCell>;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  effects?: EffectsType<T, TCell>;
 };
 
-export type SyncAtom<T> = AtomBase<T> & {
+export type SyncAtom<T, TCell = undefined> = AtomBase<T, TCell> & {
   default: SyncAtomValueArg<T>;
 };
 
-export type AsyncAtom<T> = AtomBase<T> & {
+export type AsyncAtom<T, TCell = undefined> = AtomBase<T, TCell> & {
   suppressSuspense?: boolean;
   asyncDefault: AsyncAtomValueArg<T>;
 };
 
-export type Atom<T = any> = SyncAtom<T> | AsyncAtom<T>;
+export type Atom<T = unknown, TCell = any> = SyncAtom<T, TCell> | AsyncAtom<T, TCell>;
 
-type AtomArgBase<T> = {
+type AtomArgBase<T, TCell> = {
   name?: string;
   compare?: Compare<T>;
-  effects?: EffectsType<T>;
+  cell?: CellFactory<TCell>;
+  effects?: EffectsType<T, TCell>;
 };
 
-export type SyncAtomArg<T> = AtomArgBase<T> & {
+export type SyncAtomArg<T, TCell = any> = AtomArgBase<T, TCell> & {
   default: SyncAtomValueArg<T>;
 };
-export type AsyncAtomArg<T> = AtomArgBase<T> & {
+export type AsyncAtomArg<T, TCell = any> = AtomArgBase<T, TCell> & {
   suppressSuspense?: boolean;
   asyncDefault: AsyncAtomValueArg<T>;
 };
 
-export type AtomArg<T> = StrictUnion<SyncAtomArg<T> | AsyncAtomArg<T>>;
+export type AtomArg<T, TCell = any> = StrictUnion<SyncAtomArg<T, TCell> | AsyncAtomArg<T, TCell>>;
 
-export function atom<T>(arg: SyncAtomArg<T>): SyncAtom<T>;
-export function atom<T>(arg: AsyncAtomArg<T>): AsyncAtom<T>;
-export function atom<T>(arg: AtomArg<T>): Atom<T>;
-export function atom<T>(arg: AtomArg<T>): Atom<T> {
-  const result: Atom<T> = {
+export function atom<T, TCell = undefined>(arg: SyncAtomArg<T, TCell>): SyncAtom<T, TCell>;
+export function atom<T, TCell = undefined>(arg: AsyncAtomArg<T, TCell>): AsyncAtom<T, TCell>;
+export function atom<T, TCell = undefined>(arg: AtomArg<T, TCell>): Atom<T, TCell>;
+export function atom<T, TCell = undefined>(arg: AtomArg<T, TCell>): Atom<T, TCell> {
+  const { cell, ...other } = arg;
+  const result: Atom<T, TCell> = {
     key: generateRandomKey(),
-    ...arg,
+    ...other,
+    cell: (cell ?? (() => undefined)) as CellFactory<TCell>,
     type: 'atom',
   };
 
@@ -95,61 +100,64 @@ export function atom<T>(arg: AtomArg<T>): Atom<T> {
 type SyncAtomFamilyValueArg<T, P> = Awaited<T> | ((arg: P) => Awaited<T>);
 type AsyncAtomFamilyValueArg<T, P> = Promise<T> | Awaited<T> | ((arg: P) => Promise<T> | Awaited<T>);
 
-type AtomFamilyBase<T = any, P = any> = {
+type AtomFamilyBase<T, P, TCell> = {
   type: 'atomFamily';
   key: string;
   name?: string;
   baseKey: string;
   parameter: P;
+  cell: CellFactory<TCell>;
   parameterString: string;
   compare?: Compare<T>;
-  effects?: FamilyEffectsTypes<T, P>;
+  effects?: FamilyEffectsTypes<T, P, TCell>;
 };
 
-export type SyncAtomFamily<T, P> = AtomFamilyBase<T, P> & {
+export type SyncAtomFamily<T, P, TCell = undefined> = AtomFamilyBase<T, P, TCell> & {
   default: SyncAtomFamilyValueArg<T, P>;
 };
 
-export type AsyncAtomFamily<T, P> = AtomFamilyBase<T, P> & {
+export type AsyncAtomFamily<T, P, TCell = undefined> = AtomFamilyBase<T, P, TCell> & {
   suppressSuspense?: boolean;
   asyncDefault: AsyncAtomFamilyValueArg<T, P>;
 };
 
-export type AtomFamily<T = unknown, P = any> = SyncAtomFamily<T, P> | AsyncAtomFamily<T, P>;
+export type AtomFamily<T = unknown, P = unknown, TCell = undefined> = SyncAtomFamily<T, P, TCell> | AsyncAtomFamily<T, P, TCell>;
 
-export type AtomFamilyArgBase<T, P> = {
+export type AtomFamilyArgBase<T, P, TCell> = {
   name?: string;
   stringfy?: (arg: P) => string;
+  cell?: CellFactory<TCell>;
   compare?: Compare<T>;
-  effects?: FamilyEffectsTypes<T, P>;
+  effects?: FamilyEffectsTypes<T, P, TCell>;
 };
 
-export type SyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
+export type SyncAtomFamilyArg<T, P, TCell> = AtomFamilyArgBase<T, P, TCell> & {
   default: SyncAtomFamilyValueArg<T, P>;
 };
 
-export type AsyncAtomFamilyArg<T, P> = AtomFamilyArgBase<T, P> & {
+export type AsyncAtomFamilyArg<T, P, TCell> = AtomFamilyArgBase<T, P, TCell> & {
   suppressSuspense?: boolean;
   asyncDefault: AsyncAtomFamilyValueArg<T, P>;
 };
 
-export type AtomFamilyArg<T, P> = SyncAtomFamilyArg<T, P> | AsyncAtomFamilyArg<T, P>;
+export type AtomFamilyArg<T, P, TCell> = SyncAtomFamilyArg<T, P, TCell> | AsyncAtomFamilyArg<T, P, TCell>;
 
-export type SyncAtomFamilyFunction<T = unknown, P = unknown> = (arg: P) => SyncAtomFamily<T, P>;
-export type AsyncAtomFamilyFunction<T = unknown, P = unknown> = (arg: P) => AsyncAtomFamily<T, P>;
-export type AtomFamilyFunction<T = any, P = any> = (arg: P) => AtomFamily<T, P>;
+export type SyncAtomFamilyFunction<T = unknown, P = unknown, TCell = undefined> = (arg: P) => SyncAtomFamily<T, P, TCell>;
+export type AsyncAtomFamilyFunction<T = unknown, P = unknown, TCell = undefined> = (arg: P) => AsyncAtomFamily<T, P, TCell>;
+export type AtomFamilyFunction<T = any, P = any, TCell = undefined> = (arg: P) => AtomFamily<T, P, TCell>;
 
-export function atomFamily<T, P>(arg: SyncAtomFamilyArg<T, P>): SyncAtomFamilyFunction<T, P>;
-export function atomFamily<T, P>(arg: AsyncAtomFamilyArg<T, P>): AsyncAtomFamilyFunction<T, P>;
-export function atomFamily<T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T, P>;
-export function atomFamily<T, P>(arg: AtomFamilyArg<T, P>): AtomFamilyFunction<T, P> {
+export function atomFamily<T, P, TCell = undefined>(arg: SyncAtomFamilyArg<T, P, TCell>): SyncAtomFamilyFunction<T, P, TCell>;
+export function atomFamily<T, P, TCell = undefined>(arg: AsyncAtomFamilyArg<T, P, TCell>): AsyncAtomFamilyFunction<T, P, TCell>;
+export function atomFamily<T, P, TCell = undefined>(arg: AtomFamilyArg<T, P, TCell>): AtomFamilyFunction<T, P, TCell>;
+export function atomFamily<T, P, TCell = undefined>(arg: AtomFamilyArg<T, P, TCell>): AtomFamilyFunction<T, P, TCell> {
   const baseKey = generateRandomKey();
-  const { stringfy, ...other } = arg;
-  const result: AtomFamilyFunction<T, P> = parameter => {
+  const { stringfy, cell, ...other } = arg;
+  const result: AtomFamilyFunction<T, P, TCell> = parameter => {
     const parameterString = stringfy != null ? stringfy(parameter) : `${JSON.stringify(parameter)}`;
     const key = `${baseKey}-familyKey-${parameterString}`;
     return {
       ...other,
+      cell: (cell ?? (() => undefined)) as CellFactory<TCell>,
       parameter,
       stringfy,
       key,
@@ -168,23 +176,25 @@ type AsyncAtomInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus | S
 export type SyncAtomInstanceEvent<T> = InitializedEventArg<T> | ChangedEventArg<T> | ErrorEventArg | ResetEventArg;
 export type AsyncAtomInstanceEvent<T> = InitializedEventArg<T> | WaitingEventArg | ChangedByPromiseEventArg<T> | ErrorEventArg | ResetEventArg;
 
-export type SyncAtomInstance<T = unknown> = {
+export type SyncAtomInstance<T = unknown, TCell = any> = {
   id: string;
-  state: SyncAtom<T> | SyncAtomFamily<T, any>;
+  state: SyncAtom<T, TCell> | SyncAtomFamily<T, any, TCell>;
+  cell: TCell;
   store: Store;
   status: SyncAtomInstanceStatus<T>;
   event: EventPublisher<SyncAtomInstanceEvent<T>>;
 };
 
-export type AsyncAtomInstance<T = unknown> = {
+export type AsyncAtomInstance<T = unknown, TCell = any> = {
   id: string;
-  state: AsyncAtom<T> | AsyncAtomFamily<T, any>;
+  state: AsyncAtom<T, TCell> | AsyncAtomFamily<T, any, TCell>;
+  cell: TCell;
   store: Store;
   status: AsyncAtomInstanceStatus<T>;
   event: EventPublisher<AsyncAtomInstanceEvent<T>>;
 };
 
-export type AtomInstance<T> = SyncAtomInstance<T> | AsyncAtomInstance<T>;
+export type AtomInstance<T = unknown, TCell = any> = SyncAtomInstance<T, TCell> | AsyncAtomInstance<T, TCell>;
 
 const getNewValueFromSyncAtom = <T>(valueOrUpdater: SyncAtomSetterOrUpdaterArg<T>, oldValue: T | undefined): T => {
   if (valueOrUpdater instanceof Function) {
@@ -202,7 +212,7 @@ const getNewValueFromAsyncAtom = <T>(valueOrUpdater: AsyncAtomSetterOrUpdaterArg
   }
 };
 
-const initializeAsyncAtom = <T>(atomInstance: AsyncAtomInstance<T>, initialValue?: AsyncAtomValueArg<T> | AsyncAtomFamilyValueArg<T, any>) => {
+const initializeAsyncAtom = <T, TCell>(atomInstance: AsyncAtomInstance<T, TCell>, initialValue?: AsyncAtomValueArg<T> | AsyncAtomFamilyValueArg<T, any>) => {
   const asyncAtom = atomInstance.state as AsyncAtom<T> | AsyncAtomFamily<T, any>;
   const parameter = asyncAtom.type === 'atomFamily' ? asyncAtom.parameter : undefined;
 
@@ -251,7 +261,7 @@ const initializeAsyncAtom = <T>(atomInstance: AsyncAtomInstance<T>, initialValue
   atomInstance.status = waitingForInitializeStatus;
 };
 
-const initializeSyncAtom = <T>(atomInstance: SyncAtomInstance<T>, initialValue?: SyncAtomValueArg<T> | SyncAtomFamilyValueArg<T, any>) => {
+const initializeSyncAtom = <T, TCell>(atomInstance: SyncAtomInstance<T, TCell>, initialValue?: SyncAtomValueArg<T> | SyncAtomFamilyValueArg<T, any>) => {
   const syncAtom = atomInstance.state as SyncAtom<T> | SyncAtomFamily<T, any>;
   const parameter = syncAtom.type === 'atomFamily' ? syncAtom.parameter : undefined;
 
@@ -280,19 +290,20 @@ const initializeSyncAtom = <T>(atomInstance: SyncAtomInstance<T>, initialValue?:
   }
 };
 
-export const getOrAddAsyncAtomInstance = <T = unknown>(
-  atom: AsyncAtom<T> | AsyncAtomFamily<T, any>,
+export const getOrAddAsyncAtomInstance = <T = unknown, TCell = any>(
+  atom: AsyncAtom<T, TCell> | AsyncAtomFamily<T, any, TCell>,
   storePlaceType: StorePlaceType,
   initialValue?: AsyncAtomValueArg<T>
 ) => {
-  const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as AsyncAtomInstance<T> | undefined;
+  const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as AsyncAtomInstance<T, TCell> | undefined;
   if (atomInstanceFromStore != null) return atomInstanceFromStore;
 
   const targetStore = getNewValueStore(storePlaceType);
 
-  const atomInstance: AsyncAtomInstance<T> = {
+  const atomInstance: AsyncAtomInstance<T, TCell> = {
     id: generateRandomKey(),
     state: atom,
+    cell: atom.cell?.() as TCell,
     event: eventPublisher(),
     store: targetStore,
     status: { type: 'unknown' },
@@ -314,19 +325,20 @@ export const getOrAddAsyncAtomInstance = <T = unknown>(
   return atomInstance;
 };
 
-export const getOrAddSyncAtomInstance = <T = unknown>(
-  atom: SyncAtom<T> | SyncAtomFamily<T, any>,
+export const getOrAddSyncAtomInstance = <T = unknown, TCell = any>(
+  atom: SyncAtom<T, TCell> | SyncAtomFamily<T, any, TCell>,
   storePlaceType: StorePlaceType,
   initialValue?: SyncAtomValueArg<T>
 ) => {
-  const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as SyncAtomInstance<T> | undefined;
+  const atomInstanceFromStore = getFiddichInstance(atom, storePlaceType) as SyncAtomInstance<T, TCell> | undefined;
   if (atomInstanceFromStore != null) return atomInstanceFromStore;
 
   const targetStore = getNewValueStore(storePlaceType);
 
-  const atomInstance: SyncAtomInstance<T> = {
+  const atomInstance: SyncAtomInstance<T, TCell> = {
     id: generateRandomKey(),
     state: atom,
+    cell: atom.cell?.() as TCell,
     event: eventPublisher(),
     store: targetStore,
     status: { type: 'unknown' },
@@ -348,7 +360,7 @@ export const getOrAddSyncAtomInstance = <T = unknown>(
   return atomInstance;
 };
 
-export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => {
+export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T, any>, valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => {
   if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
 
   const oldValue = getStableValue(atomInstance)!;
@@ -401,7 +413,7 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T>, valu
   atomInstance.event.emit({ type: 'waiting', promise: changeValuePromise });
 };
 
-export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T>, valueOrUpdater: SyncAtomSetterOrUpdaterArg<T>) => {
+export const changeSyncAtomValue = <T>(atomInstance: SyncAtomInstance<T, any>, valueOrUpdater: SyncAtomSetterOrUpdaterArg<T>) => {
   if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
 
   const oldValue = getStableValue(atomInstance)!;

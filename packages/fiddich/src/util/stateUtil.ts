@@ -65,7 +65,10 @@ export const getStableValue = <T>(instance: FiddichStateInstance<T>) => {
   return status.type === 'stable' ? status.value : status.oldValue;
 };
 
-export function getFiddichInstance<T = unknown>(state: FiddichState<T>, storePlaceType: StorePlaceType): FiddichStateInstance<T> | undefined {
+export function getFiddichInstance<T = unknown, TCell = any>(
+  state: FiddichState<T, TCell>,
+  storePlaceType: StorePlaceType
+): FiddichStateInstance<T, TCell> | undefined {
   if (storePlaceType.type === 'named') {
     const store = nameAndGlobalNamedStoreMap.get(storePlaceType.name)!;
     return store.map.get(state.key);
@@ -105,7 +108,10 @@ export function getFiddichInstance<T = unknown>(state: FiddichState<T>, storePla
   return undefined;
 }
 
-export const getOrAddStateInstance = <T = unknown>(state: FiddichState<T>, storePlaceType: StorePlaceType): FiddichStateInstance<T> => {
+export const getOrAddStateInstance = <T = unknown, TCell = any>(
+  state: FiddichState<T, TCell>,
+  storePlaceType: StorePlaceType
+): FiddichStateInstance<T, TCell> => {
   if (state.type === 'atom' || state.type === 'atomFamily') {
     if ('default' in state) {
       return getOrAddSyncAtomInstance(state, storePlaceType);
@@ -167,11 +173,11 @@ export type SubOperationExecutionContext =
   | {
       type: 'instance effect';
       effectType: EffectStringType;
-      instance: FiddichStateInstance<any>;
+      instance: FiddichStateInstance;
     }
   | {
       type: 'selector get';
-      instance: SelectorInstance<any>;
+      instance: SelectorInstance;
     };
 
 export const buildSetSyncAtomFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): SetSyncAtom => {
@@ -218,12 +224,12 @@ export const buildResetStatesFunction = (store: Store, context: SubOperationExec
   return resetStatesFunction;
 };
 
-export type GetSnapshot = <TSource>(arg: FiddichState<TSource>) => TSource | undefined;
+export type GetSnapshot = <TSource>(arg: FiddichState<TSource, any>) => TSource | undefined;
 export type SetSyncAtom = <TSource>(arg: SyncAtom<TSource> | SyncAtomFamily<TSource, any>, setterOrUpdater: SyncAtomSetterOrUpdaterArg<TSource>) => void;
 export type SetAsyncAtom = <TSource>(arg: AsyncAtom<TSource> | AsyncAtomFamily<TSource, any>, setterOrUpdater: AsyncAtomSetterOrUpdaterArg<TSource>) => void;
 export type ResetStates = (recursive: boolean) => void;
 
-export type EffectArgTypeBase = {
+export type EffectArgTypeBase<TCell = any> = {
   snapshot: GetSnapshot;
   setSyncAtom: SetSyncAtom;
   setAsyncAtom: SetAsyncAtom;
@@ -232,34 +238,37 @@ export type EffectArgTypeBase = {
   root: { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStates: ResetStates };
   named: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStates: ResetStates };
   context: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStates: ResetStates };
+  cell: TCell;
 };
 
-export type InitEffectArgType<T> = EffectArgTypeBase & {
+export type InitEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
   value: T;
 };
 
-export type ChangeEffectArgType<T> = EffectArgTypeBase & {
+export type ChangeEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
   newValue: T;
   oldValue: T | undefined;
 };
 
-export type ErrorEffectArgType<T> = EffectArgTypeBase & {
+export type ErrorEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
   oldValue: T | undefined;
   error: unknown;
 };
 
-export type FinalizeEffectArgType<T> = EffectArgTypeBase & {
+export type FinalizeEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
   lastValue: T | undefined;
 };
 
-export type EffectsType<T> = {
-  init?: (arg: InitEffectArgType<T>) => void;
-  change?: (arg: ChangeEffectArgType<T>) => void;
-  error?: (arg: ErrorEffectArgType<T>) => void;
-  finalize?: (arg: FinalizeEffectArgType<T>) => void;
+export type EffectsType<T, TCell = any> = {
+  init?: (arg: InitEffectArgType<T, TCell>) => void;
+  change?: (arg: ChangeEffectArgType<T, TCell>) => void;
+  error?: (arg: ErrorEffectArgType<T, TCell>) => void;
+  finalize?: (arg: FinalizeEffectArgType<T, TCell>) => void;
 };
 
-export type FamilyEffectsTypes<T, P> = { [K in keyof EffectsType<T>]?: (arg: Parameters<NonNullable<EffectsType<T>[K]>>[0] & { parameter: P }) => void };
+export type FamilyEffectsTypes<T, P, TCell> = {
+  [K in keyof EffectsType<T, TCell>]?: (arg: Parameters<NonNullable<EffectsType<T, TCell>[K]>>[0] & { parameter: P }) => void;
+};
 
 export const fireInitEffect = <T>(stateInstance: FiddichStateInstance<T>, initialValue: T) => {
   if (stateInstance.state.effects?.init == null) return;
@@ -333,7 +342,7 @@ export const fireFinalizeEffect = <T>(stateInstance: FiddichStateInstance<T>) =>
   }
 };
 
-export const effectsArgBase = (mainInstance: FiddichStateInstance<any>, effectType: EffectStringType): EffectArgTypeBase => {
+export const effectsArgBase = <T, TCell>(mainInstance: FiddichStateInstance<T, TCell>, effectType: EffectStringType): EffectArgTypeBase<TCell> => {
   const normalStorePlace: NormalStorePlaceType = {
     type: 'normal',
     nearestStore: mainInstance.store,
@@ -380,13 +389,14 @@ export const effectsArgBase = (mainInstance: FiddichStateInstance<any>, effectTy
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
       resetStates: lazyFunction(() => buildResetStatesFunction(getContextStore(key, mainInstance.store), subOperationContext)),
     }),
+    cell: mainInstance.cell,
   };
 };
 
 export class StateInstanceError extends Error {
-  state: FiddichState<any>;
+  state: FiddichState;
 
-  constructor(public instance: FiddichStateInstance<any>, public originalError: Error) {
+  constructor(public instance: FiddichStateInstance, public originalError: Error) {
     super();
     this.name = 'StateInstanceError';
     this.state = instance.state;
