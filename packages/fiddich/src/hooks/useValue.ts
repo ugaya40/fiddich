@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { AsyncAtom, AsyncAtomFamily, AsyncAtomValueArg, Atom, AtomFamily, SyncAtom, SyncAtomFamily, SyncAtomValueArg } from '../atom';
+import { AsyncAtom, AsyncAtomFamily, AsyncAtomValueArg, Atom, AtomFamily, SyncAtom, SyncAtomFamily, SyncAtomValueArg } from '../atom/atom';
 import type { FiddichState, FiddichStateInstance } from '../shareTypes';
-import { Selector, SelectorFamily } from '../selector';
+import { Selector, SelectorFamily } from '../selector/selector';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useRerenderAsync } from './useRerender';
 import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';

@@ -1,5 +1,5 @@
-import { AtomInstance } from './atom';
-import { SelectorInstance } from './selector';
+import { AtomInstance } from './atom/atom';
+import { SelectorInstance } from './selector/selector';
 import { FiddichStateInstance, InstanceEventArgs, Store } from './shareTypes';
 import { eventPublisher } from './util/event';
 
@@ -103,7 +103,6 @@ export type ResetStoreOperationInfoEventArg = {
         selectorInfo: SelectorInstanceInfo;
       };
   targetStore: StoreInfo;
-  isRecursive: boolean;
 };
 
 export type UseValueInfoEventArg =
@@ -196,11 +195,10 @@ export const useSetAtomInfoEventEmitter = {
 };
 
 export const useStoreInfoEventEmitter = {
-  fireResetStates: (componentName: string | undefined, targetStore: Store, isRecursive: boolean) =>
+  fireResetStates: (componentName: string | undefined, targetStore: Store) =>
     globalFiddichEvent.emit({
       type: 'reset store',
       source: { type: 'useStore', componentName },
-      isRecursive,
       targetStore: storeInfo(targetStore),
     }),
 };
@@ -212,10 +210,9 @@ export const operationInEffectInfoEventEmitter = {
       source: { type: 'instance effect', instanceInfo: instanceInfo(instance), effectType },
       targetAtomInstanceInfo: instanceInfo(targetInstance),
     }),
-  fireResetStates: (instance: FiddichStateInstance<any>, targetStore: Store, effectType: EffectStringType, isRecursive: boolean) =>
+  fireResetStates: (instance: FiddichStateInstance<any>, targetStore: Store, effectType: EffectStringType) =>
     globalFiddichEvent.emit({
       type: 'reset store',
-      isRecursive,
       source: { type: 'instance effect', instanceInfo: instanceInfo(instance), effectType },
       targetStore: storeInfo(targetStore),
     }),
@@ -228,12 +225,11 @@ export const operationInGetValueInfoEventEmitter = {
       source: { type: 'selector get', selectorInfo: instanceInfo(instance) },
       targetAtomInstanceInfo: instanceInfo(targetInstance),
     }),
-  fireResetStates: (instance: SelectorInstance<any>, targetStore: Store, isRecursive: boolean) =>
+  fireResetStates: (instance: SelectorInstance<any>, targetStore: Store) =>
     globalFiddichEvent.emit({
       type: 'reset store',
       source: { type: 'selector get', selectorInfo: instanceInfo(instance) },
       targetStore: storeInfo(targetStore),
-      isRecursive,
     }),
 };
 

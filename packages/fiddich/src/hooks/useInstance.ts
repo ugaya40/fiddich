@@ -1,8 +1,10 @@
 import { useContext } from 'react';
-import { AsyncAtomValueArg, Atom, AtomFamily, AtomInstance, getOrAddAsyncAtomInstance, getOrAddSyncAtomInstance, SyncAtomValueArg } from '../atom';
+import { AsyncAtomValueArg, Atom, AtomFamily, AtomInstance, SyncAtomValueArg } from '../atom/atom';
 import type { FiddichState, FiddichStateInstance } from '../shareTypes';
-import { getOrAddAsyncSelectorInstance, getOrAddSyncSelectorInstance, Selector, SelectorFamily, SelectorInstance } from '../selector';
+import { Selector, SelectorFamily, SelectorInstance } from '../selector/selector';
 import { FiddichStoreContext, noStoreErrorText } from '../util/const';
+import { getOrAddAsyncAtomInstance, getOrAddSyncAtomInstance } from '../atom/getOrAddInstance';
+import { getOrAddAsyncSelectorInstance, getOrAddSyncSelectorInstance } from '../selector/getOrAddInstance';
 
 export type StorePlaceTypeHookContext =
   | {

@@ -1,20 +1,5 @@
-import {
-  AsyncAtom,
-  AsyncAtomFamily,
-  AsyncAtomSetterOrUpdaterArg,
-  AtomInstance,
-  SyncAtom,
-  SyncAtomFamily,
-  SyncAtomSetterOrUpdaterArg,
-  changeAsyncAtomValue,
-  changeSyncAtomValue,
-  getOrAddAsyncAtomInstance,
-  getOrAddSyncAtomInstance,
-  resetAtom,
-} from '../atom';
 import { EffectStringType, operationInEffectInfoEventEmitter, operationInGetValueInfoEventEmitter, stateInstanceInfoEventEmitter } from '../globalFiddichEvent';
 import { getNamedStore } from '../namedStore';
-import { SelectorInstance, getOrAddAsyncSelectorInstance, getOrAddSyncSelectorInstance, resetSelector } from '../selector';
 import {
   ContextStorePlaceType,
   FiddichState,
@@ -26,130 +11,16 @@ import {
   Store,
   StorePlaceType,
 } from '../shareTypes';
-import { invalidStatusErrorText, nameAndGlobalNamedStoreMap } from './const';
-import { getContextStore, getRootStore } from './storeUtil';
-import { lazyFunction } from './util';
-
-export type NotFunction<T> = T extends Function ? never : T;
-
-type UnionKeys<T> = T extends T ? keyof T : never;
-type StrictUnionHelper<T, TAll> = T extends T ? T & Partial<Record<Exclude<UnionKeys<TAll>, keyof T>, undefined>> : never;
-export type StrictUnion<T> = StrictUnionHelper<T, T>;
-
-export function getValue<T>(instance: FiddichStateInstance<T>): T | Promise<T> {
-  const status = instance.status;
-  if (status.type === 'stable') {
-    return status.value;
-  } else if ('abortRequest' in status) {
-    return new Promise<T>(async (resolve, reject) => {
-      await status.promise;
-      const newStatus = instance.status;
-      if (newStatus.type === 'stable') {
-        resolve(newStatus.value);
-      } else if (newStatus.type === 'error') {
-        reject(newStatus.error);
-      } else {
-        resolve(getValue(instance));
-      }
-    });
-  } else if (status.type === 'error') {
-    throw status.error;
-  } else {
-    throw new Error(invalidStatusErrorText);
-  }
-}
-
-export const getStableValue = <T>(instance: FiddichStateInstance<T>) => {
-  const status = instance.status;
-  if (status.type === 'error' || status.type === 'unknown' || status.type === 'waiting for initialize') return undefined;
-  return status.type === 'stable' ? status.value : status.oldValue;
-};
-
-export function getFiddichInstance<T = unknown, TCell = any>(
-  state: FiddichState<T, TCell>,
-  storePlaceType: StorePlaceType
-): FiddichStateInstance<T, TCell> | undefined {
-  if (storePlaceType.type === 'named') {
-    const store = nameAndGlobalNamedStoreMap.get(storePlaceType.name)!;
-    return store.map.get(state.key);
-  } else if (storePlaceType.type === 'root') {
-    return getRootStore(storePlaceType.nearestStore).map.get(state.key);
-  } else if (storePlaceType.type === 'context') {
-    if (storePlaceType.nearestStore.contextKey === storePlaceType.key) {
-      return storePlaceType.nearestStore.map.get(state.key);
-    } else {
-      if ('parent' in storePlaceType.nearestStore) {
-        return getFiddichInstance(state, {
-          type: storePlaceType.type,
-          nearestStore: storePlaceType.nearestStore.parent,
-          key: storePlaceType.key,
-        });
-      } else {
-        return undefined;
-      }
-    }
-  } else {
-    const nearestStoreResult = storePlaceType.nearestStore.map.get(state.key);
-
-    if (nearestStoreResult != null) {
-      return nearestStoreResult;
-    }
-
-    if (storePlaceType.type === 'hierarchical') {
-      if ('parent' in storePlaceType.nearestStore) {
-        return getFiddichInstance(state, {
-          type: storePlaceType.type,
-          nearestStore: storePlaceType.nearestStore.parent,
-        });
-      }
-    }
-  }
-
-  return undefined;
-}
-
-export const getOrAddStateInstance = <T = unknown, TCell = any>(
-  state: FiddichState<T, TCell>,
-  storePlaceType: StorePlaceType
-): FiddichStateInstance<T, TCell> => {
-  if (state.type === 'atom' || state.type === 'atomFamily') {
-    if ('default' in state) {
-      return getOrAddSyncAtomInstance(state, storePlaceType);
-    } else {
-      return getOrAddAsyncAtomInstance(state, storePlaceType);
-    }
-  } else {
-    if ('get' in state) {
-      return getOrAddSyncSelectorInstance(state, storePlaceType);
-    } else {
-      return getOrAddAsyncSelectorInstance(state, storePlaceType);
-    }
-  }
-};
-
-function resetStoreStatesInternal(store: Store, doneList: Store[], recursive: boolean) {
-  store.map.forEach(value => {
-    if (value.state.type === 'atom' || value.state.type === 'atomFamily') {
-      resetAtom(value as AtomInstance<unknown>);
-    } else {
-      resetSelector(value as SelectorInstance<unknown>);
-    }
-  });
-  doneList.push(store);
-
-  if (recursive) {
-    store.children.forEach(child => resetStoreStatesInternal(child, doneList, recursive));
-  }
-}
-
-export function resetStoreStates(store: Store, recursive: boolean) {
-  if (recursive) {
-    const doneList: Store[] = [];
-    resetStoreStatesInternal(store, doneList, true);
-  } else {
-    resetStoreStatesInternal(store, [], false);
-  }
-}
+import { invalidStatusErrorText } from '../util/const';
+import { getOrAddStateInstance } from './getInstance';
+import { getContextStore, getRootStore } from '../util/storeUtil';
+import { lazyFunction } from '../util/util';
+import { getStableValue } from './getValue';
+import { resetStoreStates } from './reset';
+import { SelectorInstance } from '../selector/selector';
+import { AsyncAtom, AsyncAtomFamily, SyncAtom, SyncAtomFamily } from '../atom/atom';
+import { AsyncAtomSetterOrUpdaterArg, SyncAtomSetterOrUpdaterArg, changeAsyncAtomValue, changeSyncAtomValue } from '../atom/change';
+import { getOrAddAsyncAtomInstance, getOrAddSyncAtomInstance } from '../atom/getOrAddInstance';
 
 export const buildSnapshotFunction = (storePlaceType: StorePlaceType): GetSnapshot => {
   const snapshotFunction = <TSource>(state: FiddichState<TSource>): TSource | undefined => {
@@ -212,13 +83,13 @@ export const buildSetAsyncAtomFunction = (storePlaceType: StorePlaceType, contex
   return setAtomFunction;
 };
 
-export const buildResetStatesFunction = (store: Store, context: SubOperationExecutionContext): ResetStates => {
-  const resetStatesFunction = (recursive: boolean) => {
-    resetStoreStates(store, recursive);
+export const buildResetStoreFunction = (store: Store, context: SubOperationExecutionContext): ResetStore => {
+  const resetStatesFunction = () => {
+    resetStoreStates(store, true);
     if (context.type === 'instance effect') {
-      operationInEffectInfoEventEmitter.fireResetStates(context.instance, store, context.effectType, recursive);
+      operationInEffectInfoEventEmitter.fireResetStates(context.instance, store, context.effectType);
     } else if (context.type === 'selector get') {
-      operationInGetValueInfoEventEmitter.fireResetStates(context.instance, store, recursive);
+      operationInGetValueInfoEventEmitter.fireResetStates(context.instance, store);
     }
   };
   return resetStatesFunction;
@@ -227,17 +98,17 @@ export const buildResetStatesFunction = (store: Store, context: SubOperationExec
 export type GetSnapshot = <TSource>(arg: FiddichState<TSource, any>) => TSource | undefined;
 export type SetSyncAtom = <TSource>(arg: SyncAtom<TSource> | SyncAtomFamily<TSource, any>, setterOrUpdater: SyncAtomSetterOrUpdaterArg<TSource>) => void;
 export type SetAsyncAtom = <TSource>(arg: AsyncAtom<TSource> | AsyncAtomFamily<TSource, any>, setterOrUpdater: AsyncAtomSetterOrUpdaterArg<TSource>) => void;
-export type ResetStates = (recursive: boolean) => void;
+export type ResetStore = () => void;
 
 export type EffectArgTypeBase<TCell = any> = {
   snapshot: GetSnapshot;
   setSyncAtom: SetSyncAtom;
   setAsyncAtom: SetAsyncAtom;
-  resetStates: ResetStates;
+  resetStore: ResetStore;
   hierarchical: { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom };
-  root: { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStates: ResetStates };
-  named: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStates: ResetStates };
-  context: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStates: ResetStates };
+  root: { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore };
+  named: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore };
+  context: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore };
   cell: TCell;
 };
 
@@ -365,12 +236,12 @@ export const effectsArgBase = <T, TCell>(mainInstance: FiddichStateInstance<T, T
     snapshot: lazyFunction(() => buildSnapshotFunction(normalStorePlace)),
     setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace, subOperationContext)),
     setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace, subOperationContext)),
-    resetStates: lazyFunction(() => buildResetStatesFunction(mainInstance.store, subOperationContext)),
+    resetStore: lazyFunction(() => buildResetStoreFunction(mainInstance.store, subOperationContext)),
     root: {
       snapshot: lazyFunction(() => buildSnapshotFunction(rootStorePlace)),
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace, subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace, subOperationContext)),
-      resetStates: lazyFunction(() => buildResetStatesFunction(getRootStore(mainInstance.store), subOperationContext)),
+      resetStore: lazyFunction(() => buildResetStoreFunction(getRootStore(mainInstance.store), subOperationContext)),
     },
     hierarchical: {
       snapshot: lazyFunction(() => buildSnapshotFunction(hierarchicalStorePlace)),
@@ -381,35 +252,14 @@ export const effectsArgBase = <T, TCell>(mainInstance: FiddichStateInstance<T, T
       snapshot: lazyFunction(() => buildSnapshotFunction(namedStorePlace(name))),
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name), subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name), subOperationContext)),
-      resetStates: lazyFunction(() => buildResetStatesFunction(getNamedStore(name), subOperationContext)),
+      resetStore: lazyFunction(() => buildResetStoreFunction(getNamedStore(name), subOperationContext)),
     }),
     context: (key: string) => ({
       snapshot: lazyFunction(() => buildSnapshotFunction(contextStorePlace(key))),
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key), subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
-      resetStates: lazyFunction(() => buildResetStatesFunction(getContextStore(key, mainInstance.store), subOperationContext)),
+      resetStore: lazyFunction(() => buildResetStoreFunction(getContextStore(key, mainInstance.store), subOperationContext)),
     }),
     cell: mainInstance.cell,
   };
 };
-
-export class StateInstanceError extends Error {
-  state: FiddichState;
-
-  constructor(public instance: FiddichStateInstance, public originalError: Error) {
-    super();
-    this.name = 'StateInstanceError';
-    this.state = instance.state;
-    const storeDisplayName =
-      'name' in instance.store && instance.store.name != null
-        ? `StoreName: "${instance.store.name}"`
-        : 'contextKey' in instance.store && instance.store.contextKey != null
-        ? `ContextKey: "${instance.store.contextKey}"`
-        : `StoreId: "${instance.store.id}"`;
-    this.message = `${storeDisplayName} StateName: "${instance.state.name ?? 'anonymous'}"(${instance.state.key}`;
-    this.stack = `${this.stack}
-     ------ Original Error ------
-     ${this.originalError.message}
-     ${this.originalError.stack}`;
-  }
-}

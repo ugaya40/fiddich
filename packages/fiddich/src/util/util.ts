@@ -1,3 +1,9 @@
+export type NotFunction<T> = T extends Function ? never : T;
+
+type UnionKeys<T> = T extends T ? keyof T : never;
+type StrictUnionHelper<T, TAll> = T extends T ? T & Partial<Record<Exclude<UnionKeys<TAll>, keyof T>, undefined>> : never;
+export type StrictUnion<T> = StrictUnionHelper<T, T>;
+
 function generateRandomString(length: number): string {
   const array = new Uint8Array(Math.ceil(length / 2));
   window.crypto.getRandomValues(array);

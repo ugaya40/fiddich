@@ -13,8 +13,8 @@ import {
   SyncAtomFamilyFunction,
   atom,
   atomFamily,
-} from './atom';
-import { InitEffectArgType, FinalizeEffectArgType, FamilyEffectsTypes, EffectsType } from './util/stateUtil';
+} from './atom/atom';
+import { EffectsType, FamilyEffectsTypes, FinalizeEffectArgType, InitEffectArgType } from './stateUtil/instanceOperation';
 
 type Cleanup = () => void;
 type ChangeValue<T> = (newValue: T) => void;

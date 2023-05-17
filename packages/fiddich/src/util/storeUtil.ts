@@ -21,7 +21,7 @@ export function getContextStore(contextKey: string, store: Store): Store {
   }
 }
 
-export function getNewValueStore(storePlaceType: StorePlaceType): Store {
+export function getStoreForNewInstance(storePlaceType: StorePlaceType): Store {
   if (storePlaceType.type === 'named') {
     const namedStoreResult = nameAndGlobalNamedStoreMap.get(storePlaceType.name)!;
     if (namedStoreResult != null) {
@@ -34,7 +34,7 @@ export function getNewValueStore(storePlaceType: StorePlaceType): Store {
       return storePlaceType.nearestStore;
     } else {
       if ('parent' in storePlaceType.nearestStore) {
-        return getNewValueStore({
+        return getStoreForNewInstance({
           type: storePlaceType.type,
           key: storePlaceType.key,
           nearestStore: storePlaceType.nearestStore.parent,

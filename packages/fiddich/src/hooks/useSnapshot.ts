@@ -1,6 +1,6 @@
-import { Atom, AtomFamily } from '../atom';
+import { Atom, AtomFamily } from '../atom/atom';
 import type { FiddichState, FiddichStateInstance } from '../shareTypes';
-import { Selector, SelectorFamily } from '../selector';
+import { Selector, SelectorFamily } from '../selector/selector';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { invalidStatusErrorText } from '../util/const';
 

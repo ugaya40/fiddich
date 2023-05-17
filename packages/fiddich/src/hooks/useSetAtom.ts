@@ -9,21 +9,23 @@ import {
   SyncAtomFamily,
   SyncAtom,
   AsyncAtom,
-  SyncAtomSetterOrUpdater,
-  AsyncAtomSetterOrUpdater,
-  AtomSetterOrUpdater,
-  AtomSetterOrUpdaterArg,
-  changeSyncAtomValue,
   SyncAtomInstance,
-  changeAsyncAtomValue,
   AsyncAtomInstance,
-  SyncAtomSetterOrUpdaterArg,
-  AsyncAtomSetterOrUpdaterArg,
-} from '../atom';
+} from '../atom/atom';
 import { FiddichStoreContext, noStoreErrorText } from '../util/const';
 import { StorePlaceTypeHookContext, useAtomInstance } from './useInstance';
 import { useSetAtomInfoEventEmitter } from '../globalFiddichEvent';
 import { useComponentNameIfDev } from './useComponentNameIfDev';
+import {
+  AsyncAtomSetterOrUpdater,
+  AsyncAtomSetterOrUpdaterArg,
+  AtomSetterOrUpdater,
+  AtomSetterOrUpdaterArg,
+  SyncAtomSetterOrUpdater,
+  SyncAtomSetterOrUpdaterArg,
+  changeAsyncAtomValue,
+  changeSyncAtomValue,
+} from '../atom/change';
 
 export const useSetAtomInternal = <T>(atomInstance: AtomInstance<T>): AtomSetterOrUpdater<T> => {
   const store = useContext(FiddichStoreContext);

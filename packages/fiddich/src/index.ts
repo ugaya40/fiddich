@@ -1,125 +1,108 @@
-export { atom, atomFamily } from './atom';
+export { atom, atomFamily } from './atom/atom';
 export type {
-  Atom,
-  AtomFamily,
-  AtomInstance,
-  AtomArg,
-  AtomFamilyArg,
-  AtomSetterOrUpdater,
-  SyncAtom,
-  SyncAtomFamily,
-  SyncAtomInstance,
-  SyncAtomArg,
-  SyncAtomFamilyArg,
-  SyncAtomSetterOrUpdater,
   AsyncAtom,
-  AsyncAtomFamily,
-  AsyncAtomInstance,
   AsyncAtomArg,
+  AsyncAtomFamily,
   AsyncAtomFamilyArg,
-  AsyncAtomSetterOrUpdater,
-  SyncAtomFamilyFunction,
   AsyncAtomFamilyFunction,
+  AsyncAtomInstance,
+  Atom,
+  AtomArg,
+  AtomFamily,
+  AtomFamilyArg,
   AtomFamilyFunction,
-} from './atom';
-
-export { selector, selectorFamily } from './selector';
+  AtomInstance,
+  SyncAtom,
+  SyncAtomArg,
+  SyncAtomFamily,
+  SyncAtomFamilyArg,
+  SyncAtomFamilyFunction,
+  SyncAtomInstance,
+} from './atom/atom';
+export type { AsyncAtomSetterOrUpdater, AtomSetterOrUpdater, SyncAtomSetterOrUpdater } from './atom/change';
+export { FiddichRoot, wrapFiddichRoot } from './components/FiddichRoot';
+export { SubFiddichRoot, wrapSubFiddichRoot } from './components/SubFiddichRoot';
+export { globalFiddichEvent } from './globalFiddichEvent';
 export type {
-  Selector,
-  SelectorFamily,
-  SelectorInstance,
-  SelectorArg,
-  SelectorFamilyArg,
-  SyncSelector,
-  SyncSelectorFamily,
-  SyncSelectorInstance,
-  SyncSelectorArg,
-  SyncSelectorFamilyArg,
+  EffectInfoEventArg,
+  InfoEventArgs,
+  ResetStoreOperationInfoEventArg,
+  SelectorInfoEventArg,
+  SetAtomOperationInfoEventArg,
+  StateInstanceInfoEventArg,
+  StoreInfoEventArg,
+  UseValueInfoEventArg,
+} from './globalFiddichEvent';
+export { useAtom, useContextAtom, useHierarchicalAtom, useNamedStoreAtom, useRootAtom } from './hooks/useAtom';
+export type { AsyncAtomOption, AtomOption, LimitedAsyncAtomOption, LimitedAtomOption, LimitedSyncAtomOption, SyncAtomOption } from './hooks/useAtom';
+export { useEvent } from './hooks/useEvent';
+export { useInstance } from './hooks/useInstance';
+export type { StorePlaceTypeHookContext } from './hooks/useInstance';
+export { useSetAtom, useSetContextAtom, useSetHierarchicalAtom, useSetNamedStoreAtom, useSetRootAtom } from './hooks/useSetAtom';
+export type {
+  LimitedSetAsyncAtomOption,
+  LimitedSetAtomOption,
+  LimitedSetSyncAtomOption,
+  SetAsyncAtomOption,
+  SetAtomOption,
+  SetSyncAtomOption,
+} from './hooks/useSetAtom';
+export { useContextSnapshot, useHierarchicalSnapshot, useNamedStoreSnapshot, useRootSnapshot, useSnapshot } from './hooks/useSnapshot';
+export type { SnapshotOption } from './hooks/useSnapshot';
+export { useContextStore, useNearestStore, useRootStore } from './hooks/useStore';
+export { useContextValue, useHierarchicalValue, useNamedStoreValue, useRootValue, useValue } from './hooks/useValue';
+export type {
+  AsyncAtomValueOption,
+  AtomValueOption,
+  LimitedAtomValueOption,
+  LimitedSelectorValueOption,
+  SelectorValueOption,
+  SyncAtomValueOption,
+} from './hooks/useValue';
+export { independentAtom, independentAtomFamily } from './independentAtom';
+export type {
+  AsyncIndependentAtomArg,
+  AsyncIndependentAtomFamilyArg,
+  IndependentAtomArg,
+  IndependentAtomFamilyArg,
+  SyncIndependentAtomArg,
+  SyncIndependentAtomFamilyArg,
+} from './independentAtom';
+export { deleteNamedStoreIfExists, getNamedStore, namedStore } from './namedStore';
+export { selector, selectorFamily } from './selector/selector';
+export type {
   AsyncSelector,
-  AsyncSelectorFamily,
-  AsyncSelectorInstance,
   AsyncSelectorArg,
+  AsyncSelectorFamily,
   AsyncSelectorFamilyArg,
-  SyncSelectorFamilyFunction,
   AsyncSelectorFamilyFunction,
+  AsyncSelectorInstance,
+  Selector,
+  SelectorArg,
+  SelectorFamily,
+  SelectorFamilyArg,
   SelectorFamilyFunction,
-} from './selector';
-
+  SelectorInstance,
+  SyncSelector,
+  SyncSelectorArg,
+  SyncSelectorFamily,
+  SyncSelectorFamilyArg,
+  SyncSelectorFamilyFunction,
+  SyncSelectorInstance,
+} from './selector/selector';
 export type {
-  Store,
-  FiddichState,
-  FiddichStore,
-  FiddichStateInstance,
-  InitializedEventArg,
-  WaitingEventArg,
   ChangedByPromiseEventArg,
   ChangedEventArg,
   ErrorEventArg,
-  ResetEventArg,
+  FiddichState,
+  FiddichStateInstance,
+  FiddichStore,
+  InitializedEventArg,
   InstanceEventArgs,
+  ResetEventArg,
+  Store,
+  WaitingEventArg,
 } from './shareTypes';
-
-export { namedStore, deleteNamedStoreIfExists, getNamedStore } from './namedStore';
-
-export type {
-  SyncIndependentAtomArg,
-  AsyncIndependentAtomArg,
-  IndependentAtomArg,
-  SyncIndependentAtomFamilyArg,
-  AsyncIndependentAtomFamilyArg,
-  IndependentAtomFamilyArg,
-} from './independentAtom';
-export { independentAtom, independentAtomFamily } from './independentAtom';
-
 export { defaultCompareFunction } from './util/const';
-
-export type { EventPublisher, Disposable, Listener } from './util/event';
 export { eventPublisher } from './util/event';
-
-export { FiddichRoot, wrapFiddichRoot } from './components/FiddichRoot';
-export { SubFiddichRoot, wrapSubFiddichRoot } from './components/SubFiddichRoot';
-
-export { useEvent } from './hooks/useEvent';
-
-export type { AtomOption, LimitedAtomOption, SyncAtomOption, LimitedSyncAtomOption, AsyncAtomOption, LimitedAsyncAtomOption } from './hooks/useAtom';
-export { useAtom, useHierarchicalAtom, useRootAtom, useNamedStoreAtom, useContextAtom } from './hooks/useAtom';
-
-export type {
-  AtomValueOption,
-  SelectorValueOption,
-  LimitedAtomValueOption,
-  LimitedSelectorValueOption,
-  SyncAtomValueOption,
-  AsyncAtomValueOption,
-} from './hooks/useValue';
-export { useValue, useHierarchicalValue, useRootValue, useNamedStoreValue, useContextValue } from './hooks/useValue';
-
-export type {
-  SetAtomOption,
-  SetSyncAtomOption,
-  SetAsyncAtomOption,
-  LimitedSetAtomOption,
-  LimitedSetSyncAtomOption,
-  LimitedSetAsyncAtomOption,
-} from './hooks/useSetAtom';
-export { useSetAtom, useSetHierarchicalAtom, useSetRootAtom, useSetNamedStoreAtom, useSetContextAtom } from './hooks/useSetAtom';
-
-export type { SnapshotOption } from './hooks/useSnapshot';
-export { useSnapshot, useHierarchicalSnapshot, useRootSnapshot, useNamedStoreSnapshot, useContextSnapshot } from './hooks/useSnapshot';
-
-export type { StorePlaceTypeHookContext } from './hooks/useInstance';
-export { useInstance } from './hooks/useInstance';
-
-export { useNearestStore, useContextStore, useRootStore } from './hooks/useStore';
-
-export type {
-  StoreInfoEventArg,
-  StateInstanceInfoEventArg,
-  EffectInfoEventArg,
-  ResetStoreOperationInfoEventArg,
-  SetAtomOperationInfoEventArg,
-  SelectorInfoEventArg,
-  UseValueInfoEventArg,
-  InfoEventArgs,
-} from './globalFiddichEvent';
-export { globalFiddichEvent } from './globalFiddichEvent';
+export type { Disposable, EventPublisher, Listener } from './util/event';

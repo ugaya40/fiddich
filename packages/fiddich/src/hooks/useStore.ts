@@ -1,14 +1,15 @@
 import { useContext, useMemo } from 'react';
 import { Store } from '../shareTypes';
 import { FiddichStoreContext, noStoreErrorText } from '../util/const';
-import { resetStoreStates } from '../util/stateUtil';
 import { getContextStore, getRootStore } from '../util/storeUtil';
 import { useStoreInfoEventEmitter } from '../globalFiddichEvent';
 import { useComponentNameIfDev } from './useComponentNameIfDev';
+import { ResetStore } from '../stateUtil/instanceOperation';
+import { resetStoreStates } from '../stateUtil/reset';
 
 type StoreOperatorForReset = {
   store: Store;
-  resetStates: (recursive: boolean) => void;
+  resetStates: ResetStore;
 };
 
 function useStoreOperator(store: Store): StoreOperatorForReset {
@@ -16,9 +17,9 @@ function useStoreOperator(store: Store): StoreOperatorForReset {
   return useMemo(() => {
     return {
       store,
-      resetStates: (recursive: boolean) => {
-        resetStoreStates(store, recursive);
-        useStoreInfoEventEmitter.fireResetStates(componentName, store, recursive);
+      resetStates: () => {
+        resetStoreStates(store, true);
+        useStoreInfoEventEmitter.fireResetStates(componentName, store);
       },
     };
   }, [store.id]);

@@ -3,7 +3,6 @@ import {
   AsyncAtomFamily,
   AsyncAtomInstance,
   AsyncAtomInstanceEvent,
-  AsyncAtomSetterOrUpdater,
   Atom,
   AtomFamily,
   AtomInstance,
@@ -11,8 +10,7 @@ import {
   SyncAtomFamily,
   SyncAtomInstance,
   SyncAtomInstanceEvent,
-  SyncAtomSetterOrUpdater,
-} from './atom';
+} from './atom/atom';
 import { EventPublisher } from './util/event';
 import {
   AsyncSelector,
@@ -26,7 +24,8 @@ import {
   SyncSelectorFamily,
   SyncSelectorInstance,
   SyncSelectorInstanceEvent,
-} from './selector';
+} from './selector/selector';
+import { AsyncAtomSetterOrUpdater, SyncAtomSetterOrUpdater } from './atom/change';
 
 export type FiddichState<T = any, TCell = any> = Atom<T, TCell> | AtomFamily<T, any, TCell> | Selector<T, TCell> | SelectorFamily<T, any, TCell>;
 export type SyncFiddichState<T = any, TCell = any> =

@@ -1,11 +1,13 @@
-import { AsyncAtom, AsyncAtomFamily, AsyncAtomInstance, changeAsyncAtomValue, changeSyncAtomValue, SyncAtom, SyncAtomFamily, SyncAtomInstance } from './atom';
-import { AsyncSelector, AsyncSelectorFamily, AsyncSelectorInstance, SyncSelector, SyncSelectorFamily, SyncSelectorInstance } from './selector';
+import { AsyncAtom, AsyncAtomFamily, AsyncAtomInstance, SyncAtom, SyncAtomFamily, SyncAtomInstance } from './atom/atom';
+import { AsyncSelector, AsyncSelectorFamily, AsyncSelectorInstance, SyncSelector, SyncSelectorFamily, SyncSelectorInstance } from './selector/selector';
 import type { AsyncAtomOperator, AsyncSelectorOperator, FiddichState, FiddichStore, SyncAtomOperator, SyncSelectorOperator } from './shareTypes';
 import { idAndGlobalNamedStoreMap, nameAndGlobalNamedStoreMap, notFoundNamedStoreErrorText } from './util/const';
 import { eventPublisher } from './util/event';
 import { storeInfoEventEmitter } from './globalFiddichEvent';
-import { getOrAddStateInstance, getValue } from './util/stateUtil';
+import { getOrAddStateInstance } from './stateUtil/getInstance';
 import { generateRandomKey } from './util/util';
+import { getValue } from './stateUtil/getValue';
+import { changeAsyncAtomValue, changeSyncAtomValue } from './atom/change';
 
 export function createNewNamedStore(name: string): FiddichStore {
   const newStore: FiddichStore = { id: generateRandomKey(), map: new Map(), name, event: eventPublisher(), children: [] };

@@ -1,19 +1,8 @@
-import {
-  AsyncAtom,
-  AsyncAtomFamily,
-  AsyncAtomSetterOrUpdater,
-  AsyncAtomValueArg,
-  Atom,
-  AtomFamily,
-  AtomSetterOrUpdater,
-  SyncAtom,
-  SyncAtomFamily,
-  SyncAtomSetterOrUpdater,
-  SyncAtomValueArg,
-} from '../atom';
+import { AsyncAtom, AsyncAtomFamily, AsyncAtomValueArg, Atom, AtomFamily, SyncAtom, SyncAtomFamily, SyncAtomValueArg } from '../atom/atom';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
 import { useValueInternal } from './useValue';
 import { useSetAtomInternal } from './useSetAtom';
+import { AsyncAtomSetterOrUpdater, AtomSetterOrUpdater, SyncAtomSetterOrUpdater } from '../atom/change';
 
 export type AtomOption<T> = {
   initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>;
