@@ -18,6 +18,7 @@ import { getOrAddStateInstance } from '../stateUtil/getInstance';
 import { getStableValue, getValue } from '../stateUtil/getValue';
 import {
   SubOperationExecutionContext,
+  buildResetStateFunction,
   buildResetStoreFunction,
   buildSetAsyncAtomFunction,
   buildSetSyncAtomFunction,
@@ -223,18 +224,21 @@ export function syncGetterArg<T, TCell>(selectorInstance: SyncSelectorInstance<T
     setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace, subOperationContext)),
     setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace, subOperationContext)),
     resetStore: lazyFunction(() => buildResetStoreFunction(nearestStore, subOperationContext)),
+    resetState: lazyFunction(() => buildResetStateFunction(normalStorePlace, subOperationContext)),
     root: {
       get: lazyFunction(() => buildGetFunction(selectorInstance, rootStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(rootStorePlace)),
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace, subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace, subOperationContext)),
       resetStore: lazyFunction(() => buildResetStoreFunction(getRootStore(nearestStore), subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(rootStorePlace, subOperationContext)),
     },
     hierarchical: {
       get: lazyFunction(() => buildGetFunction(selectorInstance, hierarchicalStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(hierarchicalStorePlace)),
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(hierarchicalStorePlace, subOperationContext)),
     },
     named: (name: string) => ({
       get: lazyFunction(() => buildGetFunction(selectorInstance, namedStorePlace(name))),
@@ -242,6 +246,7 @@ export function syncGetterArg<T, TCell>(selectorInstance: SyncSelectorInstance<T
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name), subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name), subOperationContext)),
       resetStore: lazyFunction(() => buildResetStoreFunction(getNamedStore(name), subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(namedStorePlace(name), subOperationContext)),
     }),
     context: (key: string) => ({
       get: lazyFunction(() => buildGetFunction(selectorInstance, contextStorePlace(key))),
@@ -249,6 +254,7 @@ export function syncGetterArg<T, TCell>(selectorInstance: SyncSelectorInstance<T
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key), subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
       resetStore: lazyFunction(() => buildResetStoreFunction(getContextStore(key, nearestStore), subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(contextStorePlace(key), subOperationContext)),
     }),
     cell: selectorInstance.cell,
   };
@@ -278,18 +284,21 @@ export function asyncGetterArg<T, TCell>(selectorInstance: AsyncSelectorInstance
     setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace, subOperationContext)),
     setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace, subOperationContext)),
     resetStore: lazyFunction(() => buildResetStoreFunction(nearestStore, subOperationContext)),
+    resetState: lazyFunction(() => buildResetStateFunction(normalStorePlace, subOperationContext)),
     root: {
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, rootStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(rootStorePlace)),
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace, subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace, subOperationContext)),
       resetStore: lazyFunction(() => buildResetStoreFunction(getRootStore(nearestStore), subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(rootStorePlace, subOperationContext)),
     },
     hierarchical: {
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, hierarchicalStorePlace)),
       snapshot: lazyFunction(() => buildSnapshotFunction(hierarchicalStorePlace)),
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(hierarchicalStorePlace, subOperationContext)),
     },
     named: (name: string) => ({
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, namedStorePlace(name))),
@@ -297,6 +306,7 @@ export function asyncGetterArg<T, TCell>(selectorInstance: AsyncSelectorInstance
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name), subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name), subOperationContext)),
       resetStore: lazyFunction(() => buildResetStoreFunction(getNamedStore(name), subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(namedStorePlace(name), subOperationContext)),
     }),
     context: (key: string) => ({
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, contextStorePlace(key))),
@@ -304,6 +314,7 @@ export function asyncGetterArg<T, TCell>(selectorInstance: AsyncSelectorInstance
       setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key), subOperationContext)),
       setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
       resetStore: lazyFunction(() => buildResetStoreFunction(getContextStore(key, nearestStore), subOperationContext)),
+      resetState: lazyFunction(() => buildResetStateFunction(contextStorePlace(key), subOperationContext)),
     }),
     cell: selectorInstance.cell,
   };

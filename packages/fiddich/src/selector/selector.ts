@@ -17,7 +17,7 @@ import {
   WaitingForInitializeStatus,
   WaitingStatus,
 } from '../shareTypes';
-import { EffectsType, FamilyEffectsTypes, GetSnapshot, ResetStore, SetAsyncAtom, SetSyncAtom } from '../stateUtil/instanceOperation';
+import { EffectsType, FamilyEffectsTypes, GetSnapshot, ResetState, ResetStore, SetAsyncAtom, SetSyncAtom } from '../stateUtil/instanceOperation';
 import { Disposable, EventPublisher } from '../util/event';
 import { StrictUnion, generateRandomKey } from '../util/util';
 
@@ -30,14 +30,16 @@ export type SyncSelectorGetArgsType<TCell> = {
   setSyncAtom: SetSyncAtom;
   setAsyncAtom: SetAsyncAtom;
   resetStore: ResetStore;
-  hierarchical: { get: GetState; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom };
-  root: { get: GetState; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore };
+  resetState: ResetState;
+  hierarchical: { get: GetState; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetState: ResetState };
+  root: { get: GetState; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore; resetState: ResetState };
   named: (name: string) => {
     get: GetState;
     snapshot: GetSnapshot;
     setSyncAtom: SetSyncAtom;
     setAsyncAtom: SetAsyncAtom;
     resetStore: ResetStore;
+    resetState: ResetState;
   };
   context: (name: string) => {
     get: GetState;
@@ -45,6 +47,7 @@ export type SyncSelectorGetArgsType<TCell> = {
     setSyncAtom: SetSyncAtom;
     setAsyncAtom: SetAsyncAtom;
     resetStore: ResetStore;
+    resetState: ResetState;
   };
   cell: TCell;
 };
@@ -55,14 +58,16 @@ export type AsyncSelectorGetArgsType<TCell> = {
   setSyncAtom: SetSyncAtom;
   setAsyncAtom: SetAsyncAtom;
   resetStore: ResetStore;
-  hierarchical: { get: GetStateAsync; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom };
-  root: { get: GetStateAsync; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore };
+  resetState: ResetState;
+  hierarchical: { get: GetStateAsync; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetState: ResetState };
+  root: { get: GetStateAsync; snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore; resetState: ResetState };
   named: (name: string) => {
     get: GetStateAsync;
     snapshot: GetSnapshot;
     setSyncAtom: SetSyncAtom;
     setAsyncAtom: SetAsyncAtom;
     resetStore: ResetStore;
+    resetState: ResetState;
   };
   context: (name: string) => {
     get: GetStateAsync;
@@ -70,6 +75,7 @@ export type AsyncSelectorGetArgsType<TCell> = {
     setSyncAtom: SetSyncAtom;
     setAsyncAtom: SetAsyncAtom;
     resetStore: ResetStore;
+    resetState: ResetState;
   };
   cell: TCell;
 };

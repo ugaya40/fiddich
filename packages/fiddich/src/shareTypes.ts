@@ -26,6 +26,7 @@ import {
   SyncSelectorInstanceEvent,
 } from './selector/selector';
 import { AsyncAtomSetterOrUpdater, SyncAtomSetterOrUpdater } from './atom/change';
+import { ResetState } from './stateUtil/instanceOperation';
 
 export type FiddichState<T = any, TCell = any> = Atom<T, TCell> | AtomFamily<T, any, TCell> | Selector<T, TCell> | SelectorFamily<T, any, TCell>;
 export type SyncFiddichState<T = any, TCell = any> =
@@ -158,6 +159,7 @@ type StateOperatorBase<TSource> = {
 export type SyncAtomOperator<TSource> = StateOperatorBase<TSource> & {
   get: () => TSource;
   set: SyncAtomSetterOrUpdater<TSource>;
+  reset: () => void;
   instance: SyncAtomInstance<TSource>;
   event: EventPublisher<SyncAtomInstanceEvent<TSource>>;
 };
@@ -165,18 +167,21 @@ export type SyncAtomOperator<TSource> = StateOperatorBase<TSource> & {
 export type AsyncAtomOperator<TSource> = StateOperatorBase<TSource> & {
   getAsync: () => Promise<TSource>;
   set: AsyncAtomSetterOrUpdater<TSource>;
+  reset: () => void;
   instance: AsyncAtomInstance<TSource>;
   event: EventPublisher<AsyncAtomInstanceEvent<TSource>>;
 };
 
 export type SyncSelectorOperator<TSource> = StateOperatorBase<TSource> & {
   get: () => TSource;
+  reset: () => void;
   instance: SyncSelectorInstance<TSource>;
   event: EventPublisher<SyncSelectorInstanceEvent<TSource>>;
 };
 
 export type AsyncSelectorOperator<TSource> = StateOperatorBase<TSource> & {
   getAsync: () => Promise<TSource>;
+  reset: () => void;
   instance: AsyncSelectorInstance<TSource>;
   event: EventPublisher<AsyncSelectorInstanceEvent<TSource>>;
 };

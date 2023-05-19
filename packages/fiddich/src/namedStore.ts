@@ -1,13 +1,22 @@
 import { AsyncAtom, AsyncAtomFamily, AsyncAtomInstance, SyncAtom, SyncAtomFamily, SyncAtomInstance } from './atom/atom';
 import { AsyncSelector, AsyncSelectorFamily, AsyncSelectorInstance, SyncSelector, SyncSelectorFamily, SyncSelectorInstance } from './selector/selector';
-import type { AsyncAtomOperator, AsyncSelectorOperator, FiddichState, FiddichStore, SyncAtomOperator, SyncSelectorOperator } from './shareTypes';
+import type {
+  AsyncAtomOperator,
+  AsyncSelectorOperator,
+  FiddichState,
+  FiddichStore,
+  NormalStorePlaceType,
+  SyncAtomOperator,
+  SyncSelectorOperator,
+} from './shareTypes';
 import { idAndGlobalNamedStoreMap, nameAndGlobalNamedStoreMap, notFoundNamedStoreErrorText } from './util/const';
 import { eventPublisher } from './util/event';
-import { storeInfoEventEmitter } from './globalFiddichEvent';
+import { namedStoreOperatorInfoEventEmitter, storeInfoEventEmitter } from './globalFiddichEvent';
 import { getOrAddStateInstance } from './stateUtil/getInstance';
 import { generateRandomKey } from './util/util';
 import { getValue } from './stateUtil/getValue';
 import { changeAsyncAtomValue, changeSyncAtomValue } from './atom/change';
+import { resetState, resetStoreStates } from './stateUtil/reset';
 
 export function createNewNamedStore(name: string): FiddichStore {
   const newStore: FiddichStore = { id: generateRandomKey(), map: new Map(), name, event: eventPublisher(), children: [] };
@@ -47,10 +56,18 @@ class StoreOperator {
   state<T, TCell>(state: AsyncSelector<T, TCell> | AsyncSelectorFamily<T, any, TCell>): AsyncSelectorOperator<T>;
   state<T, TCell>(state: FiddichState<T, TCell>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T>;
   state<T, TCell>(state: FiddichState<T, TCell>): SyncAtomOperator<T> | AsyncAtomOperator<T> | SyncSelectorOperator<T> | AsyncSelectorOperator<T> {
-    const instance = getOrAddStateInstance(state, {
+    const place: NormalStorePlaceType = {
       type: 'normal',
       nearestStore: this.store,
-    });
+    };
+
+    const instance = getOrAddStateInstance(state, place);
+
+    const reset = () => {
+      resetState(instance);
+      namedStoreOperatorInfoEventEmitter.fireResetState(this.store, instance);
+    };
+
     if (state.type === 'atom' || state.type === 'atomFamily') {
       if ('default' in state) {
         const syncAtomInstance = instance as SyncAtomInstance<T, TCell>;
@@ -59,6 +76,7 @@ class StoreOperator {
           event: syncAtomInstance.event,
           get: () => getValue(syncAtomInstance) as T,
           set: arg => changeSyncAtomValue(syncAtomInstance, arg),
+          reset,
           instance: syncAtomInstance,
         } as SyncAtomOperator<T>;
       } else {
@@ -68,6 +86,7 @@ class StoreOperator {
           event: asyncAtomInstance.event,
           getAsync: () => getValue(asyncAtomInstance),
           set: arg => changeAsyncAtomValue(asyncAtomInstance, arg),
+          reset,
           instance: asyncAtomInstance,
         } as AsyncAtomOperator<T>;
       }
@@ -78,6 +97,7 @@ class StoreOperator {
           state,
           event: syncSelectorInstance.event,
           get: () => getValue(syncSelectorInstance) as T,
+          reset,
           instance: syncSelectorInstance,
         } as SyncSelectorOperator<T>;
       } else {
@@ -86,10 +106,16 @@ class StoreOperator {
           state,
           event: asyncSelectorInstance.event,
           getAsync: () => getValue(asyncSelectorInstance),
+          reset,
           instance: asyncSelectorInstance,
         } as AsyncSelectorOperator<T>;
       }
     }
+  }
+
+  reset() {
+    resetStoreStates(this.store, true);
+    namedStoreOperatorInfoEventEmitter.fireResetStore(this.store);
   }
 }
 

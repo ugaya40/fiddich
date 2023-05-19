@@ -26,6 +26,7 @@ export { globalFiddichEvent } from './globalFiddichEvent';
 export type {
   EffectInfoEventArg,
   InfoEventArgs,
+  ResetStateOperationInfoEventArg,
   ResetStoreOperationInfoEventArg,
   SelectorInfoEventArg,
   SetAtomOperationInfoEventArg,
@@ -38,6 +39,7 @@ export type { AsyncAtomOption, AtomOption, LimitedAsyncAtomOption, LimitedAtomOp
 export { useEvent } from './hooks/useEvent';
 export { useInstance } from './hooks/useInstance';
 export type { StorePlaceTypeHookContext } from './hooks/useInstance';
+export { useContextResetState, useHierarchicalResetState, useNamedResetState, useNearestResetState, useRootResetState } from './hooks/useResetState';
 export { useSetAtom, useSetContextAtom, useSetHierarchicalAtom, useSetNamedStoreAtom, useSetRootAtom } from './hooks/useSetAtom';
 export type {
   LimitedSetAsyncAtomOption,
@@ -49,7 +51,7 @@ export type {
 } from './hooks/useSetAtom';
 export { useContextSnapshot, useHierarchicalSnapshot, useNamedStoreSnapshot, useRootSnapshot, useSnapshot } from './hooks/useSnapshot';
 export type { SnapshotOption } from './hooks/useSnapshot';
-export { useContextStore, useNearestStore, useRootStore } from './hooks/useStore';
+export { useContextStore, useNamedStore, useNearestStore, useRootStore } from './hooks/useStore';
 export { useContextValue, useHierarchicalValue, useNamedStoreValue, useRootValue, useValue } from './hooks/useValue';
 export type {
   AsyncAtomValueOption,
