@@ -31,7 +31,7 @@ const getNewValueFromAsyncAtom = <T>(valueOrUpdater: AsyncAtomSetterOrUpdaterArg
 };
 
 export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T, any>, valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => {
-  if(atomInstance.status.type === 'waiting for initialize') {
+  if (atomInstance.status.type === 'waiting for initialize') {
     initializeAsyncAtom(atomInstance);
     return;
   }
