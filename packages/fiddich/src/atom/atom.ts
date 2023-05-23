@@ -35,7 +35,6 @@ export type SyncAtom<T, TCell = undefined> = AtomBase<T, TCell> & {
 };
 
 export type AsyncAtom<T, TCell = undefined> = AtomBase<T, TCell> & {
-  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomValueArg<T>;
 };
 
@@ -52,7 +51,6 @@ export type SyncAtomArg<T, TCell = any> = AtomArgBase<T, TCell> & {
   default: SyncAtomValueArg<T>;
 };
 export type AsyncAtomArg<T, TCell = any> = AtomArgBase<T, TCell> & {
-  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomValueArg<T>;
 };
 
@@ -93,7 +91,6 @@ export type SyncAtomFamily<T, P, TCell = undefined> = AtomFamilyBase<T, P, TCell
 };
 
 export type AsyncAtomFamily<T, P, TCell = undefined> = AtomFamilyBase<T, P, TCell> & {
-  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomFamilyValueArg<T, P>;
 };
 
@@ -112,7 +109,6 @@ export type SyncAtomFamilyArg<T, P, TCell> = AtomFamilyArgBase<T, P, TCell> & {
 };
 
 export type AsyncAtomFamilyArg<T, P, TCell> = AtomFamilyArgBase<T, P, TCell> & {
-  suppressSuspense?: boolean;
   asyncDefault: AsyncAtomFamilyValueArg<T, P>;
 };
 

@@ -13,6 +13,7 @@ type SuspenseCounterProps = {
 type StateValueProps = SuspenseCounterProps & {
   state: FiddichState<any>,
   place?: StorePlaceTypeHookContext,
+  suppressSuspense?: boolean,
   counter: {
     tryRenderCount: number,
     renderedCount: number,
@@ -25,7 +26,7 @@ type StateValueBoxProps = Omit<StateValueProps, 'counter'>
 const StateValue: FC<StateValueProps> = props => {
   try {
     props.counter.tryRenderCount++;
-    const value = useValue(props.state, {place: props.place})
+    const value = useValue(props.state, {place: props.place, suppressSuspense: props.suppressSuspense})
     props.counter.renderedCount++;
     return (
       <p>

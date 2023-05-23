@@ -40,7 +40,7 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
   // implementation at this time.
   const rerenderPure = useRerenderAsync();
   const compare = stateInstance.state.compare ?? defaultCompareFunction;
-  const suppressSuspenseValue = (suppressSuspense ?? false) || ('suppressSuspense' in stateInstance.state && (stateInstance.state.suppressSuspense ?? false));
+  const suppressSuspenseValue = suppressSuspense ?? false;
 
   const componentName = useComponentNameIfDev();
 

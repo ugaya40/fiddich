@@ -116,7 +116,6 @@ test('Async State Base',async () => {
 
 const atom3 = atom({
   name: 'atom3',
-  suppressSuspense: true,
   asyncDefault: async () => {
     await sleep(30);
     return 'atom3';
@@ -125,7 +124,6 @@ const atom3 = atom({
 
 const selector5 = selector({
   name: 'selector5',
-  suppressSuspense: true,
   getAsync: async ({get}) => {
     const atom3Value = await get(atom3);
     return `selector5-${atom3Value}`;
@@ -134,7 +132,6 @@ const selector5 = selector({
 
 const selector6 = selector({
   name: 'selector6',
-  suppressSuspense: true,
   getAsync: async ({get}) => {
     await sleep(30);
     const selector1Value = await get(selector5);
@@ -145,9 +142,9 @@ const selector6 = selector({
 const Basic3: FC = () => {
   return (
     <FiddichRoot>
-      <StateValueBox state={atom3}/>
-      <StateValueBox state={selector5}/>
-      <StateValueBox state={selector6}/>
+      <StateValueBox suppressSuspense={true} state={atom3}/>
+      <StateValueBox suppressSuspense={true} state={selector5}/>
+      <StateValueBox suppressSuspense={true} state={selector6}/>
       <ChangeStateAsyncButton state={atom3}/>
     </FiddichRoot>
   )

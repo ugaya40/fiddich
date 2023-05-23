@@ -65,7 +65,8 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
 
       const listener = sourceInstance.event.addListener(event => {
         if (event.type === 'waiting' || event.type === 'change') {
-          if (selectorInstance.status.type === 'waiting for initialize') {
+
+          if(selectorInstance.status.type === 'waiting for initialize') {
             initializeAsyncSelector(selectorInstance);
             return;
           }
@@ -157,6 +158,7 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
 
       const listener = sourceInstance.event.addListener(event => {
         if (event.type === 'change' || event.type === 'change by promise' || event.type === 'error') {
+
           const state = selectorInstance.state as SyncSelector<T> | SyncSelectorFamily<T, unknown>;
           const oldValue = getStableValue(selectorInstance);
 

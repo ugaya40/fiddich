@@ -94,7 +94,6 @@ export type SyncSelector<T, TCell = undefined> = SelectorBase<T, TCell> & {
 };
 
 export type AsyncSelector<T, TCell = undefined> = SelectorBase<T, TCell> & {
-  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorGetArgsType<TCell>) => Promise<T>;
 };
 
@@ -112,7 +111,6 @@ export type SyncSelectorArg<T, TCell = undefined> = SelectorArgBase<T, TCell> & 
 };
 
 export type AsyncSelectorArg<T, TCell = undefined> = SelectorArgBase<T, TCell> & {
-  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorGetArgsType<TCell>) => Promise<T>;
 };
 
@@ -155,7 +153,6 @@ export type SyncSelectorFamily<T = unknown, P = unknown, TCell = undefined> = Se
 };
 
 export type AsyncSelectorFamily<T = unknown, P = unknown, TCell = undefined> = SelectorFamilyBase<T, P, TCell> & {
-  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorFamilyGetArgsType<T, P, TCell>) => Promise<T>;
 };
 
@@ -174,7 +171,6 @@ export type SyncSelectorFamilyArg<T, P, TCell> = SelectorFamilyArgBase<T, P, TCe
 };
 
 export type AsyncSelectorFamilyArg<T, P, TCell> = SelectorFamilyArgBase<T, P, TCell> & {
-  suppressSuspense?: boolean;
   getAsync: (arg: AsyncSelectorFamilyGetArgsType<T, P, TCell>) => Promise<T>;
 };
 
