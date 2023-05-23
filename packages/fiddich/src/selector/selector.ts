@@ -203,7 +203,7 @@ export function selectorFamily<T, P, TCell = undefined>(arg: SelectorFamilyArg<T
 }
 
 type SyncSelectorInstanceStatus<T> = UnknownStatus | StableStatus<T> | ErrorStatus;
-type AsyncSelectorInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus | StableStatus<T> | WaitingStatus<T> | ErrorStatus;
+type AsyncSelectorInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus<T> | StableStatus<T> | WaitingStatus<T> | ErrorStatus;
 
 export type SyncSelectorInstanceEvent<T> = InitializedEventArg<T> | ChangedEventArg<T> | ErrorEventArg | ResetEventArg;
 export type AsyncSelectorInstanceEvent<T> = InitializedEventArg<T> | WaitingEventArg | ChangedByPromiseEventArg<T> | ErrorEventArg | ResetEventArg;

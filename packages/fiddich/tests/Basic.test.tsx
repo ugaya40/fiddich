@@ -4,7 +4,7 @@
 
 import React, { FC } from "react";
 import { FiddichRoot, atom, selector } from "../src";
-import { ChangeStateAsyncButton, ChangeStateButton, StateValueBox } from "./TestComponents";
+import { ChangeStateAsyncButton, ChangeStateButton, ResetStoreButton, StateValueBox } from "./TestComponents";
 import {fireEvent, render, screen, waitFor} from '@testing-library/react'
 import { sleep, waitForBoolean } from "./testUtil";
 
@@ -142,15 +142,15 @@ const selector6 = selector({
 const Basic3: FC = () => {
   return (
     <FiddichRoot>
-      <StateValueBox suppressSuspense={true} state={atom3}/>
-      <StateValueBox suppressSuspense={true} state={selector5}/>
-      <StateValueBox suppressSuspense={true} state={selector6}/>
+      <StateValueBox suppressSuspenseWhenChange={true} state={atom3}/>
+      <StateValueBox suppressSuspenseWhenChange={true} state={selector5}/>
+      <StateValueBox suppressSuspenseWhenChange={true} state={selector6}/>
       <ChangeStateAsyncButton state={atom3}/>
     </FiddichRoot>
   )
 }
 
-test('Suppress Suspense',async () => {
+test('Suppress Suspense - Change',async () => {
   const result = render(<Basic3/>);
   expect(screen.queryAllByText('loading...').length).toBe(3);
 
@@ -160,10 +160,91 @@ test('Suppress Suspense',async () => {
 
   fireEvent.change(result.container.querySelector('#setValue-atom3')!, {target: {value: 'newAtom3Value'}});
   fireEvent.click(screen.getByRole('button', {name: 'ChangeStateAsync-atom3'}));
+
   expect(screen.queryAllByText('loading...').length).toBe(0);
   await waitFor(() => screen.getByText('Value: selector6-selector5-newAtom3Value'));
 
   expect(screen.queryAllByText('SuspenseCount: 1').length).toBe(3);
   expect(screen.queryAllByText('RenderedCount: 2').length).toBe(3);
   expect(screen.queryAllByText('TryRenderCount: 3').length).toBe(3);
+});
+
+const Basic4: FC = () => {
+  return (
+    <FiddichRoot>
+      <StateValueBox suppressSuspenseWhenInit={true} state={atom3}/>
+      <StateValueBox suppressSuspenseWhenInit={true} state={selector5}/>
+      <StateValueBox suppressSuspenseWhenInit={true} state={selector6}/>
+      <ChangeStateAsyncButton state={atom3}/>
+      <ResetStoreButton/>
+    </FiddichRoot>
+  )
+}
+
+test('Suppress Suspense - Init',async () => {
+  const result = render(<Basic4/>);
+  expect(screen.queryAllByText('loading...').length).toBe(3);
+
+  await waitForBoolean(() => screen.queryAllByText('RenderedCount: 1'), r => r.length === 3, 100);
+  expect(screen.queryAllByText('SuspenseCount: 1').length).toBe(3);
+  expect(screen.queryAllByText('TryRenderCount: 2').length).toBe(3);
+
+  fireEvent.change(result.container.querySelector('#setValue-atom3')!, {target: {value: 'newAtom3Value'}});
+  fireEvent.click(screen.getByRole('button', {name: 'ChangeStateAsync-atom3'}));
+
+  expect(screen.queryAllByText('loading...').length).toBe(3);
+  await waitFor(() => screen.getByText('Value: selector6-selector5-newAtom3Value'));
+
+  expect(screen.queryAllByText('SuspenseCount: 2').length).toBe(3);
+  expect(screen.queryAllByText('RenderedCount: 2').length).toBe(3);
+  expect(screen.queryAllByText('TryRenderCount: 4').length).toBe(3);
+
+  fireEvent.click(screen.getByRole('button', {name: 'ResetStore'}));
+
+  expect(screen.queryAllByText('loading...').length).toBe(0);
+  await waitFor(() => screen.getByText('Value: selector6-selector5-atom3'));
+
+  expect(screen.queryAllByText('SuspenseCount: 2').length).toBe(3);
+  expect(screen.queryAllByText('RenderedCount: 3').length).toBe(3);
+  expect(screen.queryAllByText('TryRenderCount: 5').length).toBe(3);
+});
+
+const Basic5: FC = () => {
+  return (
+    <FiddichRoot>
+      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenInit={true} state={atom3}/>
+      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenInit={true} state={selector5}/>
+      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenInit={true} state={selector6}/>
+      <ChangeStateAsyncButton state={atom3}/>
+      <ResetStoreButton/>
+    </FiddichRoot>
+  )
+}
+
+test('Suppress Suspense - Both',async () => {
+  const result = render(<Basic5/>);
+  expect(screen.queryAllByText('loading...').length).toBe(3);
+
+  await waitForBoolean(() => screen.queryAllByText('RenderedCount: 1'), r => r.length === 3, 100);
+  expect(screen.queryAllByText('SuspenseCount: 1').length).toBe(3);
+  expect(screen.queryAllByText('TryRenderCount: 2').length).toBe(3);
+
+  fireEvent.change(result.container.querySelector('#setValue-atom3')!, {target: {value: 'newAtom3Value'}});
+  fireEvent.click(screen.getByRole('button', {name: 'ChangeStateAsync-atom3'}));
+
+  expect(screen.queryAllByText('loading...').length).toBe(0);
+  await waitFor(() => screen.getByText('Value: selector6-selector5-newAtom3Value'));
+
+  expect(screen.queryAllByText('SuspenseCount: 1').length).toBe(3);
+  expect(screen.queryAllByText('RenderedCount: 2').length).toBe(3);
+  expect(screen.queryAllByText('TryRenderCount: 3').length).toBe(3);
+
+  fireEvent.click(screen.getByRole('button', {name: 'ResetStore'}));
+
+  expect(screen.queryAllByText('loading...').length).toBe(0);
+  await waitFor(() => screen.getByText('Value: selector6-selector5-atom3'));
+
+  expect(screen.queryAllByText('SuspenseCount: 1').length).toBe(3);
+  expect(screen.queryAllByText('RenderedCount: 3').length).toBe(3);
+  expect(screen.queryAllByText('TryRenderCount: 4').length).toBe(3);
 });

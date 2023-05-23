@@ -1,6 +1,7 @@
 import { selectorInstanceInfoEventEmitter } from '../globalFiddichEvent';
 import { WaitingForInitializeStatus } from '../shareTypes';
 import { StateInstanceError } from '../stateUtil/StateInstanceError';
+import { getStableValue } from '../stateUtil/getValue';
 import { fireErrorEffect, fireInitEffect } from '../stateUtil/instanceOperation';
 import { asyncGetterArg, syncGetterArg } from './getter';
 import { AsyncSelector, AsyncSelectorFamily, AsyncSelectorInstance, SyncSelector, SyncSelectorFamily, SyncSelectorInstance } from './selector';
@@ -20,7 +21,7 @@ export const initializeSyncSelector = <T, TCell>(selectorInstance: SyncSelectorI
       value: value,
     };
     fireInitEffect(selectorInstance, value);
-    selectorInstance.event.emit({ type: 'initialized', value: value });
+    selectorInstance.event.emit({ type: 'initialized', value: value, oldValue: undefined });
   } catch (e) {
     if (e instanceof Error) {
       const error = new StateInstanceError(selectorInstance, e);
@@ -37,13 +38,15 @@ export const initializeSyncSelector = <T, TCell>(selectorInstance: SyncSelectorI
 export const initializeAsyncSelector = <T, TCell>(selectorInstance: AsyncSelectorInstance<T, TCell>) => {
   const asyncSelector = selectorInstance.state as AsyncSelector<T, TCell> | AsyncSelectorFamily<T, any, TCell>;
 
+  const oldValue = getStableValue(selectorInstance);
+
   if ('abortRequest' in selectorInstance.status) selectorInstance.status.abortRequest = true;
 
   selectorInstance.cell = asyncSelector.cell();
 
   //The status of instance may be overwritten while waiting for await,
   //so prepare it as a save destination to determine abortRequest.
-  let waitingForInitializeStatus: WaitingForInitializeStatus | undefined;
+  let waitingForInitializeStatus: WaitingForInitializeStatus<T> | undefined;
 
   const getterArg = asyncGetterArg(selectorInstance);
 
@@ -59,7 +62,7 @@ export const initializeAsyncSelector = <T, TCell>(selectorInstance: AsyncSelecto
           value: value,
         };
         fireInitEffect(selectorInstance, value);
-        selectorInstance.event.emit({ type: 'initialized', value: value });
+        selectorInstance.event.emit({ type: 'initialized', value: value, oldValue });
       }
     } catch (e) {
       if (e instanceof Error) {
@@ -78,6 +81,7 @@ export const initializeAsyncSelector = <T, TCell>(selectorInstance: AsyncSelecto
   waitingForInitializeStatus = {
     type: 'waiting for initialize',
     abortRequest: false,
+    oldValue,
     promise: initializePromise,
   };
 

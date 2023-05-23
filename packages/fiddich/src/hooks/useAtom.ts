@@ -6,7 +6,8 @@ import { AsyncAtomSetterOrUpdater, AtomSetterOrUpdater, SyncAtomSetterOrUpdater 
 
 export type AtomOption<T> = {
   initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>;
-  suppressSuspense?: boolean;
+  suppressSuspenseWhenInit?: boolean;
+  suppressSuspenseWhenChanged?: boolean;
   place?: StorePlaceTypeHookContext;
 };
 
@@ -26,7 +27,7 @@ export function useAtom<T>(atom: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?
 export function useAtom<T>(atom: Atom<T> | AtomFamily<T, any>, option?: AtomOption<T>): [T, AtomSetterOrUpdater<T>];
 export function useAtom<T>(atom: Atom<T> | AtomFamily<T, any>, option?: AtomOption<T>): [T, AtomSetterOrUpdater<T>] {
   const instance = useInstance(atom, option?.place ?? { type: 'normal' }, option?.initialValue);
-  return [useValueInternal(instance, option?.suppressSuspense), useSetAtomInternal(instance)];
+  return [useValueInternal(instance, option?.suppressSuspenseWhenInit ?? false, option?.suppressSuspenseWhenChanged ?? false), useSetAtomInternal(instance)];
 }
 
 export function useHierarchicalAtom<T>(atom: SyncAtom<T> | SyncAtomFamily<T, any>, option?: LimitedSyncAtomOption<T>): [T, SyncAtomSetterOrUpdater<T>];

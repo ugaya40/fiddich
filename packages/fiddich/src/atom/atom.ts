@@ -143,7 +143,7 @@ export function atomFamily<T, P, TCell = undefined>(arg: AtomFamilyArg<T, P, TCe
 }
 
 type SyncAtomInstanceStatus<T> = UnknownStatus | StableStatus<T> | ErrorStatus;
-type AsyncAtomInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus | StableStatus<T> | WaitingStatus<T> | ErrorStatus;
+type AsyncAtomInstanceStatus<T> = UnknownStatus | WaitingForInitializeStatus<T> | StableStatus<T> | WaitingStatus<T> | ErrorStatus;
 
 export type SyncAtomInstanceEvent<T> = InitializedEventArg<T> | ChangedEventArg<T> | ErrorEventArg | ResetEventArg;
 export type AsyncAtomInstanceEvent<T> = InitializedEventArg<T> | WaitingEventArg | ChangedByPromiseEventArg<T> | ErrorEventArg | ResetEventArg;

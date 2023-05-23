@@ -8,7 +8,12 @@ import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
 import { RequestRerenderReason, useValueInfoEventEmitter } from '../globalFiddichEvent';
 import { useComponentNameIfDev } from './useComponentNameIfDev';
 
-function returnValueForUseValue<T>(componentName: string | undefined, stateInstance: FiddichStateInstance<T>, suppressSuspenseValue: boolean) {
+function returnValueForUseValue<T>(
+  componentName: string | undefined,
+  stateInstance: FiddichStateInstance<T>,
+  suppressSuspenseWhenInit: boolean,
+  suppressSuspenseWhenChange: boolean
+) {
   if (stateInstance.status.type === 'stable') {
     useValueInfoEventEmitter.fireReturnValue(componentName, stateInstance, stateInstance.status.value);
     return stateInstance.status.value;
@@ -16,12 +21,17 @@ function returnValueForUseValue<T>(componentName: string | undefined, stateInsta
     // Even if this state suppresses Suspense,
     // the waiting status may be exposed by a re-rendering by another StateInstance.value.
     // In that case, the old value should be returned.
-    if (suppressSuspenseValue && stateInstance.status.type === 'waiting') {
+    if (suppressSuspenseWhenChange && stateInstance.status.type === 'waiting') {
       useValueInfoEventEmitter.fireReturnValue(componentName, stateInstance, stateInstance.status.oldValue);
       return stateInstance.status.oldValue;
     } else {
-      useValueInfoEventEmitter.fireThrowPromise(componentName, stateInstance, stateInstance.status.promise);
-      throw stateInstance.status.promise;
+      if (suppressSuspenseWhenInit && stateInstance.status.type === 'waiting for initialize' && stateInstance.status.oldValue != null) {
+        useValueInfoEventEmitter.fireReturnValue(componentName, stateInstance, stateInstance.status.oldValue);
+        return stateInstance.status.oldValue;
+      } else {
+        useValueInfoEventEmitter.fireThrowPromise(componentName, stateInstance, stateInstance.status.promise);
+        throw stateInstance.status.promise;
+      }
     }
   } else if (stateInstance.status.type === 'error') {
     useValueInfoEventEmitter.fireThrowError(componentName, stateInstance, stateInstance.status.error);
@@ -31,7 +41,7 @@ function returnValueForUseValue<T>(componentName: string | undefined, stateInsta
   }
 }
 
-export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, suppressSuspense?: boolean): T => {
+export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, suppressSuspenseWhenInit: boolean, suppressSuspenseWhenChange: boolean): T => {
   // Why not use useSyncExternalStore?
   //
   // Although using useSyncExternalStore wouldn't cause any additional renderings compared to the current method,
@@ -40,7 +50,6 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
   // implementation at this time.
   const rerenderPure = useRerenderAsync();
   const compare = stateInstance.state.compare ?? defaultCompareFunction;
-  const suppressSuspenseValue = suppressSuspense ?? false;
 
   const componentName = useComponentNameIfDev();
 
@@ -50,31 +59,41 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
       useValueInfoEventEmitter.fireRequestRerender(componentName, stateInstance, reason);
     };
     const listener = stateInstance.event.addListener(event => {
-      if (suppressSuspenseValue) {
-        if (event.type === 'change by promise' || event.type === 'change') {
-          if (!compare(event.oldValue, event.newValue)) {
-            rerender(event.type);
-          }
-        }
-      } else {
-        if (event.type === 'waiting' || event.type === 'change') {
+
+      if (event.type === 'change by promise' || event.type === 'change') {
+        if (suppressSuspenseWhenChange && !compare(event.oldValue, event.newValue)) {
           rerender(event.type);
         }
       }
 
-      if (event.type === 'reset' || event.type === 'error') {
+      if (event.type === 'waiting' || event.type === 'change') {
+        if(!suppressSuspenseWhenChange) {
+          rerender(event.type);
+        }
+      }
+
+      if(event.type === 'reset' && !suppressSuspenseWhenInit) {
+        rerender(event.type);
+      }
+
+      if(event.type === 'initialized' && suppressSuspenseWhenInit && event.oldValue != null) {
+        rerender(event.type);
+      }
+
+      if (event.type === 'error') {
         rerender(event.type);
       }
     });
 
     return () => listener.dispose();
-  }, [stateInstance, compare, suppressSuspenseValue]);
+  }, [stateInstance, compare, suppressSuspenseWhenInit, suppressSuspenseWhenChange]);
 
-  return returnValueForUseValue(componentName, stateInstance, suppressSuspenseValue);
+  return returnValueForUseValue(componentName, stateInstance, suppressSuspenseWhenInit, suppressSuspenseWhenChange);
 };
 
 export type SelectorValueOption = {
-  suppressSuspense?: boolean;
+  suppressSuspenseWhenInit?: boolean;
+  suppressSuspenseWhenChanged?: boolean;
   place?: StorePlaceTypeHookContext;
 };
 
@@ -101,7 +120,7 @@ export function useValue<T>(state: Selector<T> | SelectorFamily<T, any>, option?
 export function useValue<T>(state: FiddichState<T>, option?: AtomValueOption<T>): T;
 export function useValue<T>(state: FiddichState<T>, option?: AtomValueOption<T>): T {
   const instance = useInstance(state, option?.place ?? { type: 'normal' }, option?.initialValue);
-  return useValueInternal(instance, option?.suppressSuspense);
+  return useValueInternal(instance, option?.suppressSuspenseWhenInit ?? false, option?.suppressSuspenseWhenChanged ?? false);
 }
 
 export function useHierarchicalValue<T>(state: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: LimitedAsyncAtomValueOption<T>): T;
@@ -111,7 +130,7 @@ export function useHierarchicalValue<T>(state: Selector<T> | SelectorFamily<T, a
 export function useHierarchicalValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
 export function useHierarchicalValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
   const instance = useInstance(state, { type: 'hierarchical' }, option?.initialValue);
-  return useValueInternal(instance, option?.suppressSuspense);
+  return useValueInternal(instance, option?.suppressSuspenseWhenInit ?? false, option?.suppressSuspenseWhenChanged ?? false);
 }
 
 export function useRootValue<T>(state: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: LimitedAsyncAtomValueOption<T>): T;
@@ -121,7 +140,7 @@ export function useRootValue<T>(state: Selector<T> | SelectorFamily<T, any>, opt
 export function useRootValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
 export function useRootValue<T>(state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
   const instance = useInstance(state, { type: 'root' }, option?.initialValue);
-  return useValueInternal(instance, option?.suppressSuspense);
+  return useValueInternal(instance, option?.suppressSuspenseWhenInit ?? false, option?.suppressSuspenseWhenChanged ?? false);
 }
 
 export function useNamedStoreValue<T>(storeName: string, state: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: LimitedAsyncAtomValueOption<T>): T;
@@ -131,7 +150,7 @@ export function useNamedStoreValue<T>(storeName: string, state: Selector<T> | Se
 export function useNamedStoreValue<T>(storeName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
 export function useNamedStoreValue<T>(storeName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
   const instance = useInstance(state, { type: 'named', name: storeName }, option?.initialValue);
-  return useValueInternal(instance, option?.suppressSuspense);
+  return useValueInternal(instance, option?.suppressSuspenseWhenInit ?? false, option?.suppressSuspenseWhenChanged ?? false);
 }
 
 export function useContextValue<T>(contextKey: string, state: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: LimitedAsyncAtomValueOption<T>): T;
@@ -141,5 +160,5 @@ export function useContextValue<T>(contextKey: string, state: Selector<T> | Sele
 export function useContextValue<T>(contextKey: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T;
 export function useContextValue<T>(contextKey: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T>): T {
   const instance = useInstance(state, { type: 'context', key: contextKey }, option?.initialValue);
-  return useValueInternal(instance, option?.suppressSuspense);
+  return useValueInternal(instance, option?.suppressSuspenseWhenInit ?? false, option?.suppressSuspenseWhenChanged ?? false);
 }

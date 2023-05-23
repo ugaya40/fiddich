@@ -137,7 +137,7 @@ export type UseValueInfoEventArg =
       type: 'useValue request rerender';
       componentName: string | undefined;
       instanceInfo: StateInstanceInfo;
-      reason: 'change' | 'change by promise' | 'reset' | 'waiting' | 'error';
+      reason: 'change' | 'change by promise' | 'reset' | 'initialized' | 'waiting' | 'error';
     }
   | {
       type: 'useValue return value';
@@ -293,7 +293,7 @@ export const selectorInstanceInfoEventEmitter = {
     }),
 };
 
-export type RequestRerenderReason = 'change' | 'change by promise' | 'reset' | 'waiting' | 'error';
+export type RequestRerenderReason = 'change' | 'change by promise' | 'reset' | 'initialized' | 'waiting' | 'error';
 
 export const useValueInfoEventEmitter = {
   fireRequestRerender: (componentName: string | undefined, instance: FiddichStateInstance<any>, reason: RequestRerenderReason) =>

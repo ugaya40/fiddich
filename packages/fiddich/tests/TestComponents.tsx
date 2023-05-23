@@ -1,5 +1,5 @@
 import React, { useRef, FC, Suspense, useState } from "react";
-import { FiddichState, useValue, StorePlaceTypeHookContext, useSetAtom, Atom, AtomFamily, AsyncAtom, AsyncAtomFamily } from "../src";
+import { FiddichState, useValue, StorePlaceTypeHookContext, useSetAtom, Atom, AtomFamily, AsyncAtom, AsyncAtomFamily, useNearestStore } from "../src";
 import { sleep } from "./testUtil";
 
 type SuspenseCounterProps = {
@@ -13,7 +13,8 @@ type SuspenseCounterProps = {
 type StateValueProps = SuspenseCounterProps & {
   state: FiddichState<any>,
   place?: StorePlaceTypeHookContext,
-  suppressSuspense?: boolean,
+  suppressSuspenseWhenInit?: boolean,
+  suppressSuspenseWhenChange?: boolean,
   counter: {
     tryRenderCount: number,
     renderedCount: number,
@@ -26,7 +27,11 @@ type StateValueBoxProps = Omit<StateValueProps, 'counter'>
 const StateValue: FC<StateValueProps> = props => {
   try {
     props.counter.tryRenderCount++;
-    const value = useValue(props.state, {place: props.place, suppressSuspense: props.suppressSuspense})
+    const value = useValue(props.state, {
+      place: props.place, 
+      suppressSuspenseWhenInit: props.suppressSuspenseWhenInit,
+      suppressSuspenseWhenChanged: props.suppressSuspenseWhenChange
+    });
     props.counter.renderedCount++;
     return (
       <p>
@@ -85,6 +90,15 @@ export const ChangeStateAsyncButton: FC<{state: AsyncAtom<any> | AsyncAtomFamily
         await sleep(30);
         return inputText;
       })}>{`ChangeStateAsync-${props.state.name}`}</button>
+    </p>
+  )
+}
+
+export const ResetStoreButton: FC = props => {
+  const store = useNearestStore();
+  return (
+    <p>
+      <button role="button" onClick={() => store.reset()}>{`ResetStore`}</button>
     </p>
   )
 }

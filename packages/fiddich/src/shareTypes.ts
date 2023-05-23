@@ -26,7 +26,6 @@ import {
   SyncSelectorInstanceEvent,
 } from './selector/selector';
 import { AsyncAtomSetterOrUpdater, SyncAtomSetterOrUpdater } from './atom/change';
-import { ResetState } from './stateUtil/instanceOperation';
 
 export type FiddichState<T = any, TCell = any> = Atom<T, TCell> | AtomFamily<T, any, TCell> | Selector<T, TCell> | SelectorFamily<T, any, TCell>;
 export type SyncFiddichState<T = any, TCell = any> =
@@ -47,6 +46,7 @@ export type ResetEventArg = {
 export type InitializedEventArg<T = any> = {
   type: 'initialized';
   value: T;
+  oldValue: T | undefined;
 };
 
 export type WaitingEventArg = {
@@ -79,8 +79,9 @@ export type UnknownStatus = {
   type: 'unknown';
 };
 
-export type WaitingForInitializeStatus = {
+export type WaitingForInitializeStatus<T> = {
   type: 'waiting for initialize';
+  oldValue: T | undefined;
   promise: Promise<void>;
   abortRequest: boolean;
 };
