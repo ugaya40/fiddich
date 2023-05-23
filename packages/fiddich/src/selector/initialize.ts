@@ -37,6 +37,8 @@ export const initializeSyncSelector = <T, TCell>(selectorInstance: SyncSelectorI
 export const initializeAsyncSelector = <T, TCell>(selectorInstance: AsyncSelectorInstance<T, TCell>) => {
   const asyncSelector = selectorInstance.state as AsyncSelector<T, TCell> | AsyncSelectorFamily<T, any, TCell>;
 
+  if('abortRequest' in selectorInstance.status) selectorInstance.status.abortRequest = true;
+
   selectorInstance.cell = asyncSelector.cell();
 
   //The status of instance may be overwritten while waiting for await,

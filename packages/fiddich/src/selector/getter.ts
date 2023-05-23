@@ -29,6 +29,7 @@ import {
 import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
 import { getContextStore, getRootStore } from '../util/storeUtil';
 import { lazyFunction } from '../util/util';
+import { initializeAsyncSelector } from './initialize';
 import {
   AsyncSelector,
   AsyncSelectorFamily,
@@ -63,11 +64,17 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
       existingListener?.listener?.dispose?.();
 
       const listener = sourceInstance.event.addListener(event => {
-        const state = selectorInstance.state as AsyncSelector<T> | AsyncSelectorFamily<T, unknown>;
-        const oldValue = getStableValue(selectorInstance);
-
         if (event.type === 'waiting' || event.type === 'change') {
+
+          if(selectorInstance.status.type === 'waiting for initialize') {
+            initializeAsyncSelector(selectorInstance);
+            return;
+          }
+
           if (selectorInstance.status.type === 'waiting') selectorInstance.status.abortRequest = true;
+
+          const state = selectorInstance.state as AsyncSelector<T> | AsyncSelectorFamily<T, unknown>;
+          const oldValue = getStableValue(selectorInstance);
 
           //The status of instance may be overwritten while waiting for await,
           //so prepare it as a save destination to determine abortRequest.
@@ -126,6 +133,7 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
           });
         }
       });
+
       selectorInstance.stateListeners.set(listenerKey, {
         instance: sourceInstance,
         listener,
@@ -149,10 +157,11 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
       existingListener?.listener?.dispose?.();
 
       const listener = sourceInstance.event.addListener(event => {
-        const state = selectorInstance.state as SyncSelector<T> | SyncSelectorFamily<T, unknown>;
-        const oldValue = getStableValue(selectorInstance);
-
         if (event.type === 'change' || event.type === 'change by promise' || event.type === 'error') {
+
+          const state = selectorInstance.state as SyncSelector<T> | SyncSelectorFamily<T, unknown>;
+          const oldValue = getStableValue(selectorInstance);
+
           try {
             selectorInstanceInfoEventEmitter.fireTryGetValueWhenSourceChanged(selectorInstance, sourceInstance);
             const newValue = state.type === 'selectorFamily' ? state.get({ ...getterArg, param: state.parameter }) : state.get(getterArg);
@@ -182,6 +191,7 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
           }
         }
       });
+
       selectorInstance.stateListeners.set(listenerKey, {
         instance: sourceInstance,
         listener,

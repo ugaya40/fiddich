@@ -72,6 +72,8 @@ export const initializeSyncAtom = <T, TCell>(atomInstance: SyncAtomInstance<T, T
   const syncAtom = atomInstance.state as SyncAtom<T, TCell> | SyncAtomFamily<T, any, TCell>;
   const parameter = syncAtom.type === 'atomFamily' ? syncAtom.parameter : undefined;
 
+  if('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
+
   atomInstance.cell = syncAtom.cell();
 
   try {
