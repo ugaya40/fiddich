@@ -59,7 +59,6 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
       useValueInfoEventEmitter.fireRequestRerender(componentName, stateInstance, reason);
     };
     const listener = stateInstance.event.addListener(event => {
-
       if (event.type === 'change by promise' || event.type === 'change') {
         if (suppressSuspenseWhenChange && !compare(event.oldValue, event.newValue)) {
           rerender(event.type);
@@ -67,16 +66,16 @@ export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, supp
       }
 
       if (event.type === 'waiting' || event.type === 'change') {
-        if(!suppressSuspenseWhenChange) {
+        if (!suppressSuspenseWhenChange) {
           rerender(event.type);
         }
       }
 
-      if(event.type === 'reset' && !suppressSuspenseWhenInit) {
+      if (event.type === 'reset' && !suppressSuspenseWhenInit) {
         rerender(event.type);
       }
 
-      if(event.type === 'initialized' && suppressSuspenseWhenInit && event.oldValue != null) {
+      if (event.type === 'initialized' && suppressSuspenseWhenInit && event.oldValue != null) {
         rerender(event.type);
       }
 

@@ -79,7 +79,7 @@ export const initializeAsyncAtom = <T, TCell>(
         atomInstance.event.emit({
           type: 'initialized',
           value: actualInitialValue,
-          oldValue
+          oldValue,
         });
       }
     } catch (e) {
