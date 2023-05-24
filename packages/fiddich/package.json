@@ -1,6 +1,6 @@
 {
   "name": "fiddich",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
