@@ -18,8 +18,8 @@ function useStoreOperator(store: Store): StoreOperatorForReset {
   return useMemo(() => {
     return {
       store,
-      reset: () => {
-        resetStoreStates(store, true);
+      reset: (resetChildStores?: boolean) => {
+        resetStoreStates(store, resetChildStores ?? false);
         useStoreInfoEventEmitter.fireResetStore(componentName, store);
       },
     };

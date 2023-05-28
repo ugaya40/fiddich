@@ -13,7 +13,7 @@ type SuspenseCounterProps = {
 type StateValueProps = SuspenseCounterProps & {
   state: FiddichState<any>,
   place?: StorePlaceTypeHookContext,
-  suppressSuspenseWhenInit?: boolean,
+  suppressSuspenseWhenReset?: boolean,
   suppressSuspenseWhenChange?: boolean,
   counter: {
     tryRenderCount: number,
@@ -29,8 +29,10 @@ const StateValue: FC<StateValueProps> = props => {
     props.counter.tryRenderCount++;
     const value = useValue(props.state, {
       place: props.place, 
-      suppressSuspenseWhenInit: props.suppressSuspenseWhenInit,
-      suppressSuspenseWhenChanged: props.suppressSuspenseWhenChange
+      suppressSuspense: {
+        onReset: props.suppressSuspenseWhenReset,
+        onChange: props.suppressSuspenseWhenChange
+      }
     });
     props.counter.renderedCount++;
     return (
@@ -98,7 +100,7 @@ export const ResetStoreButton: FC = props => {
   const store = useNearestStore();
   return (
     <p>
-      <button role="button" onClick={() => store.reset()}>{`ResetStore`}</button>
+      <button role="button" onClick={() => store.reset(true)}>{`ResetStore`}</button>
     </p>
   )
 }

@@ -39,7 +39,7 @@ export type { AsyncAtomOption, AtomOption, LimitedAsyncAtomOption, LimitedAtomOp
 export { useEvent } from './hooks/useEvent';
 export { useInstance } from './hooks/useInstance';
 export type { StorePlaceTypeHookContext } from './hooks/useInstance';
-export { useContextResetState, useHierarchicalResetState, useNamedResetState, useNearestResetState, useRootResetState } from './hooks/useResetState';
+export { useContextResetState, useHierarchicalResetState, useNamedResetState, useResetState, useRootResetState } from './hooks/useResetState';
 export { useSetAtom, useSetContextAtom, useSetHierarchicalAtom, useSetNamedStoreAtom, useSetRootAtom } from './hooks/useSetAtom';
 export type {
   LimitedSetAsyncAtomOption,
@@ -57,7 +57,7 @@ export type {
   AsyncAtomValueOption,
   AtomValueOption,
   LimitedAtomValueOption,
-  LimitedSelectorValueOption,
+  LimitedAsyncSelectorValueOption,
   SelectorValueOption,
   SyncAtomValueOption,
 } from './hooks/useValue';

@@ -89,8 +89,8 @@ export const buildSetAsyncAtomFunction = (storePlaceType: StorePlaceType, contex
 };
 
 export const buildResetStoreFunction = (store: Store, context: SubOperationExecutionContext): ResetStore => {
-  const resetStoreFunction = (resetChildStores: boolean) => {
-    resetStoreStates(store, resetChildStores);
+  const resetStoreFunction = (resetChildStores?: boolean) => {
+    resetStoreStates(store, resetChildStores ?? false);
     if (context.type === 'instance effect') {
       operationInEffectInfoEventEmitter.fireResetStore(context.instance, store, context.effectType);
     } else if (context.type === 'selector get') {
@@ -116,7 +116,7 @@ export const buildResetStateFunction = (storePlaceType: StorePlaceType, context:
 export type GetSnapshot = <TSource>(arg: FiddichState<TSource, any>) => TSource | undefined;
 export type SetSyncAtom = <TSource>(arg: SyncAtom<TSource> | SyncAtomFamily<TSource, any>, setterOrUpdater: SyncAtomSetterOrUpdaterArg<TSource>) => void;
 export type SetAsyncAtom = <TSource>(arg: AsyncAtom<TSource> | AsyncAtomFamily<TSource, any>, setterOrUpdater: AsyncAtomSetterOrUpdaterArg<TSource>) => void;
-export type ResetStore = (resetChildStores: boolean) => void;
+export type ResetStore = (resetChildStores?: boolean) => void;
 export type ResetState = <TSource>(state: FiddichState<TSource>) => void;
 
 export type EffectArgTypeBase<TCell = any> = {

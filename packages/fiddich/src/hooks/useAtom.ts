@@ -1,33 +1,41 @@
 import { AsyncAtom, AsyncAtomFamily, AsyncAtomValueArg, Atom, AtomFamily, SyncAtom, SyncAtomFamily, SyncAtomValueArg } from '../atom/atom';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
-import { useValueInternal } from './useValue';
+import { SuppressSuspenseOption, useValueInternal } from './useValue';
 import { useSetAtomInternal } from './useSetAtom';
 import { AsyncAtomSetterOrUpdater, AtomSetterOrUpdater, SyncAtomSetterOrUpdater } from '../atom/change';
 
-export type AtomOption<T> = {
-  initialValue?: SyncAtomValueArg<T> | AsyncAtomValueArg<T>;
-  suppressSuspenseWhenInit?: boolean;
-  suppressSuspenseWhenChanged?: boolean;
+export type SyncAtomOption<T> = {
+  initialValue?: SyncAtomValueArg<T>;
   place?: StorePlaceTypeHookContext;
 };
 
-export type SyncAtomOption<T> = Omit<AtomOption<T>, 'suppressSuspense'> & {
-  initialValue?: SyncAtomValueArg<T>;
-};
-export type AsyncAtomOption<T> = AtomOption<T> & {
+export type AsyncAtomOption<T> = {
   initialValue?: AsyncAtomValueArg<T>;
+  suppressSuspense?: SuppressSuspenseOption;
+  place?: StorePlaceTypeHookContext;
 };
 
-export type LimitedAtomOption<T> = Omit<AtomOption<T>, 'place'>;
+export type AtomOption<T> = SyncAtomOption<T> | AsyncAtomOption<T>;
+
 export type LimitedSyncAtomOption<T> = Omit<SyncAtomOption<T>, 'place'>;
 export type LimitedAsyncAtomOption<T> = Omit<AsyncAtomOption<T>, 'place'>;
+export type LimitedAtomOption<T> = LimitedSyncAtomOption<T> | LimitedAsyncAtomOption<T>;
 
 export function useAtom<T>(atom: SyncAtom<T> | SyncAtomFamily<T, any>, option?: SyncAtomOption<T>): [T, SyncAtomSetterOrUpdater<T>];
 export function useAtom<T>(atom: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: AsyncAtomOption<T>): [T, AsyncAtomSetterOrUpdater<T>];
 export function useAtom<T>(atom: Atom<T> | AtomFamily<T, any>, option?: AtomOption<T>): [T, AtomSetterOrUpdater<T>];
 export function useAtom<T>(atom: Atom<T> | AtomFamily<T, any>, option?: AtomOption<T>): [T, AtomSetterOrUpdater<T>] {
-  const instance = useInstance(atom, option?.place ?? { type: 'normal' }, option?.initialValue);
-  return [useValueInternal(instance, option?.suppressSuspenseWhenInit ?? false, option?.suppressSuspenseWhenChanged ?? false), useSetAtomInternal(instance)];
+  if (option != null) {
+    const suppressSuspenseWhenReset = 'suppressSuspense' in option ? option.suppressSuspense?.onReset ?? false : false;
+    const suppressSuspenseWhenChange = 'suppressSuspense' in option ? option.suppressSuspense?.onChange ?? false : false;
+    const initialValue = 'initialValue' in option ? option.initialValue : undefined;
+
+    const instance = useInstance(atom, option?.place ?? { type: 'normal' }, initialValue);
+    return [useValueInternal(instance, suppressSuspenseWhenReset, suppressSuspenseWhenChange), useSetAtomInternal(instance)];
+  } else {
+    const instance = useInstance(atom, { type: 'normal' });
+    return [useValueInternal(instance, false, false), useSetAtomInternal(instance)];
+  }
 }
 
 export function useHierarchicalAtom<T>(atom: SyncAtom<T> | SyncAtomFamily<T, any>, option?: LimitedSyncAtomOption<T>): [T, SyncAtomSetterOrUpdater<T>];

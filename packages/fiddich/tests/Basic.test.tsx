@@ -172,9 +172,9 @@ test('Suppress Suspense - Change',async () => {
 const Basic4: FC = () => {
   return (
     <FiddichRoot>
-      <StateValueBox suppressSuspenseWhenInit={true} state={atom3}/>
-      <StateValueBox suppressSuspenseWhenInit={true} state={selector5}/>
-      <StateValueBox suppressSuspenseWhenInit={true} state={selector6}/>
+      <StateValueBox suppressSuspenseWhenReset={true} state={atom3}/>
+      <StateValueBox suppressSuspenseWhenReset={true} state={selector5}/>
+      <StateValueBox suppressSuspenseWhenReset={true} state={selector6}/>
       <ChangeStateAsyncButton state={atom3}/>
       <ResetStoreButton/>
     </FiddichRoot>
@@ -212,9 +212,9 @@ test('Suppress Suspense - Init',async () => {
 const Basic5: FC = () => {
   return (
     <FiddichRoot>
-      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenInit={true} state={atom3}/>
-      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenInit={true} state={selector5}/>
-      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenInit={true} state={selector6}/>
+      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenReset={true} state={atom3}/>
+      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenReset={true} state={selector5}/>
+      <StateValueBox suppressSuspenseWhenChange={true} suppressSuspenseWhenReset={true} state={selector6}/>
       <ChangeStateAsyncButton state={atom3}/>
       <ResetStoreButton/>
     </FiddichRoot>
