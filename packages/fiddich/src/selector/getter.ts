@@ -29,7 +29,6 @@ import {
 import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
 import { getContextStore, getRootStore } from '../util/storeUtil';
 import { lazyFunction } from '../util/util';
-import { initializeAsyncSelector } from './initialize';
 import {
   AsyncSelector,
   AsyncSelectorFamily,
@@ -65,13 +64,9 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
 
       const listener = sourceInstance.event.addListener(event => {
         if (event.type === 'waiting' || event.type === 'change') {
-          if (selectorInstance.status.type === 'waiting for initialize') {
-            initializeAsyncSelector(selectorInstance);
-            return;
-          }
+          if ('abortRequest' in selectorInstance.status) selectorInstance.status.abortRequest = true;
 
-          if (selectorInstance.status.type === 'waiting') selectorInstance.status.abortRequest = true;
-
+          const isInitialized = selectorInstance.status.type !== 'waiting for initialize';
           const state = selectorInstance.state as AsyncSelector<T> | AsyncSelectorFamily<T, unknown>;
           const oldValue = getStableValue(selectorInstance);
 
@@ -120,6 +115,7 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
           waitingStatus = {
             type: 'waiting',
             promise: waitingPromise,
+            isInitialized,
             abortRequest: false,
             oldValue: oldValue!,
           };

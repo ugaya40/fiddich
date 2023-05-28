@@ -22,8 +22,13 @@ function returnValueForUseValue<T>(
     // the waiting status may be exposed by a re-rendering by another StateInstance.value.
     // In that case, the old value should be returned.
     if (suppressSuspenseWhenChange && stateInstance.status.type === 'waiting') {
-      useValueInfoEventEmitter.fireReturnValue(componentName, stateInstance, stateInstance.status.oldValue);
-      return stateInstance.status.oldValue;
+      if (stateInstance.status.isInitialized) {
+        useValueInfoEventEmitter.fireReturnValue(componentName, stateInstance, stateInstance.status.oldValue);
+        return stateInstance.status.oldValue;
+      } else {
+        useValueInfoEventEmitter.fireThrowPromise(componentName, stateInstance, stateInstance.status.promise);
+        throw stateInstance.status.promise;
+      }
     } else {
       // Only immediately after reset, there is a status of "waiting for initialize" in which "oldValue" is not undefined.
       if (suppressSuspenseWhenReset && stateInstance.status.type === 'waiting for initialize' && stateInstance.status.oldValue != null) {

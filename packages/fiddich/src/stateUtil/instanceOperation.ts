@@ -33,7 +33,7 @@ export const buildSnapshotFunction = (storePlaceType: StorePlaceType): GetSnapsh
     } else if (sourceInstance.status.type === 'waiting') {
       return sourceInstance.status.oldValue;
     } else if (sourceInstance.status.type === 'waiting for initialize') {
-      return undefined;
+      return sourceInstance.status.oldValue;
     } else {
       throw new Error(invalidStatusErrorText);
     }

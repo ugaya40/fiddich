@@ -134,8 +134,8 @@ const selector6 = selector({
   name: 'selector6',
   getAsync: async ({get}) => {
     await sleep(30);
-    const selector1Value = await get(selector5);
-    return `selector6-${selector1Value}`;
+    const selector5Value = await get(selector5);
+    return `selector6-${selector5Value}`;
   }
 });
 
@@ -247,4 +247,65 @@ test('Suppress Suspense - Both',async () => {
   expect(screen.queryAllByText('SuspenseCount: 1').length).toBe(3);
   expect(screen.queryAllByText('RenderedCount: 3').length).toBe(3);
   expect(screen.queryAllByText('TryRenderCount: 4').length).toBe(3);
+});
+
+const atom4 = atom({
+  name: 'atom4',
+  asyncDefault: async () => {
+    await sleep(30);
+    return 'atom4';
+  },
+});
+
+const selector7 = selector({
+  name: 'selector7',
+  getAsync: async ({get}) => {
+    const atom4Value = await get(atom4);
+    return `selector7-${atom4Value}`;
+  }
+});
+
+const selector8 = selector({
+  name: 'selector8',
+  getAsync: async ({get}) => {
+    await sleep(30);
+    const selector7Value = await get(selector7);
+    return `selector8-${selector7Value}`;
+  }
+});
+
+const Basic6: FC = () => {
+  return (
+    <FiddichRoot>
+      <StateValueBox suppressSuspenseWhenChange={true} state={atom4}/>
+      <StateValueBox suppressSuspenseWhenChange={true} state={selector7}/>
+      <StateValueBox suppressSuspenseWhenChange={true} state={selector8}/>
+      <ChangeStateAsyncButton state={atom4} time={50}/>
+      <ResetStoreButton/>
+    </FiddichRoot>
+  )
+}
+
+test('Suppress Suspense - Change before initialization',async () => {
+  const result = render(<Basic6/>);
+
+  expect(screen.queryAllByText('loading...').length).toBe(3);
+
+  fireEvent.change(result.container.querySelector('#setValue-atom4')!, {target: {value: 'newAtom4Value'}});
+  fireEvent.click(screen.getByRole('button', {name: 'ChangeStateAsync-atom4'}));
+
+  expect(screen.queryAllByText('loading...').length).toBe(3);
+
+  await waitFor(() => screen.getByText('Value: selector8-selector7-newAtom4Value'));
+  expect(screen.queryAllByText('Value: selector8-selector7-newAtom4Value').length).toBe(1);
+  expect(screen.queryAllByText('Value: selector7-newAtom4Value').length).toBe(1);
+  expect(screen.queryAllByText('Value: newAtom4Value').length).toBe(1);
+
+  expect(screen.queryAllByText('SuspenseCount: 2').length).toBe(1);
+  expect(screen.queryAllByText('SuspenseCount: 1').length).toBe(2);
+  
+  expect(screen.queryAllByText('RenderedCount: 1').length).toBe(3);
+
+  expect(screen.queryAllByText('TryRenderCount: 3').length).toBe(1);
+  expect(screen.queryAllByText('TryRenderCount: 2').length).toBe(2);
 });

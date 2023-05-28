@@ -4,7 +4,6 @@ import { getStableValue } from '../stateUtil/getValue';
 import { fireChangeEffect, fireErrorEffect } from '../stateUtil/instanceOperation';
 import { defaultCompareFunction } from '../util/const';
 import { AsyncAtomInstance, SyncAtomInstance } from './atom';
-import { initializeAsyncAtom } from './initialize';
 
 export type SyncAtomSetterOrUpdaterArg<T> = T | ((old: T | undefined) => T);
 export type AsyncAtomSetterOrUpdaterArg<T> = T | Promise<T> | ((old: T | undefined) => T | Promise<T>);
@@ -31,13 +30,9 @@ const getNewValueFromAsyncAtom = <T>(valueOrUpdater: AsyncAtomSetterOrUpdaterArg
 };
 
 export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T, any>, valueOrUpdater: AsyncAtomSetterOrUpdaterArg<T>) => {
-  if (atomInstance.status.type === 'waiting for initialize') {
-    initializeAsyncAtom(atomInstance);
-    return;
-  }
+  if ('abortRequest' in atomInstance.status) atomInstance.status.abortRequest = true;
 
-  if (atomInstance.status.type === 'waiting') atomInstance.status.abortRequest = true;
-
+  const isInitialized = atomInstance.status.type !== 'waiting for initialize';
   const oldValue = getStableValue(atomInstance)!;
 
   //The status of instance may be overwritten while waiting for await,
@@ -80,6 +75,7 @@ export const changeAsyncAtomValue = <T>(atomInstance: AsyncAtomInstance<T, any>,
     type: 'waiting',
     abortRequest: false,
     oldValue,
+    isInitialized,
     promise: changeValuePromise,
   };
 

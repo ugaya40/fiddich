@@ -26,6 +26,6 @@ export function getValue<T>(instance: FiddichStateInstance<T>): T | Promise<T> {
 
 export const getStableValue = <T>(instance: FiddichStateInstance<T>) => {
   const status = instance.status;
-  if (status.type === 'error' || status.type === 'unknown' || status.type === 'waiting for initialize') return undefined;
+  if (status.type === 'error' || status.type === 'unknown') return undefined;
   return status.type === 'stable' ? status.value : status.oldValue;
 };

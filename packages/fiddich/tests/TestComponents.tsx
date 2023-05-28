@@ -81,7 +81,7 @@ export const ChangeStateButton: FC<{state: Atom<any> | AtomFamily<any,any>, plac
   )
 }
 
-export const ChangeStateAsyncButton: FC<{state: AsyncAtom<any> | AsyncAtomFamily<any,any>, place?: StorePlaceTypeHookContext,}> = props => {
+export const ChangeStateAsyncButton: FC<{state: AsyncAtom<any> | AsyncAtomFamily<any,any>, place?: StorePlaceTypeHookContext, time?: number}> = props => {
   const setValue = useSetAtom(props.state, {place: props.place});
   const [inputText, setInputText] = useState('');
   return (
@@ -89,7 +89,7 @@ export const ChangeStateAsyncButton: FC<{state: AsyncAtom<any> | AsyncAtomFamily
       <label htmlFor={`setValue-${props.state.name}`}>{`setValue-${props.state.name}`}</label>
       <input id={`setValue-${props.state.name}`} type="text" value={inputText} onChange={e => setInputText(e.target.value)}/>
       <button role="button" onClick={() => setValue(async () => {
-        await sleep(30);
+        await sleep(props.time ?? 30);
         return inputText;
       })}>{`ChangeStateAsync-${props.state.name}`}</button>
     </p>

@@ -90,6 +90,7 @@ export type WaitingStatus<T> = {
   type: 'waiting';
   promise: Promise<void>;
   oldValue: T;
+  isInitialized: boolean;
   abortRequest: boolean;
 };
 

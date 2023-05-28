@@ -6,8 +6,7 @@ export const useSnapshotInternal = <T>(stateInstance: FiddichStateInstance<T>): 
   if (stateInstance.status.type === 'stable') {
     return stateInstance.status.value;
   } else if (stateInstance.status.type === 'waiting for initialize') {
-    //It is reasonable that the "waiting for initialize" snapshot should be undefined without considering reset.
-    return undefined;
+    return stateInstance.status.oldValue;
   } else if (stateInstance.status.type === 'waiting') {
     return stateInstance.status.oldValue;
   } else if (stateInstance.status.type === 'error') {
