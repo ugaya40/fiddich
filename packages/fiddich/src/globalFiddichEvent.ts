@@ -109,6 +109,25 @@ export type ResetStoreOperationInfoEventArg = {
   targetStore: StoreInfo;
 };
 
+export type ResetChildStoresOperationInfoEventArg = {
+  type: 'reset child stores';
+  source:
+    | {
+        type: 'useStore';
+        componentName: string | undefined;
+      }
+    | {
+        type: 'instance effect';
+        effectType: EffectStringType;
+        instanceInfo: StateInstanceInfo;
+      }
+    | {
+        type: 'selector get';
+        selectorInfo: SelectorInstanceInfo;
+      };
+  rootStore: StoreInfo;
+};
+
 export type ResetStateOperationInfoEventArg = {
   type: 'reset state';
   source:
@@ -165,6 +184,7 @@ export type InfoEventArgs =
   | SetAtomOperationInfoEventArg
   | ResetStateOperationInfoEventArg
   | ResetStoreOperationInfoEventArg
+  | ResetChildStoresOperationInfoEventArg
   | SelectorInfoEventArg
   | UseValueInfoEventArg;
 
@@ -229,6 +249,12 @@ export const useStoreInfoEventEmitter = {
       source: { type: 'useStore', componentName },
       targetStore: storeInfo(targetStore),
     }),
+  fireResetChildStores: (componentName: string | undefined, rootStore: Store) =>
+    globalFiddichEvent.emit({
+      type: 'reset child stores',
+      source: { type: 'useStore', componentName },
+      rootStore: storeInfo(rootStore),
+    }),
 };
 
 export const operationInEffectInfoEventEmitter = {
@@ -243,6 +269,12 @@ export const operationInEffectInfoEventEmitter = {
       type: 'reset store',
       source: { type: 'instance effect', instanceInfo: instanceInfo(instance), effectType },
       targetStore: storeInfo(targetStore),
+    }),
+  fireResetChildStores: (componentName: string | undefined, rootStore: Store) =>
+    globalFiddichEvent.emit({
+      type: 'reset child stores',
+      source: { type: 'useStore', componentName },
+      rootStore: storeInfo(rootStore),
     }),
   fireResetState: (instance: FiddichStateInstance<any>, targetInstance: FiddichStateInstance<any>, effectType: EffectStringType) =>
     globalFiddichEvent.emit({
@@ -264,6 +296,12 @@ export const operationInGetValueInfoEventEmitter = {
       type: 'reset store',
       source: { type: 'selector get', selectorInfo: instanceInfo(instance) },
       targetStore: storeInfo(targetStore),
+    }),
+  fireResetChildStores: (componentName: string | undefined, rootStore: Store) =>
+    globalFiddichEvent.emit({
+      type: 'reset child stores',
+      source: { type: 'useStore', componentName },
+      rootStore: storeInfo(rootStore),
     }),
   fireResetState: (instance: SelectorInstance<any>, targetInstance: FiddichStateInstance<any>) =>
     globalFiddichEvent.emit({

@@ -4,13 +4,14 @@ import { FiddichStoreContext, noStoreErrorText } from '../util/const';
 import { getContextStore, getRootStore } from '../util/storeUtil';
 import { useStoreInfoEventEmitter } from '../globalFiddichEvent';
 import { useComponentNameIfDev } from './useComponentNameIfDev';
-import { ResetStore } from '../stateUtil/instanceOperation';
+import { ResetChildStores, ResetStore } from '../stateUtil/instanceOperation';
 import { resetStoreStates } from '../stateUtil/reset';
 import { getNamedStore } from '../namedStore';
 
 type StoreOperatorForReset = {
   store: Store;
   reset: ResetStore;
+  resetChildStores: ResetChildStores;
 };
 
 function useStoreOperator(store: Store): StoreOperatorForReset {
@@ -18,9 +19,13 @@ function useStoreOperator(store: Store): StoreOperatorForReset {
   return useMemo(() => {
     return {
       store,
-      reset: (resetChildStores?: boolean) => {
-        resetStoreStates(store, resetChildStores ?? false);
+      reset: () => {
+        resetStoreStates(store, false);
         useStoreInfoEventEmitter.fireResetStore(componentName, store);
+      },
+      resetChildStores: () => {
+        store.children.forEach(child => resetStoreStates(child, true));
+        useStoreInfoEventEmitter.fireResetChildStores(componentName, store);
       },
     };
   }, [store.id]);

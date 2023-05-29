@@ -100,7 +100,10 @@ export const ResetStoreButton: FC = props => {
   const store = useNearestStore();
   return (
     <p>
-      <button role="button" onClick={() => store.reset(true)}>{`ResetStore`}</button>
+      <button role="button" onClick={() => {
+        store.reset();
+        store.resetChildStores();
+      }}>{`ResetStore`}</button>
     </p>
   )
 }

@@ -1,5 +1,9 @@
-import { EffectStringType, operationInEffectInfoEventEmitter, operationInGetValueInfoEventEmitter, stateInstanceInfoEventEmitter } from '../globalFiddichEvent';
-import { getNamedStore } from '../namedStore';
+import {
+  EffectStringType,
+  operationInEffectInfoEventEmitter,
+  operationInGetValueInfoEventEmitter,
+  stateInstanceInfoEventEmitter,
+} from '../globalFiddichEvent';
 import {
   ContextStorePlaceType,
   FiddichState,
@@ -9,12 +13,11 @@ import {
   NamedStorePlaceType,
   NormalStorePlaceType,
   RootStorePlaceType,
-  Store,
   StorePlaceType,
 } from '../shareTypes';
 import { invalidStatusErrorText } from '../util/const';
 import { getOrAddStateInstance } from './getInstance';
-import { getContextStore, getRootStore } from '../util/storeUtil';
+import { getStoreForNewInstance } from '../util/storeUtil';
 import { lazyFunction } from '../util/util';
 import { getStableValue } from './getValue';
 import { resetState, resetStoreStates } from './reset';
@@ -54,6 +57,10 @@ export type SubOperationExecutionContext =
   | {
       type: 'named store operator';
       store: FiddichStore;
+    }
+  | {
+      type: 'useStore';
+      componentName: string | undefined;
     };
 
 export const buildSetSyncAtomFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): SetSyncAtom => {
@@ -88,15 +95,29 @@ export const buildSetAsyncAtomFunction = (storePlaceType: StorePlaceType, contex
   return setAtomFunction;
 };
 
-export const buildResetStoreFunction = (store: Store, context: SubOperationExecutionContext): ResetStore => {
-  const resetStoreFunction = (resetChildStores?: boolean) => {
-    resetStoreStates(store, resetChildStores ?? false);
+export const buildResetStoreFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): ResetStore => {
+  const store = getStoreForNewInstance(storePlaceType);
+  const resetStoreFunction = () => {
+    resetStoreStates(store, false);
     if (context.type === 'instance effect') {
       operationInEffectInfoEventEmitter.fireResetStore(context.instance, store, context.effectType);
     } else if (context.type === 'selector get') {
       operationInGetValueInfoEventEmitter.fireResetStore(context.instance, store);
     }
   };
+  return resetStoreFunction;
+};
+
+export const buildResetChildStoresFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): ResetStore => {
+  const store = getStoreForNewInstance(storePlaceType);
+  const resetStoreFunction = () => {
+    store.children.map(child => resetStoreStates(child, true));
+  };
+  if (context.type === 'instance effect') {
+    operationInEffectInfoEventEmitter.fireResetStore(context.instance, store, context.effectType);
+  } else if (context.type === 'selector get') {
+    operationInGetValueInfoEventEmitter.fireResetStore(context.instance, store);
+  }
   return resetStoreFunction;
 };
 
@@ -116,37 +137,42 @@ export const buildResetStateFunction = (storePlaceType: StorePlaceType, context:
 export type GetSnapshot = <TSource>(arg: FiddichState<TSource, any>) => TSource | undefined;
 export type SetSyncAtom = <TSource>(arg: SyncAtom<TSource> | SyncAtomFamily<TSource, any>, setterOrUpdater: SyncAtomSetterOrUpdaterArg<TSource>) => void;
 export type SetAsyncAtom = <TSource>(arg: AsyncAtom<TSource> | AsyncAtomFamily<TSource, any>, setterOrUpdater: AsyncAtomSetterOrUpdaterArg<TSource>) => void;
-export type ResetStore = (resetChildStores?: boolean) => void;
+export type ResetStore = () => void;
+export type ResetChildStores = () => void;
 export type ResetState = <TSource>(state: FiddichState<TSource>) => void;
 
-export type EffectArgTypeBase<TCell = any> = {
+export type BasicOperationArgType = {
   snapshot: GetSnapshot;
   setSyncAtom: SetSyncAtom;
   setAsyncAtom: SetAsyncAtom;
   resetStore: ResetStore;
+  resetChildStores: ResetChildStores;
   resetState: ResetState;
-  hierarchical: { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetState: ResetState };
-  root: { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore; resetState: ResetState };
-  named: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore; resetState: ResetState };
-  context: (name: string) => { snapshot: GetSnapshot; setSyncAtom: SetSyncAtom; setAsyncAtom: SetAsyncAtom; resetStore: ResetStore; resetState: ResetState };
+};
+
+export type EffectArgBaseType<TCell = any> = BasicOperationArgType & {
+  hierarchical: Omit<BasicOperationArgType, 'resetStore' | 'resetChildStores'>;
+  root: BasicOperationArgType;
+  named: (name: string) => BasicOperationArgType;
+  context: (key: string) => BasicOperationArgType;
   cell: TCell;
 };
 
-export type InitEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
+export type InitEffectArgType<T, TCell = any> = EffectArgBaseType<TCell> & {
   value: T;
 };
 
-export type ChangeEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
+export type ChangeEffectArgType<T, TCell = any> = EffectArgBaseType<TCell> & {
   newValue: T;
   oldValue: T | undefined;
 };
 
-export type ErrorEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
+export type ErrorEffectArgType<T, TCell = any> = EffectArgBaseType<TCell> & {
   oldValue: T | undefined;
   error: unknown;
 };
 
-export type FinalizeEffectArgType<T, TCell = any> = EffectArgTypeBase<TCell> & {
+export type FinalizeEffectArgType<T, TCell = any> = EffectArgBaseType<TCell> & {
   lastValue: T | undefined;
 };
 
@@ -166,13 +192,13 @@ export const fireInitEffect = <T>(stateInstance: FiddichStateInstance<T>, initia
   stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'init');
   if ('parameter' in stateInstance.state) {
     stateInstance.state.effects.init({
-      ...effectsArgBase(stateInstance, 'init'),
+      ...basicEffectsArg(stateInstance, 'init'),
       parameter: stateInstance.state.parameter,
       value: initialValue,
     });
   } else {
     stateInstance.state.effects.init({
-      ...effectsArgBase(stateInstance, 'init'),
+      ...basicEffectsArg(stateInstance, 'init'),
       value: initialValue,
     });
   }
@@ -183,14 +209,14 @@ export const fireChangeEffect = <T>(stateInstance: FiddichStateInstance<T>, oldV
   stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'change');
   if ('parameter' in stateInstance.state) {
     stateInstance.state.effects.change({
-      ...effectsArgBase(stateInstance, 'change'),
+      ...basicEffectsArg(stateInstance, 'change'),
       parameter: stateInstance.state.parameter,
       oldValue,
       newValue,
     });
   } else {
     stateInstance.state.effects.change({
-      ...effectsArgBase(stateInstance, 'change'),
+      ...basicEffectsArg(stateInstance, 'change'),
       oldValue,
       newValue,
     });
@@ -202,14 +228,14 @@ export const fireErrorEffect = <T>(stateInstance: FiddichStateInstance<T>, oldVa
   stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'error');
   if ('parameter' in stateInstance.state) {
     stateInstance.state.effects.error({
-      ...effectsArgBase(stateInstance, 'error'),
+      ...basicEffectsArg(stateInstance, 'error'),
       parameter: stateInstance.state.parameter,
       error,
       oldValue,
     });
   } else {
     stateInstance.state.effects.error({
-      ...effectsArgBase(stateInstance, 'error'),
+      ...basicEffectsArg(stateInstance, 'error'),
       error,
       oldValue,
     });
@@ -221,19 +247,46 @@ export const fireFinalizeEffect = <T>(stateInstance: FiddichStateInstance<T>) =>
   stateInstanceInfoEventEmitter.fireEffects(stateInstance, 'finalize');
   if ('parameter' in stateInstance.state) {
     stateInstance.state.effects.finalize({
-      ...effectsArgBase(stateInstance, 'finalize'),
+      ...basicEffectsArg(stateInstance, 'finalize'),
       parameter: stateInstance.state.parameter,
       lastValue: getStableValue(stateInstance),
     });
   } else {
     stateInstance.state.effects.finalize({
-      ...effectsArgBase(stateInstance, 'finalize'),
+      ...basicEffectsArg(stateInstance, 'finalize'),
       lastValue: getStableValue(stateInstance),
     });
   }
 };
 
-export const effectsArgBase = <T, TCell>(mainInstance: FiddichStateInstance<T, TCell>, effectType: EffectStringType): EffectArgTypeBase<TCell> => {
+export function effectArgEveryStorePlaceType(
+  storePlace: HierarchicalStorePlaceType,
+  context: SubOperationExecutionContext
+): Omit<BasicOperationArgType, 'resetStore' | 'resetChildStores'>;
+export function effectArgEveryStorePlaceType(
+  storePlace: Exclude<StorePlaceType, HierarchicalStorePlaceType>,
+  context: SubOperationExecutionContext
+): BasicOperationArgType;
+export function effectArgEveryStorePlaceType(storePlace: StorePlaceType, context: SubOperationExecutionContext) {
+  const result = {
+    snapshot: lazyFunction(() => buildSnapshotFunction(storePlace)),
+    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(storePlace, context)),
+    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(storePlace, context)),
+    resetState: lazyFunction(() => buildResetStateFunction(storePlace, context)),
+  };
+
+  if (storePlace.type !== 'hierarchical') {
+    return {
+      ...result,
+      resetStore: lazyFunction(() => buildResetStoreFunction(storePlace, context)),
+      resetChildStores: lazyFunction(() => buildResetChildStoresFunction(storePlace, context)),
+    };
+  } else {
+    return result;
+  }
+}
+
+export const basicEffectsArg = <T, TCell>(mainInstance: FiddichStateInstance<T, TCell>, effectType: EffectStringType): EffectArgBaseType<TCell> => {
   const normalStorePlace: NormalStorePlaceType = {
     type: 'normal',
     nearestStore: mainInstance.store,
@@ -253,38 +306,11 @@ export const effectsArgBase = <T, TCell>(mainInstance: FiddichStateInstance<T, T
   };
 
   return {
-    snapshot: lazyFunction(() => buildSnapshotFunction(normalStorePlace)),
-    setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(normalStorePlace, subOperationContext)),
-    setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(normalStorePlace, subOperationContext)),
-    resetStore: lazyFunction(() => buildResetStoreFunction(mainInstance.store, subOperationContext)),
-    resetState: lazyFunction(() => buildResetStateFunction(normalStorePlace, subOperationContext)),
-    root: {
-      snapshot: lazyFunction(() => buildSnapshotFunction(rootStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(rootStorePlace, subOperationContext)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(rootStorePlace, subOperationContext)),
-      resetStore: lazyFunction(() => buildResetStoreFunction(getRootStore(mainInstance.store), subOperationContext)),
-      resetState: lazyFunction(() => buildResetStateFunction(rootStorePlace, subOperationContext)),
-    },
-    hierarchical: {
-      snapshot: lazyFunction(() => buildSnapshotFunction(hierarchicalStorePlace)),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(hierarchicalStorePlace, subOperationContext)),
-      resetState: lazyFunction(() => buildResetStateFunction(hierarchicalStorePlace, subOperationContext)),
-    },
-    named: (name: string) => ({
-      snapshot: lazyFunction(() => buildSnapshotFunction(namedStorePlace(name))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(namedStorePlace(name), subOperationContext)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(namedStorePlace(name), subOperationContext)),
-      resetStore: lazyFunction(() => buildResetStoreFunction(getNamedStore(name), subOperationContext)),
-      resetState: lazyFunction(() => buildResetStateFunction(namedStorePlace(name), subOperationContext)),
-    }),
-    context: (key: string) => ({
-      snapshot: lazyFunction(() => buildSnapshotFunction(contextStorePlace(key))),
-      setSyncAtom: lazyFunction(() => buildSetSyncAtomFunction(contextStorePlace(key), subOperationContext)),
-      setAsyncAtom: lazyFunction(() => buildSetAsyncAtomFunction(contextStorePlace(key), subOperationContext)),
-      resetStore: lazyFunction(() => buildResetStoreFunction(getContextStore(key, mainInstance.store), subOperationContext)),
-      resetState: lazyFunction(() => buildResetStateFunction(contextStorePlace(key), subOperationContext)),
-    }),
+    ...effectArgEveryStorePlaceType(normalStorePlace, subOperationContext),
+    root: effectArgEveryStorePlaceType(rootStorePlace, subOperationContext),
+    hierarchical: effectArgEveryStorePlaceType(hierarchicalStorePlace, subOperationContext),
+    named: (name: string) => effectArgEveryStorePlaceType(namedStorePlace(name), subOperationContext),
+    context: (key: string) => effectArgEveryStorePlaceType(contextStorePlace(key), subOperationContext),
     cell: mainInstance.cell,
   };
 };
