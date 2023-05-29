@@ -1,9 +1,4 @@
-import {
-  EffectStringType,
-  operationInEffectInfoEventEmitter,
-  operationInGetValueInfoEventEmitter,
-  stateInstanceInfoEventEmitter,
-} from '../globalFiddichEvent';
+import { EffectStringType, operationInEffectInfoEventEmitter, operationInGetValueInfoEventEmitter, stateInstanceInfoEventEmitter } from '../globalFiddichEvent';
 import {
   ContextStorePlaceType,
   FiddichState,
