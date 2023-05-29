@@ -270,10 +270,10 @@ export const operationInEffectInfoEventEmitter = {
       source: { type: 'instance effect', instanceInfo: instanceInfo(instance), effectType },
       targetStore: storeInfo(targetStore),
     }),
-  fireResetChildStores: (componentName: string | undefined, rootStore: Store) =>
+  fireResetChildStores: (instance: FiddichStateInstance<any>, rootStore: Store, effectType: EffectStringType) =>
     globalFiddichEvent.emit({
       type: 'reset child stores',
-      source: { type: 'useStore', componentName },
+      source: { type: 'instance effect', instanceInfo: instanceInfo(instance), effectType },
       rootStore: storeInfo(rootStore),
     }),
   fireResetState: (instance: FiddichStateInstance<any>, targetInstance: FiddichStateInstance<any>, effectType: EffectStringType) =>
@@ -297,10 +297,10 @@ export const operationInGetValueInfoEventEmitter = {
       source: { type: 'selector get', selectorInfo: instanceInfo(instance) },
       targetStore: storeInfo(targetStore),
     }),
-  fireResetChildStores: (componentName: string | undefined, rootStore: Store) =>
+  fireResetChildStores: (instance: SelectorInstance<any>, rootStore: Store) =>
     globalFiddichEvent.emit({
       type: 'reset child stores',
-      source: { type: 'useStore', componentName },
+      source: { type: 'selector get', selectorInfo: instanceInfo(instance) },
       rootStore: storeInfo(rootStore),
     }),
   fireResetState: (instance: SelectorInstance<any>, targetInstance: FiddichStateInstance<any>) =>

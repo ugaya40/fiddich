@@ -105,15 +105,15 @@ export const buildResetStoreFunction = (storePlaceType: StorePlaceType, context:
 
 export const buildResetChildStoresFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): ResetStore => {
   const store = getStoreForNewInstance(storePlaceType);
-  const resetStoreFunction = () => {
+  const resetChildStoresFunction = () => {
     store.children.map(child => resetStoreStates(child, true));
   };
   if (context.type === 'instance effect') {
-    operationInEffectInfoEventEmitter.fireResetStore(context.instance, store, context.effectType);
+    operationInEffectInfoEventEmitter.fireResetChildStores(context.instance, store, context.effectType);
   } else if (context.type === 'selector get') {
-    operationInGetValueInfoEventEmitter.fireResetStore(context.instance, store);
+    operationInGetValueInfoEventEmitter.fireResetChildStores(context.instance, store);
   }
-  return resetStoreFunction;
+  return resetChildStoresFunction;
 };
 
 export const buildResetStateFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): ResetState => {

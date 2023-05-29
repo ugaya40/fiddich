@@ -23,7 +23,10 @@ export const FiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (pro
   });
 
   useChangedValue(parent, {
-    effect: current => {
+    effect: (current, old) => {
+      if(old != null) {
+        old.children = old.children.filter(child => child !== storeRef.current);
+      }
       if(current != null) {
         current.children.push(storeRef.current);
       }

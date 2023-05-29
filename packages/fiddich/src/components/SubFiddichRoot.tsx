@@ -26,17 +26,17 @@ export const SubFiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (
   });
 
   useChangedValue(parent, {
-    effect: current => {
+    init: current => {
       storeRef.current.parent = current;
-  
-      if(current != null) {
-        current.children.push(storeRef.current);
-      }
+      current.children.push(storeRef.current);
+    },
+    effect: (current, old) => {
+      old.children = old.children.filter(child => child !== storeRef.current);
+      storeRef.current.parent = current;
+      current.children.push(storeRef.current);
     },
     cleanup: current => {
-      if(current != null) {
-        current.children = current.children.filter(child => child !== storeRef.current);
-      }
+      current.children = current.children.filter(child => child !== storeRef.current);
     }
   })
 
