@@ -12,13 +12,11 @@ export function useChangedValue<T>(
   if (value !== valueRef.current) {
     const oldValue = valueRef.current;
     valueRef.current = value;
-    option.effect(oldValue, value);
+    option.effect(value, oldValue);
   }
 
   useEffect(() => {
     option.init?.(value);
-    if (option.cleanup != null) {
-      return option.cleanup(valueRef.current);
-    }
+    return () => option.cleanup?.(valueRef.current);
   }, []);
 }
