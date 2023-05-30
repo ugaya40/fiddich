@@ -46,7 +46,6 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
     const sourceInstance = getOrAddStateInstance(state, storePlaceType);
     const listenerKey = getStateListenerKey(sourceInstance, storePlaceType);
     const existingListener = selectorInstance.stateListeners.get(listenerKey);
-    const getterArg = asyncGetterArg<T, any>(selectorInstance);
 
     if (existingListener == null || existingListener.instance !== sourceInstance) {
       existingListener?.listener?.dispose?.();
@@ -66,6 +65,7 @@ const buildGetAsyncFunction = <T>(selectorInstance: AsyncSelectorInstance<T>, st
           const waitingPromise = new Promise<void>(async resolve => {
             try {
               selectorInstanceInfoEventEmitter.fireTryGetValueWhenSourceChanged(selectorInstance, sourceInstance);
+              const getterArg = asyncGetterArg<T, any>(selectorInstance);
               const newValue = await (state.type === 'selectorFamily'
                 ? state.getAsync({
                     ...getterArg,
@@ -135,7 +135,6 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
     const compareFunction: Compare<T> = selectorInstance.state.compare ?? defaultCompareFunction;
     const listenerKey = getStateListenerKey(sourceInstance, storePlaceType);
     const existingListener = selectorInstance.stateListeners.get(listenerKey);
-    const getterArg = syncGetterArg<T, any>(selectorInstance);
 
     if (existingListener == null || existingListener.instance !== sourceInstance) {
       existingListener?.listener?.dispose?.();
@@ -147,6 +146,7 @@ const buildGetFunction = <T>(selectorInstance: SyncSelectorInstance<T>, storePla
 
           try {
             selectorInstanceInfoEventEmitter.fireTryGetValueWhenSourceChanged(selectorInstance, sourceInstance);
+            const getterArg = syncGetterArg<T, any>(selectorInstance);
             const newValue = state.type === 'selectorFamily' ? state.get({ ...getterArg, param: state.parameter }) : state.get(getterArg);
 
             if (event.type === 'change') {

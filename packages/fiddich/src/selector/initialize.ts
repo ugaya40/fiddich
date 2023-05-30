@@ -8,9 +8,8 @@ import { AsyncSelector, AsyncSelectorFamily, AsyncSelectorInstance, SyncSelector
 
 export const initializeSyncSelector = <T, TCell>(selectorInstance: SyncSelectorInstance<T, TCell>) => {
   const syncSelector = selectorInstance.state as SyncSelector<T, TCell> | SyncSelectorFamily<T, any, TCell>;
-  const getterArg = syncGetterArg(selectorInstance);
-
   selectorInstance.cell = syncSelector.cell();
+  const getterArg = syncGetterArg(selectorInstance);
 
   try {
     selectorInstanceInfoEventEmitter.fireTryGetValueWhenInitialize(selectorInstance);
