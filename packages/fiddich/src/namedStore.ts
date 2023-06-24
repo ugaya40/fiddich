@@ -9,7 +9,7 @@ import type {
   SyncAtomOperator,
   SyncSelectorOperator,
 } from './shareTypes';
-import { idAndGlobalNamedStoreMap, nameAndGlobalNamedStoreMap, notFoundNamedStoreErrorText } from './util/const';
+import { nameAndGlobalNamedStoreMap, notFoundNamedStoreErrorText } from './util/const';
 import { eventPublisher } from './util/event';
 import { namedStoreOperatorInfoEventEmitter, storeInfoEventEmitter } from './globalFiddichEvent';
 import { getOrAddStateInstance } from './stateUtil/getInstance';
@@ -21,7 +21,6 @@ import { resetState, resetStoreStates } from './stateUtil/reset';
 export function createNewNamedStore(name: string): FiddichStore {
   const newStore: FiddichStore = { id: generateRandomKey(), map: new Map(), name, event: eventPublisher(), children: [] };
   nameAndGlobalNamedStoreMap.set(name, newStore);
-  idAndGlobalNamedStoreMap.set(newStore.id, newStore);
   storeInfoEventEmitter.fireStoreCreated(newStore);
   return newStore;
 }
@@ -41,7 +40,6 @@ export function deleteNamedStoreIfExists(name: string): void {
   const store = nameAndGlobalNamedStoreMap.get(name);
   if (store != null) {
     nameAndGlobalNamedStoreMap.delete(name);
-    idAndGlobalNamedStoreMap.delete(store.id);
     store.event.emit('finalize');
     storeInfoEventEmitter.fireStoreDestroyed(store);
   }
