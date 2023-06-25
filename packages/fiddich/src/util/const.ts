@@ -7,6 +7,4 @@ export const notFoundNamedStoreErrorText = (name: string) => `There is no store 
 
 export const defaultCompareFunction: Compare<unknown> = (oldValue: unknown | undefined, newValue: unknown) => oldValue === newValue;
 
-export const nameAndGlobalNamedStoreMap = new Map<string, FiddichStore>();
-
 export const FiddichStoreContext = createContext<Store | null>(null);

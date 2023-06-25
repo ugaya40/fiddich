@@ -9,7 +9,7 @@ import type {
   SyncAtomOperator,
   SyncSelectorOperator,
 } from './shareTypes';
-import { nameAndGlobalNamedStoreMap, notFoundNamedStoreErrorText } from './util/const';
+import { notFoundNamedStoreErrorText } from './util/const';
 import { eventPublisher } from './util/event';
 import { namedStoreOperatorInfoEventEmitter, storeInfoEventEmitter } from './globalFiddichEvent';
 import { getOrAddStateInstance } from './stateUtil/getInstance';
@@ -17,6 +17,8 @@ import { generateRandomKey } from './util/util';
 import { getValue } from './stateUtil/getValue';
 import { changeAsyncAtomValue, changeSyncAtomValue } from './atom/change';
 import { resetState, resetStoreStates } from './stateUtil/reset';
+
+const nameAndGlobalNamedStoreMap = new Map<string, FiddichStore>();
 
 export function createNewNamedStore(name: string): FiddichStore {
   const oldStore = nameAndGlobalNamedStoreMap.get(name);

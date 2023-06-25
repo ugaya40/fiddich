@@ -1,5 +1,5 @@
+import { getNamedStore } from '../namedStore';
 import { Store, StorePlaceType } from '../shareTypes';
-import { nameAndGlobalNamedStoreMap, notFoundNamedStoreErrorText } from './const';
 
 export function getRootStore(store: Store): Store {
   if ('parent' in store) {
@@ -11,12 +11,7 @@ export function getRootStore(store: Store): Store {
 
 export function getStoreForNewInstance(storePlaceType: StorePlaceType): Store {
   if (storePlaceType.type === 'named') {
-    const namedStoreResult = nameAndGlobalNamedStoreMap.get(storePlaceType.name)!;
-    if (namedStoreResult != null) {
-      return namedStoreResult;
-    } else {
-      throw new Error(notFoundNamedStoreErrorText(storePlaceType.name));
-    }
+    return getNamedStore(storePlaceType.name);
   } else if (storePlaceType.type === 'root') {
     return getRootStore(storePlaceType.nearestStore);
   } else {

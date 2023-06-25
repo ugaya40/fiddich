@@ -1,7 +1,7 @@
 import { getOrAddAsyncAtomInstance, getOrAddSyncAtomInstance } from '../atom/getOrAddInstance';
+import { getNamedStore } from '../namedStore';
 import { getOrAddAsyncSelectorInstance, getOrAddSyncSelectorInstance } from '../selector/getOrAddInstance';
 import { FiddichState, FiddichStateInstance, StorePlaceType } from '../shareTypes';
-import { nameAndGlobalNamedStoreMap } from '../util/const';
 import { getRootStore } from '../util/storeUtil';
 
 export function getFiddichInstance<T = unknown, TCell = any>(
@@ -9,7 +9,7 @@ export function getFiddichInstance<T = unknown, TCell = any>(
   storePlaceType: StorePlaceType
 ): FiddichStateInstance<T, TCell> | undefined {
   if (storePlaceType.type === 'named') {
-    const store = nameAndGlobalNamedStoreMap.get(storePlaceType.name)!;
+    const store = getNamedStore(storePlaceType.name);
     return store.map.get(state.key);
   } else if (storePlaceType.type === 'root') {
     return getRootStore(storePlaceType.nearestStore).map.get(state.key);
