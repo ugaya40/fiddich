@@ -39,8 +39,3 @@ export function useNamedStoreSnapshot<T>(storeName: string, state: FiddichState<
   const instance = useInstance(state, { type: 'named', name: storeName });
   return useSnapshotInternal(instance);
 }
-
-export function useContextSnapshot<T>(contextKey: string, state: FiddichState<T>): T | undefined {
-  const instance = useInstance(state, { type: 'context', key: contextKey });
-  return useSnapshotInternal(instance);
-}

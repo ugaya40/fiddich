@@ -6,7 +6,7 @@ import { useChangedValue } from "../hooks/useChangedValue";
 import { eventPublisher } from "../util/event";
 import { storeInfoEventEmitter } from "../globalFiddichEvent";
 
-export const SubFiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (props) => {
+export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
 
   const parent = useContext(FiddichStoreContext);
   if(parent == null) throw new Error('SubFiddichRoot can only be used inside FiddichRoot.');
@@ -16,14 +16,10 @@ export const SubFiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (
     map: new Map(),
     event: eventPublisher(),
     parent, 
-    children: [], 
-    contextKey: props.contextKey});
+    children: []});
   
   useMemo(() => storeInfoEventEmitter.fireStoreCreated(storeRef.current),[]);
 
-  useChangedValue(props.contextKey, {
-    effect: current => {storeRef.current.contextKey = current}
-  });
 
   useChangedValue(parent, {
     init: current => {

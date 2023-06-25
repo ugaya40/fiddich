@@ -187,15 +187,3 @@ export function useNamedStoreValue<T>(storeName: string, state: FiddichState<T>,
   const optionValue: AtomValueOption<T> | SelectorValueOption = { ...option, place: { type: 'named', name: storeName } };
   return useValue(state, optionValue);
 }
-
-export function useContextValue<T>(contextKey: string, state: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: LimitedAsyncAtomValueOption<T>): T;
-export function useContextValue<T>(contextKey: string, state: SyncAtom<T> | SyncAtomFamily<T, any>, option?: LimitedSyncAtomValueOption<T>): T;
-export function useContextValue<T>(contextKey: string, state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
-export function useContextValue<T>(contextKey: string, state: AsyncSelector<T> | AsyncSelectorFamily<T, any>, option?: LimitedAsyncSelectorValueOption): T;
-export function useContextValue<T>(contextKey: string, state: SyncSelector<T> | SyncSelectorFamily<T, any>): T;
-export function useContextValue<T>(contextKey: string, state: Selector<T> | SelectorFamily<T, any>, option?: LimitedAsyncSelectorValueOption): T;
-export function useContextValue<T>(contextKey: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T> | LimitedAsyncSelectorValueOption): T;
-export function useContextValue<T>(contextKey: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T> | LimitedAsyncSelectorValueOption): T {
-  const optionValue: AtomValueOption<T> | SelectorValueOption = { ...option, place: { type: 'context', key: contextKey } };
-  return useValue(state, optionValue);
-}

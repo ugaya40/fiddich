@@ -19,10 +19,6 @@ export type StorePlaceTypeHookContext =
   | {
       type: 'named';
       name: string;
-    }
-  | {
-      type: 'context';
-      key: string;
     };
 
 type UseAtomInstanceArgsType<T, P> = {

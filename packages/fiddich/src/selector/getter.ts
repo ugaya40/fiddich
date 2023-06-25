@@ -1,7 +1,6 @@
 import { selectorInstanceInfoEventEmitter } from '../globalFiddichEvent';
 import {
   Compare,
-  ContextStorePlaceType,
   FiddichState,
   FiddichStateInstance,
   HierarchicalStorePlaceType,
@@ -32,12 +31,7 @@ import {
 } from './selector';
 
 const getStateListenerKey = <T>(sourceInstance: FiddichStateInstance<T>, storePlaceType: StorePlaceType) => {
-  const existingListenerStoreKey =
-    storePlaceType.type === 'named'
-      ? `named-${storePlaceType.name}`
-      : storePlaceType.type === 'context'
-      ? `context-${storePlaceType.key}`
-      : storePlaceType.type;
+  const existingListenerStoreKey = storePlaceType.type === 'named' ? `named-${storePlaceType.name}` : storePlaceType.type;
   return `${existingListenerStoreKey}-${sourceInstance.state.key}`;
 };
 
@@ -205,7 +199,6 @@ export function syncGetterArg<T, TCell>(selectorInstance: SyncSelectorInstance<T
     nearestStore,
   };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
-  const contextStorePlace: (key: string) => ContextStorePlaceType = (key: string) => ({ type: 'context', nearestStore, key });
 
   const subOperationContext: SubOperationExecutionContext = {
     type: 'selector get',
@@ -227,10 +220,6 @@ export function syncGetterArg<T, TCell>(selectorInstance: SyncSelectorInstance<T
       get: lazyFunction(() => buildGetFunction(selectorInstance, namedStorePlace(name))),
       ...effectArgEveryStorePlaceType(namedStorePlace(name), subOperationContext),
     }),
-    context: (key: string) => ({
-      get: lazyFunction(() => buildGetFunction(selectorInstance, contextStorePlace(key))),
-      ...effectArgEveryStorePlaceType(contextStorePlace(key), subOperationContext),
-    }),
     cell: selectorInstance.cell,
   };
 }
@@ -247,7 +236,6 @@ export function asyncGetterArg<T, TCell>(selectorInstance: AsyncSelectorInstance
     nearestStore,
   };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
-  const contextStorePlace: (key: string) => ContextStorePlaceType = (key: string) => ({ type: 'context', nearestStore, key });
 
   const subOperationContext: SubOperationExecutionContext = {
     type: 'selector get',
@@ -268,10 +256,6 @@ export function asyncGetterArg<T, TCell>(selectorInstance: AsyncSelectorInstance
     named: (name: string) => ({
       get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, namedStorePlace(name))),
       ...effectArgEveryStorePlaceType(namedStorePlace(name), subOperationContext),
-    }),
-    context: (key: string) => ({
-      get: lazyFunction(() => buildGetAsyncFunction(selectorInstance, contextStorePlace(key))),
-      ...effectArgEveryStorePlaceType(contextStorePlace(key), subOperationContext),
     }),
     cell: selectorInstance.cell,
   };

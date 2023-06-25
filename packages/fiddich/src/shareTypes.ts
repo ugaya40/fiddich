@@ -111,7 +111,6 @@ export type FiddichStateInstance<T = any, TCell = any> = AtomInstance<T, TCell> 
 type StoreBase = {
   id: string;
   map: Map<string, FiddichStateInstance>;
-  contextKey?: string;
   children: Store[];
   event: EventPublisher<'finalize'>;
 };
@@ -141,18 +140,12 @@ export type RootStorePlaceType = {
   nearestStore: Store;
 };
 
-export type ContextStorePlaceType = {
-  type: 'context';
-  nearestStore: Store;
-  key: string;
-};
-
 export type NamedStorePlaceType = {
   type: 'named';
   name: string;
 };
 
-export type StorePlaceType = NormalStorePlaceType | RootStorePlaceType | HierarchicalStorePlaceType | ContextStorePlaceType | NamedStorePlaceType;
+export type StorePlaceType = NormalStorePlaceType | RootStorePlaceType | HierarchicalStorePlaceType | NamedStorePlaceType;
 
 type StateOperatorBase<TSource> = {
   state: FiddichState<TSource>;

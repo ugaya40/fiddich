@@ -17,14 +17,13 @@ const SubRoot: FC = () => {
   return (  
     <FiddichRoot>
       <StateValueBox state={atom1}/> 
-      <SubFiddichRoot  contextKey="test">
+      <SubFiddichRoot>
         <StateValueBox state={atom1}/>
         <SubFiddichRoot>
           <StateValueBox state={atom1}  place={{type: 'hierarchical'}}/>
           {isVisible && <StateValueBox state={atom1}/>}
           <ChangeStateButton state={atom1} place={{type: 'hierarchical'}}/>
           <ChangeStateButton state={atom1} place={{type: 'root'}}/>
-          <ChangeStateButton state={atom1} place={{type: 'context', key: 'test'}}/>
         </SubFiddichRoot>
       </SubFiddichRoot>
       <button onClick={() => setIsVisible(true)}>Display Low State</button>
@@ -44,13 +43,8 @@ test('SubRoot 1', () => {
   expect(screen.queryAllByText('Value: 2').length).toBe(1);
   expect(screen.queryAllByText('Value: 1').length).toBe(2);
 
-  fireEvent.change(result.container.querySelectorAll('#setValue-atom1')[2]!, {target: {value: '3'}});
-  fireEvent.click(screen.queryAllByRole('button', {name: 'ChangeState-atom1'})[2]);
-  expect(screen.queryAllByText('Value: 3').length).toBe(2);
-  expect(screen.queryAllByText('Value: 2').length).toBe(1);
-
   fireEvent.click(screen.queryAllByRole('button', {name: 'Display Low State'})[0]);
-  expect(screen.queryAllByText('Value: 3').length).toBe(2);
   expect(screen.queryAllByText('Value: 2').length).toBe(1);
+  expect(screen.queryAllByText('Value: 1').length).toBe(2);
   expect(screen.queryAllByText('Value: atom1').length).toBe(1);
 });

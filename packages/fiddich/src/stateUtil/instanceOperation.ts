@@ -1,6 +1,5 @@
 import { EffectStringType, operationInEffectInfoEventEmitter, operationInGetValueInfoEventEmitter, stateInstanceInfoEventEmitter } from '../globalFiddichEvent';
 import {
-  ContextStorePlaceType,
   FiddichState,
   FiddichStateInstance,
   FiddichStore,
@@ -149,7 +148,6 @@ export type EffectArgBaseType<TCell = any> = BasicOperationArgType & {
   hierarchical: Omit<BasicOperationArgType, 'resetStore' | 'resetChildStores'>;
   root: BasicOperationArgType;
   named: (name: string) => BasicOperationArgType;
-  context: (key: string) => BasicOperationArgType;
   cell: TCell;
 };
 
@@ -292,8 +290,6 @@ export const basicEffectsArg = <T, TCell>(mainInstance: FiddichStateInstance<T, 
     nearestStore: mainInstance.store,
   };
   const namedStorePlace: (name: string) => NamedStorePlaceType = (name: string) => ({ type: 'named', name });
-  const contextStorePlace: (key: string) => ContextStorePlaceType = (key: string) => ({ type: 'context', nearestStore: mainInstance.store, key });
-
   const subOperationContext: SubOperationExecutionContext = {
     type: 'instance effect',
     effectType,
@@ -305,7 +301,6 @@ export const basicEffectsArg = <T, TCell>(mainInstance: FiddichStateInstance<T, 
     root: effectArgEveryStorePlaceType(rootStorePlace, subOperationContext),
     hierarchical: effectArgEveryStorePlaceType(hierarchicalStorePlace, subOperationContext),
     named: (name: string) => effectArgEveryStorePlaceType(namedStorePlace(name), subOperationContext),
-    context: (key: string) => effectArgEveryStorePlaceType(contextStorePlace(key), subOperationContext),
     cell: mainInstance.cell,
   };
 };

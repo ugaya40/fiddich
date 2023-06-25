@@ -29,12 +29,6 @@ export function useHierarchicalResetState(state: FiddichState): () => void {
   return useResetState(state, { type: 'hierarchical', nearestStore: store });
 }
 
-export function useContextResetState(state: FiddichState, contextKey: string): () => void {
-  const store = useContext(FiddichStoreContext);
-  if (store == null) throw new Error(noStoreErrorText);
-  return useResetState(state, { type: 'context', key: contextKey, nearestStore: store });
-}
-
 export function useNamedResetState(state: FiddichState, name: string): () => void {
   return useResetState(state, { type: 'named', name });
 }

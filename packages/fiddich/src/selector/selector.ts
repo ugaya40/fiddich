@@ -29,7 +29,6 @@ type GetArgBaseType<TGetType extends GetState | GetStateAsync, TCell> = BasicOpe
   hierarchical: { get: TGetType } & Omit<BasicOperationArgType, 'resetStore' | 'resetChildStores'>;
   root: { get: TGetType } & BasicOperationArgType;
   named: (name: string) => { get: TGetType } & BasicOperationArgType;
-  context: (key: string) => { get: TGetType } & BasicOperationArgType;
   cell: TCell;
 };
 

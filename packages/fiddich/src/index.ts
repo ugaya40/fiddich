@@ -34,14 +34,14 @@ export type {
   StoreInfoEventArg,
   UseValueInfoEventArg,
 } from './globalFiddichEvent';
-export { useAtom, useContextAtom, useHierarchicalAtom, useNamedStoreAtom, useRootAtom } from './hooks/useAtom';
+export { useAtom, useHierarchicalAtom, useNamedStoreAtom, useRootAtom } from './hooks/useAtom';
 export type { AsyncAtomOption, AtomOption, LimitedAsyncAtomOption, LimitedAtomOption, LimitedSyncAtomOption, SyncAtomOption } from './hooks/useAtom';
 export { useEvent } from './hooks/useEvent';
 export { useInstance } from './hooks/useInstance';
 export { useLifecycleEffect } from './hooks/useLifecycleEffect';
 export type { StorePlaceTypeHookContext } from './hooks/useInstance';
-export { useContextResetState, useHierarchicalResetState, useNamedResetState, useResetState, useRootResetState } from './hooks/useResetState';
-export { useSetAtom, useSetContextAtom, useSetHierarchicalAtom, useSetNamedStoreAtom, useSetRootAtom } from './hooks/useSetAtom';
+export { useHierarchicalResetState, useNamedResetState, useResetState, useRootResetState } from './hooks/useResetState';
+export { useSetAtom, useSetHierarchicalAtom, useSetNamedStoreAtom, useSetRootAtom } from './hooks/useSetAtom';
 export type {
   LimitedSetAsyncAtomOption,
   LimitedSetAtomOption,
@@ -50,10 +50,10 @@ export type {
   SetAtomOption,
   SetSyncAtomOption,
 } from './hooks/useSetAtom';
-export { useContextSnapshot, useHierarchicalSnapshot, useNamedStoreSnapshot, useRootSnapshot, useSnapshot } from './hooks/useSnapshot';
+export { useHierarchicalSnapshot, useNamedStoreSnapshot, useRootSnapshot, useSnapshot } from './hooks/useSnapshot';
 export type { SnapshotOption } from './hooks/useSnapshot';
-export { useContextStore, useNamedStore, useNearestStore, useRootStore } from './hooks/useStore';
-export { useContextValue, useHierarchicalValue, useNamedStoreValue, useRootValue, useValue } from './hooks/useValue';
+export { useNamedStore, useNearestStore, useRootStore } from './hooks/useStore';
+export { useHierarchicalValue, useNamedStoreValue, useRootValue, useValue } from './hooks/useValue';
 export type {
   AsyncAtomValueOption,
   AtomValueOption,

@@ -13,20 +13,6 @@ export function getFiddichInstance<T = unknown, TCell = any>(
     return store.map.get(state.key);
   } else if (storePlaceType.type === 'root') {
     return getRootStore(storePlaceType.nearestStore).map.get(state.key);
-  } else if (storePlaceType.type === 'context') {
-    if (storePlaceType.nearestStore.contextKey === storePlaceType.key) {
-      return storePlaceType.nearestStore.map.get(state.key);
-    } else {
-      if ('parent' in storePlaceType.nearestStore) {
-        return getFiddichInstance(state, {
-          type: storePlaceType.type,
-          nearestStore: storePlaceType.nearestStore.parent,
-          key: storePlaceType.key,
-        });
-      } else {
-        return undefined;
-      }
-    }
   } else {
     const nearestStoreResult = storePlaceType.nearestStore.map.get(state.key);
 

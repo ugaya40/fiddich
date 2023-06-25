@@ -6,22 +6,16 @@ import { useChangedValue } from "../hooks/useChangedValue";
 import { eventPublisher } from "../util/event";
 import { storeInfoEventEmitter } from "../globalFiddichEvent";
 
-export const FiddichRoot: FC<{children?: ReactNode, contextKey?: string}> = (props) => {
+export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
   const storeRef = useRef<FiddichStore>({
     id: generateRandomKey(), 
     map: new Map(), 
     event: eventPublisher(), 
-    children: [], 
-    contextKey: props.contextKey});
+    children: []});
   
   useMemo(() => storeInfoEventEmitter.fireStoreCreated(storeRef.current),[]);
 
   const parent = useContext(FiddichStoreContext);
-
-  useChangedValue(props.contextKey, {
-    init: current => {storeRef.current.contextKey = current},
-    effect: current => {storeRef.current.contextKey = current}
-  });
 
   useChangedValue(parent, {
     init: current => {
