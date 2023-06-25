@@ -3,7 +3,7 @@ import { DependencyList, useEffect } from 'react';
 export function useLifecycleEffect(
   option: {
     init?: () => void;
-    effect: () => void;
+    effect?: () => void;
     cleanup?: () => void;
   },
   deps?: DependencyList
@@ -13,6 +13,6 @@ export function useLifecycleEffect(
     return () => option.cleanup?.();
   }, []);
   useEffect(() => {
-    option.effect();
+    option.effect?.();
   }, deps);
 }

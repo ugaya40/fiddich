@@ -36,6 +36,7 @@ export type {
 } from './globalFiddichEvent';
 export { useAtom, useHierarchicalAtom, useNamedStoreAtom, useRootAtom } from './hooks/useAtom';
 export type { AsyncAtomOption, AtomOption, LimitedAsyncAtomOption, LimitedAtomOption, LimitedSyncAtomOption, SyncAtomOption } from './hooks/useAtom';
+export { useBoundNamedStore } from './hooks/useBoundNamedStore';
 export { useEvent } from './hooks/useEvent';
 export { useInstance } from './hooks/useInstance';
 export { useLifecycleEffect } from './hooks/useLifecycleEffect';

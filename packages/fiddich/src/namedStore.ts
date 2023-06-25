@@ -19,6 +19,12 @@ import { changeAsyncAtomValue, changeSyncAtomValue } from './atom/change';
 import { resetState, resetStoreStates } from './stateUtil/reset';
 
 export function createNewNamedStore(name: string): FiddichStore {
+  const oldStore = nameAndGlobalNamedStoreMap.get(name);
+  if (oldStore != null) {
+    nameAndGlobalNamedStoreMap.delete(name);
+    oldStore.event.emit('finalize');
+    storeInfoEventEmitter.fireStoreDestroyed(oldStore);
+  }
   const newStore: FiddichStore = { id: generateRandomKey(), map: new Map(), name, event: eventPublisher(), children: [] };
   nameAndGlobalNamedStoreMap.set(name, newStore);
   storeInfoEventEmitter.fireStoreCreated(newStore);
