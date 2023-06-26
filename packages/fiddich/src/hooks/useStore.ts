@@ -11,7 +11,6 @@ import { getNamedStore } from '../namedStore';
 type StoreOperatorForReset = {
   store: Store;
   reset: ResetStore;
-  resetChildStores: ResetChildStores;
 };
 
 function useStoreOperator(store: Store): StoreOperatorForReset {
@@ -22,10 +21,6 @@ function useStoreOperator(store: Store): StoreOperatorForReset {
       reset: () => {
         resetStoreStates(store, false);
         useStoreInfoEventEmitter.fireResetStore(componentName, store);
-      },
-      resetChildStores: () => {
-        store.children.forEach(child => resetStoreStates(child, true));
-        useStoreInfoEventEmitter.fireResetChildStores(componentName, store);
       },
     };
   }, [store.id]);

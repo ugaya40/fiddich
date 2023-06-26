@@ -102,7 +102,6 @@ export const ResetStoreButton: FC = props => {
     <p>
       <button role="button" onClick={() => {
         store.reset();
-        store.resetChildStores();
       }}>{`ResetStore`}</button>
     </p>
   )

@@ -102,19 +102,6 @@ export const buildResetStoreFunction = (storePlaceType: StorePlaceType, context:
   return resetStoreFunction;
 };
 
-export const buildResetChildStoresFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): ResetStore => {
-  const store = getStoreForNewInstance(storePlaceType);
-  const resetChildStoresFunction = () => {
-    store.children.map(child => resetStoreStates(child, true));
-  };
-  if (context.type === 'instance effect') {
-    operationInEffectInfoEventEmitter.fireResetChildStores(context.instance, store, context.effectType);
-  } else if (context.type === 'selector get') {
-    operationInGetValueInfoEventEmitter.fireResetChildStores(context.instance, store);
-  }
-  return resetChildStoresFunction;
-};
-
 export const buildResetStateFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): ResetState => {
   const resetStatesFunction = <TSource>(state: FiddichState<TSource>): void => {
     const targetInstance = getOrAddStateInstance(state, storePlaceType)!;
@@ -140,12 +127,11 @@ export type BasicOperationArgType = {
   setSyncAtom: SetSyncAtom;
   setAsyncAtom: SetAsyncAtom;
   resetStore: ResetStore;
-  resetChildStores: ResetChildStores;
   resetState: ResetState;
 };
 
 export type EffectArgBaseType<TCell = any> = BasicOperationArgType & {
-  hierarchical: Omit<BasicOperationArgType, 'resetStore' | 'resetChildStores'>;
+  hierarchical: Omit<BasicOperationArgType, 'resetStore'>;
   root: BasicOperationArgType;
   named: (name: string) => BasicOperationArgType;
   cell: TCell;
@@ -255,7 +241,7 @@ export const fireFinalizeEffect = <T>(stateInstance: FiddichStateInstance<T>) =>
 export function effectArgEveryStorePlaceType(
   storePlace: HierarchicalStorePlaceType,
   context: SubOperationExecutionContext
-): Omit<BasicOperationArgType, 'resetStore' | 'resetChildStores'>;
+): Omit<BasicOperationArgType, 'resetStore'>;
 export function effectArgEveryStorePlaceType(
   storePlace: Exclude<StorePlaceType, HierarchicalStorePlaceType>,
   context: SubOperationExecutionContext
@@ -272,7 +258,6 @@ export function effectArgEveryStorePlaceType(storePlace: StorePlaceType, context
     return {
       ...result,
       resetStore: lazyFunction(() => buildResetStoreFunction(storePlace, context)),
-      resetChildStores: lazyFunction(() => buildResetChildStoresFunction(storePlace, context)),
     };
   } else {
     return result;

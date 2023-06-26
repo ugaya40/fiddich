@@ -27,7 +27,7 @@ export function createNewNamedStore(name: string): FiddichStore {
     oldStore.event.emit('finalize');
     storeInfoEventEmitter.fireStoreDestroyed(oldStore);
   }
-  const newStore: FiddichStore = { id: generateRandomKey(), map: new Map(), name, event: eventPublisher(), children: [] };
+  const newStore: FiddichStore = { id: generateRandomKey(), map: new Map(), name, event: eventPublisher() };
   nameAndGlobalNamedStoreMap.set(name, newStore);
   storeInfoEventEmitter.fireStoreCreated(newStore);
   return newStore;

@@ -15,8 +15,7 @@ export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
     id: generateRandomKey(), 
     map: new Map(),
     event: eventPublisher(),
-    parent, 
-    children: []});
+    parent});
   
   useMemo(() => storeInfoEventEmitter.fireStoreCreated(storeRef.current),[]);
 
@@ -24,15 +23,9 @@ export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
   useChangedValue(parent, {
     init: current => {
       storeRef.current.parent = current;
-      current.children.push(storeRef.current);
     },
     effect: (current, old) => {
-      old.children = old.children.filter(child => child !== storeRef.current);
       storeRef.current.parent = current;
-      current.children.push(storeRef.current);
-    },
-    cleanup: current => {
-      current.children = current.children.filter(child => child !== storeRef.current);
     }
   })
 

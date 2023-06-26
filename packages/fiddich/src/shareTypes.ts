@@ -111,7 +111,6 @@ export type FiddichStateInstance<T = any, TCell = any> = AtomInstance<T, TCell> 
 type StoreBase = {
   id: string;
   map: Map<string, FiddichStateInstance>;
-  children: Store[];
   event: EventPublisher<'finalize'>;
 };
 

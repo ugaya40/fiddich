@@ -26,7 +26,7 @@ export type GetStateAsync = <TSource>(arg: FiddichState<TSource>) => Promise<TSo
 
 type GetArgBaseType<TGetType extends GetState | GetStateAsync, TCell> = BasicOperationArgType & {
   get: TGetType;
-  hierarchical: { get: TGetType } & Omit<BasicOperationArgType, 'resetStore' | 'resetChildStores'>;
+  hierarchical: { get: TGetType } & Omit<BasicOperationArgType, 'resetStore'>;
   root: { get: TGetType } & BasicOperationArgType;
   named: (name: string) => { get: TGetType } & BasicOperationArgType;
   cell: TCell;
