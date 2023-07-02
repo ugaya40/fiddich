@@ -20,8 +20,8 @@ type Cleanup = () => void;
 type ChangeValue<T> = (newValue: T) => void;
 
 export type CleanupCell = {
-  cleaner: Cleanup | void
-}
+  cleaner: Cleanup | void;
+};
 
 export type SyncIndependentAtomArg<T> = SyncAtomArg<T> & {
   registerTrigger: (change: ChangeValue<T>) => Cleanup | void;
@@ -33,16 +33,16 @@ export type AsyncIndependentAtomArg<T> = AsyncAtomArg<T> & {
 
 export type IndependentAtomArg<T> = SyncIndependentAtomArg<T> | AsyncIndependentAtomArg<T>;
 
-export function independentAtom<T>(arg: SyncIndependentAtomArg<T>): SyncAtom<T,CleanupCell>;
-export function independentAtom<T>(arg: AsyncIndependentAtomArg<T>): AsyncAtom<T,CleanupCell>;
-export function independentAtom<T>(arg: IndependentAtomArg<T>): Atom<T,CleanupCell>;
+export function independentAtom<T>(arg: SyncIndependentAtomArg<T>): SyncAtom<T, CleanupCell>;
+export function independentAtom<T>(arg: AsyncIndependentAtomArg<T>): AsyncAtom<T, CleanupCell>;
+export function independentAtom<T>(arg: IndependentAtomArg<T>): Atom<T, CleanupCell>;
 export function independentAtom<T>(arg: IndependentAtomArg<T>) {
   const { registerTrigger, effects, ...other } = arg;
   const atomState = atom<T, CleanupCell>({
     ...other,
-    cell: () => ({cleaner: () =>{}}),
+    cell: () => ({ cleaner: () => {} }),
     effects: {
-      init: (effectArg: InitEffectArgType<T, {cleaner: Cleanup | void}>) => {
+      init: (effectArg: InitEffectArgType<T, { cleaner: Cleanup | void }>) => {
         if (effectArg.cell.cleaner != null) {
           effectArg.cell.cleaner();
         }
@@ -57,7 +57,7 @@ export function independentAtom<T>(arg: IndependentAtomArg<T>) {
       },
       change: effects?.change,
       error: effects?.error,
-      finalize: (effectArg: FinalizeEffectArgType<T, {cleaner: Cleanup | void}>) => {
+      finalize: (effectArg: FinalizeEffectArgType<T, { cleaner: Cleanup | void }>) => {
         effects?.finalize?.(effectArg);
         if (effectArg.cell.cleaner != null) {
           effectArg.cell.cleaner();
@@ -87,7 +87,7 @@ export function independentAtomFamily<T, P>(arg: IndependentAtomFamilyArg<T, P>)
   const { registerTrigger, effects, ...other } = arg;
   const atomFamilyFunction = atomFamily<T, P, CleanupCell>({
     ...other,
-    cell: () => ({cleaner: () =>{}}),
+    cell: () => ({ cleaner: () => {} }),
     effects: {
       init: (effectArg: FamilyEffectArg<T, P, 'init'>) => {
         if (effectArg.cell.cleaner != null) {
