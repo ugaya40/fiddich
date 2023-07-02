@@ -63,7 +63,7 @@ export type {
   SelectorValueOption,
   SyncAtomValueOption,
 } from './hooks/useValue';
-export { independentAtom, independentAtomFamily } from './independentAtom';
+export { independentAtom, independentAtomFamily, CleanupCell } from './independentAtom';
 export type {
   AsyncIndependentAtomArg,
   AsyncIndependentAtomFamilyArg,

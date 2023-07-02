@@ -1,4 +1,4 @@
-import {AsyncAtom, AsyncAtomFamily, AsyncAtomFamilyFunction, AsyncSelector, AsyncSelectorFamily, AsyncSelectorFamilyFunction, SyncAtom, SyncAtomFamily, SyncAtomFamilyFunction, SyncSelector, SyncSelectorFamily, SyncSelectorFamilyFunction, atom, atomFamily, eventPublisher, independentAtom, independentAtomFamily, selector, selectorFamily} from '../src'
+import {AsyncAtom, AsyncAtomFamily, AsyncAtomFamilyFunction, AsyncSelector, AsyncSelectorFamily, AsyncSelectorFamilyFunction, CleanupCell, SyncAtom, SyncAtomFamily, SyncAtomFamilyFunction, SyncSelector, SyncSelectorFamily, SyncSelectorFamilyFunction, atom, atomFamily, eventPublisher, independentAtom, independentAtomFamily, selector, selectorFamily} from '../src'
 import { expectType, TypeEqual } from "ts-expect";
 import './testUtil';
 
@@ -365,7 +365,7 @@ test('independentAtom typeCheck', () => {
       return () => listener.dispose();
     }
   });
-  expectType<TypeEqual<SyncAtom<number, undefined>, typeof atom1>>(true);
+  expectType<TypeEqual<SyncAtom<number, CleanupCell>, typeof atom1>>(true);
 
   const event2 = eventPublisher<TestType>();
   const atom2 = independentAtom({
@@ -381,7 +381,7 @@ test('independentAtom typeCheck', () => {
       return () => listener.dispose();
     }
   });
-  expectType<TypeEqual<SyncAtom<TestType, undefined>, typeof atom2>>(true);
+  expectType<TypeEqual<SyncAtom<TestType, CleanupCell>, typeof atom2>>(true);
 
   const event3 = eventPublisher<TestType>();
   const atom3 = independentAtom({
@@ -392,7 +392,7 @@ test('independentAtom typeCheck', () => {
       return () => listener.dispose();
     }
   });
-  expectType<TypeEqual<SyncAtom<TestType, undefined>, typeof atom3>>(true);
+  expectType<TypeEqual<SyncAtom<TestType, CleanupCell>, typeof atom3>>(true);
 
   const event4 = eventPublisher<TestType>();
   const atom4 = independentAtom({
@@ -403,7 +403,7 @@ test('independentAtom typeCheck', () => {
       return () => listener.dispose();
     }
   });
-  expectType<TypeEqual<AsyncAtom<TestType, undefined>, typeof atom4>>(true);
+  expectType<TypeEqual<AsyncAtom<TestType, CleanupCell>, typeof atom4>>(true);
 
   const event5 = eventPublisher<TestType>();
   const atom5 = independentAtom({
@@ -420,7 +420,7 @@ test('independentAtom typeCheck', () => {
     }
   });
 
-  expectType<TypeEqual<AsyncAtom<TestType, undefined>, typeof atom5>>(true);
+  expectType<TypeEqual<AsyncAtom<TestType, CleanupCell>, typeof atom5>>(true);
 
   //@ts-expect-error
   const errorSyncAtom = independentAtom({
@@ -442,8 +442,8 @@ test('independentAtomFamily typeCheck', () => {
   });
 
   const atomFamily1Sample = atomFamily1('');
-  expectType<TypeEqual<SyncAtomFamilyFunction<number, unknown, undefined>, typeof atomFamily1>>(true);
-  expectType<TypeEqual<SyncAtomFamily<number, unknown, undefined>, typeof atomFamily1Sample>>(true);
+  expectType<TypeEqual<SyncAtomFamilyFunction<number, unknown, CleanupCell>, typeof atomFamily1>>(true);
+  expectType<TypeEqual<SyncAtomFamily<number, unknown, CleanupCell>, typeof atomFamily1Sample>>(true);
 
   const event2 = eventPublisher<TestType>();
   const atomFamily2 = independentAtomFamily<TestType, number>({
@@ -463,8 +463,8 @@ test('independentAtomFamily typeCheck', () => {
     }
   });
   const atomFamily2Sample = atomFamily2(0);
-  expectType<TypeEqual<SyncAtomFamilyFunction<TestType, number, undefined>, typeof atomFamily2>>(true);
-  expectType<TypeEqual<SyncAtomFamily<TestType, number, undefined>, typeof atomFamily2Sample>>(true);
+  expectType<TypeEqual<SyncAtomFamilyFunction<TestType, number, CleanupCell>, typeof atomFamily2>>(true);
+  expectType<TypeEqual<SyncAtomFamily<TestType, number, CleanupCell>, typeof atomFamily2Sample>>(true);
 
   const event3 = eventPublisher<TestType>();
   const atomFamily3 = independentAtomFamily<TestType, number>({
@@ -479,8 +479,8 @@ test('independentAtomFamily typeCheck', () => {
     }
   });
   const atomFamily3Sample = atomFamily3(0);
-  expectType<TypeEqual<AsyncAtomFamilyFunction<TestType, number, undefined>, typeof atomFamily3>>(true);
-  expectType<TypeEqual<AsyncAtomFamily<TestType, number, undefined>, typeof atomFamily3Sample>>(true);
+  expectType<TypeEqual<AsyncAtomFamilyFunction<TestType, number, CleanupCell>, typeof atomFamily3>>(true);
+  expectType<TypeEqual<AsyncAtomFamily<TestType, number, CleanupCell>, typeof atomFamily3Sample>>(true);
 
   const event4 = eventPublisher<TestType>();
   const atomFamily4 = independentAtomFamily<TestType, number>({
@@ -500,6 +500,6 @@ test('independentAtomFamily typeCheck', () => {
     }
   });
   const atomFamily4Sample = atomFamily4(0);
-  expectType<TypeEqual<AsyncAtomFamilyFunction<TestType, number, undefined>, typeof atomFamily4>>(true);
-  expectType<TypeEqual<AsyncAtomFamily<TestType, number, undefined>, typeof atomFamily4Sample>>(true);
+  expectType<TypeEqual<AsyncAtomFamilyFunction<TestType, number, CleanupCell>, typeof atomFamily4>>(true);
+  expectType<TypeEqual<AsyncAtomFamily<TestType, number, CleanupCell>, typeof atomFamily4Sample>>(true);
 });

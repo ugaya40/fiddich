@@ -116,8 +116,8 @@ export const buildResetStateFunction = (storePlaceType: StorePlaceType, context:
 };
 
 export type GetSnapshot = <TSource>(arg: FiddichState<TSource, any>) => TSource | undefined;
-export type SetSyncAtom = <TSource>(arg: SyncAtom<TSource> | SyncAtomFamily<TSource, any>, setterOrUpdater: SyncAtomSetterOrUpdaterArg<TSource>) => void;
-export type SetAsyncAtom = <TSource>(arg: AsyncAtom<TSource> | AsyncAtomFamily<TSource, any>, setterOrUpdater: AsyncAtomSetterOrUpdaterArg<TSource>) => void;
+export type SetSyncAtom = <TSource>(arg: SyncAtom<TSource, any> | SyncAtomFamily<TSource, any, any>, setterOrUpdater: SyncAtomSetterOrUpdaterArg<TSource>) => void;
+export type SetAsyncAtom = <TSource>(arg: AsyncAtom<TSource, any> | AsyncAtomFamily<TSource, any, any>, setterOrUpdater: AsyncAtomSetterOrUpdaterArg<TSource>) => void;
 export type ResetStore = () => void;
 export type ResetChildStores = () => void;
 export type ResetState = <TSource>(state: FiddichState<TSource>) => void;
