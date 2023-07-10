@@ -3,7 +3,7 @@ import { AsyncAtom, AsyncAtomFamily, AsyncAtomValueArg, Atom, AtomFamily, SyncAt
 import type { FiddichState, FiddichStateInstance } from '../shareTypes';
 import { AsyncSelector, AsyncSelectorFamily, Selector, SelectorFamily, SyncSelector, SyncSelectorFamily } from '../selector/selector';
 import { StorePlaceTypeHookContext, useInstance } from './useInstance';
-import { useRerenderAsync } from './useRerender';
+import { useRerender } from './useRerender';
 import { defaultCompareFunction, invalidStatusErrorText } from '../util/const';
 import { RequestRerenderReason, useValueInfoEventEmitter } from '../globalFiddichEvent';
 import { useComponentNameIfDev } from './useComponentNameIfDev';
@@ -55,11 +55,15 @@ export type SuppressSuspenseOption = {
 export const useValueInternal = <T>(stateInstance: FiddichStateInstance<T>, suppressSuspenseWhenReset: boolean, suppressSuspenseWhenChange: boolean): T => {
   // Why not use useSyncExternalStore?
   //
-  // Although using useSyncExternalStore wouldn't cause any additional renderings compared to the current method,
-  // as of 2023-05-05, it may lead to multiple snapshot retrievals. This can negatively impact the developer's
-  // ability to understand data flow with globalFiddichEvent. Therefore, we are not adopting the useSyncExternalStore
-  // implementation at this time.
-  const rerenderPure = useRerenderAsync();
+  // The useSyncExternalStore has issues when combined with component-local useState in Concurrent Mode.
+  // This behavior could potentially be disastrous in large applications.
+  // Refer: https://github.com/remix-run/react-router/pull/10409
+  //
+  // As of May 5, 2023, useSyncExternalStore may also take multiple snapshots at unnecessary timings.
+  // This can confuse developers who are using globalFiddichEvent to understand and control when components read data.
+  //
+  // Due to these reasons, at this point in time, we cannot adopt useSyncExternalStore.
+  const rerenderPure = useRerender();
   const compare = stateInstance.state.compare ?? defaultCompareFunction;
 
   const componentName = useComponentNameIfDev();
