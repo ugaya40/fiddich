@@ -88,18 +88,18 @@ export function useSetRootAtom<T>(atom: Atom<T> | AtomFamily<T, any>, option?: L
   return useSetAtomInternal<T>(atomInstance);
 }
 
-export function useSetNamedStoreAtom<T>(
+export function useSetNamedAtom<T>(
   storeName: string,
   atom: SyncAtom<T> | SyncAtomFamily<T, any>,
   option?: LimitedSetSyncAtomOption<T>
 ): SyncAtomSetterOrUpdater<T>;
-export function useSetNamedStoreAtom<T>(
+export function useSetNamedAtom<T>(
   storeName: string,
   atom: AsyncAtom<T> | AsyncAtomFamily<T, any>,
   option?: LimitedSetAsyncAtomOption<T>
 ): AsyncAtomSetterOrUpdater<T>;
-export function useSetNamedStoreAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
-export function useSetNamedStoreAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> {
+export function useSetNamedAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T>;
+export function useSetNamedAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedSetAtomOption<T>): AtomSetterOrUpdater<T> {
   const atomInstance = useAtomInstance({ atom, storePlace: { type: 'named', name: storeName }, initialValue: option?.initialValue });
   return useSetAtomInternal<T>(atomInstance);
 }

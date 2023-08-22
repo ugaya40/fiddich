@@ -34,7 +34,7 @@ export type {
   StoreInfoEventArg,
   UseValueInfoEventArg,
 } from './globalFiddichEvent';
-export { useAtom, useHierarchicalAtom, useNamedStoreAtom, useRootAtom } from './hooks/useAtom';
+export { useAtom, useHierarchicalAtom, useNamedAtom, useRootAtom } from './hooks/useAtom';
 export type { AsyncAtomOption, AtomOption, LimitedAsyncAtomOption, LimitedAtomOption, LimitedSyncAtomOption, SyncAtomOption } from './hooks/useAtom';
 export { useBoundNamedStore } from './hooks/useBoundNamedStore';
 export { useEvent } from './hooks/useEvent';
@@ -42,7 +42,7 @@ export { useInstance } from './hooks/useInstance';
 export { useLifecycleEffect } from './hooks/useLifecycleEffect';
 export type { StorePlaceTypeHookContext } from './hooks/useInstance';
 export { useHierarchicalResetState, useNamedResetState, useResetState, useRootResetState } from './hooks/useResetState';
-export { useSetAtom, useSetHierarchicalAtom, useSetNamedStoreAtom, useSetRootAtom } from './hooks/useSetAtom';
+export { useSetAtom, useSetHierarchicalAtom, useSetNamedAtom, useSetRootAtom } from './hooks/useSetAtom';
 export type {
   LimitedSetAsyncAtomOption,
   LimitedSetAtomOption,
@@ -51,10 +51,10 @@ export type {
   SetAtomOption,
   SetSyncAtomOption,
 } from './hooks/useSetAtom';
-export { useHierarchicalSnapshot, useNamedStoreSnapshot, useRootSnapshot, useSnapshot } from './hooks/useSnapshot';
+export { useHierarchicalSnapshot, useNamedSnapshot, useRootSnapshot, useSnapshot } from './hooks/useSnapshot';
 export type { SnapshotOption } from './hooks/useSnapshot';
 export { useNamedStore, useNearestStore, useRootStore } from './hooks/useStore';
-export { useHierarchicalValue, useNamedStoreValue, useRootValue, useValue } from './hooks/useValue';
+export { useHierarchicalValue, useNamedValue, useRootValue, useValue } from './hooks/useValue';
 export type {
   AsyncAtomValueOption,
   AtomValueOption,

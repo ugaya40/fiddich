@@ -35,7 +35,7 @@ export function useRootSnapshot<T>(state: FiddichState<T>): T | undefined {
   return useSnapshotInternal(instance);
 }
 
-export function useNamedStoreSnapshot<T>(storeName: string, state: FiddichState<T>): T | undefined {
+export function useNamedSnapshot<T>(storeName: string, state: FiddichState<T>): T | undefined {
   const instance = useInstance(state, { type: 'named', name: storeName });
   return useSnapshotInternal(instance);
 }

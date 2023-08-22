@@ -180,14 +180,14 @@ export function useRootValue<T>(state: FiddichState<T>, option?: LimitedAtomValu
   return useValue(state, optionValue);
 }
 
-export function useNamedStoreValue<T>(storeName: string, state: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: LimitedAsyncAtomValueOption<T>): T;
-export function useNamedStoreValue<T>(storeName: string, state: SyncAtom<T> | SyncAtomFamily<T, any>, option?: LimitedSyncAtomValueOption<T>): T;
-export function useNamedStoreValue<T>(storeName: string, state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
-export function useNamedStoreValue<T>(storeName: string, state: AsyncSelector<T> | AsyncSelectorFamily<T, any>, option?: LimitedAsyncSelectorValueOption): T;
-export function useNamedStoreValue<T>(storeName: string, state: SyncSelector<T> | SyncSelectorFamily<T, any>): T;
-export function useNamedStoreValue<T>(storeName: string, state: Selector<T> | SelectorFamily<T, any>, option?: LimitedAsyncSelectorValueOption): T;
-export function useNamedStoreValue<T>(storeName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T> | LimitedAsyncSelectorValueOption): T;
-export function useNamedStoreValue<T>(storeName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T> | LimitedAsyncSelectorValueOption): T {
+export function useNamedValue<T>(storeName: string, state: AsyncAtom<T> | AsyncAtomFamily<T, any>, option?: LimitedAsyncAtomValueOption<T>): T;
+export function useNamedValue<T>(storeName: string, state: SyncAtom<T> | SyncAtomFamily<T, any>, option?: LimitedSyncAtomValueOption<T>): T;
+export function useNamedValue<T>(storeName: string, state: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomValueOption<T>): T;
+export function useNamedValue<T>(storeName: string, state: AsyncSelector<T> | AsyncSelectorFamily<T, any>, option?: LimitedAsyncSelectorValueOption): T;
+export function useNamedValue<T>(storeName: string, state: SyncSelector<T> | SyncSelectorFamily<T, any>): T;
+export function useNamedValue<T>(storeName: string, state: Selector<T> | SelectorFamily<T, any>, option?: LimitedAsyncSelectorValueOption): T;
+export function useNamedValue<T>(storeName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T> | LimitedAsyncSelectorValueOption): T;
+export function useNamedValue<T>(storeName: string, state: FiddichState<T>, option?: LimitedAtomValueOption<T> | LimitedAsyncSelectorValueOption): T {
   const optionValue: AtomValueOption<T> | SelectorValueOption = { ...option, place: { type: 'named', name: storeName } };
   return useValue(state, optionValue);
 }

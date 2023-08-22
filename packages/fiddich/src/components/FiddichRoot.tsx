@@ -1,9 +1,10 @@
-import { ComponentType, FC, ReactNode, useEffect, useMemo, useRef } from "react";
+import { ComponentType, FC, ReactNode, useRef } from "react";
 import type { FiddichStore } from "../shareTypes";
 import { generateRandomKey } from "../util/util";
 import { FiddichStoreContext } from "../util/const";
 import { eventPublisher } from "../util/event";
 import { storeInfoEventEmitter } from "../globalFiddichEvent";
+import { useLifecycleEffect } from "../hooks/useLifecycleEffect";
 
 export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
   const storeRef = useRef<FiddichStore>({
@@ -11,14 +12,13 @@ export const FiddichRoot: FC<{children?: ReactNode}> = (props) => {
     map: new Map(), 
     event: eventPublisher()});
   
-  useMemo(() => storeInfoEventEmitter.fireStoreCreated(storeRef.current),[]);
-
-  useEffect(() => {
-    return () => {
+  useLifecycleEffect({
+    beforeInit: () => storeInfoEventEmitter.fireStoreCreated(storeRef.current),
+    cleanup: () => {
       storeRef.current.event.emit('finalize');
       storeInfoEventEmitter.fireStoreDestroyed(storeRef.current);
-    };
-  },[]);
+    }
+  })
 
   return (
     <FiddichStoreContext.Provider value={storeRef.current}>

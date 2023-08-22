@@ -52,17 +52,17 @@ export function useRootAtom<T>(atom: Atom<T> | AtomFamily<T, any>, option?: Limi
   return useAtom(atom, { ...option, place: { type: 'root' } });
 }
 
-export function useNamedStoreAtom<T>(
+export function useNamedAtom<T>(
   storeName: string,
   atom: SyncAtom<T> | SyncAtomFamily<T, any>,
   option?: LimitedSyncAtomOption<T>
 ): [T, SyncAtomSetterOrUpdater<T>];
-export function useNamedStoreAtom<T>(
+export function useNamedAtom<T>(
   storeName: string,
   atom: AsyncAtom<T> | AsyncAtomFamily<T, any>,
   option?: LimitedAsyncAtomOption<T>
 ): [T, AsyncAtomSetterOrUpdater<T>];
-export function useNamedStoreAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomOption<T>): [T, AtomSetterOrUpdater<T>];
-export function useNamedStoreAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomOption<T>): [T, AtomSetterOrUpdater<T>] {
+export function useNamedAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomOption<T>): [T, AtomSetterOrUpdater<T>];
+export function useNamedAtom<T>(storeName: string, atom: Atom<T> | AtomFamily<T, any>, option?: LimitedAtomOption<T>): [T, AtomSetterOrUpdater<T>] {
   return useAtom(atom, { ...option, place: { type: 'named', name: storeName } });
 }

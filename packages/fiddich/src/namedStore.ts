@@ -120,7 +120,7 @@ class StoreOperator {
   }
 
   reset() {
-    resetStoreStates(this.store, true);
+    resetStoreStates(this.store);
     namedStoreOperatorInfoEventEmitter.fireResetStore(this.store);
   }
 }

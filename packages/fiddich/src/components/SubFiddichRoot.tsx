@@ -1,10 +1,11 @@
-import { ComponentType, FC, ReactNode, useContext, useEffect, useMemo, useRef } from "react";
+import { ComponentType, FC, ReactNode, useContext, useRef } from "react";
 import type { SubFiddichStore } from "../shareTypes";
 import { generateRandomKey } from "../util/util";
 import { FiddichStoreContext } from "../util/const";
 import { useChangedValue } from "../hooks/useChangedValue";
 import { eventPublisher } from "../util/event";
 import { storeInfoEventEmitter } from "../globalFiddichEvent";
+import { useLifecycleEffect } from "../hooks/useLifecycleEffect";
 
 export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
 
@@ -17,8 +18,13 @@ export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
     event: eventPublisher(),
     parent});
   
-  useMemo(() => storeInfoEventEmitter.fireStoreCreated(storeRef.current),[]);
-
+  useLifecycleEffect({
+    beforeInit: () => storeInfoEventEmitter.fireStoreCreated(storeRef.current),
+    cleanup: () => {
+      storeRef.current.event.emit('finalize');
+      storeInfoEventEmitter.fireStoreDestroyed(storeRef.current);
+    }
+  });
 
   useChangedValue(parent, {
     init: current => {
@@ -28,13 +34,6 @@ export const SubFiddichRoot: FC<{children?: ReactNode}> = (props) => {
       storeRef.current.parent = current;
     }
   })
-
-  useEffect(() => {
-    return () => {
-      storeRef.current.event.emit('finalize');
-      storeInfoEventEmitter.fireStoreDestroyed(storeRef.current);
-    };
-  },[]);
 
   return (
     <FiddichStoreContext.Provider value={storeRef.current}>

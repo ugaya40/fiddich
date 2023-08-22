@@ -4,7 +4,7 @@ import { resetSelector } from '../selector/reset';
 import { SelectorInstance } from '../selector/selector';
 import { FiddichStateInstance, Store } from '../shareTypes';
 
-export function resetStoreStates(store: Store, recursive: boolean) {
+export function resetStoreStates(store: Store) {
   store.map.forEach(resetState);
 }
 

@@ -4,7 +4,7 @@ export function useChangedValue<T>(
   value: T,
   option: {
     init?: (current: T) => void;
-    effect: (current: T, old: T) => void;
+    effect?: (current: T, old: T) => void;
     cleanup?: (current: T) => void;
   }
 ) {
@@ -12,7 +12,7 @@ export function useChangedValue<T>(
   if (value !== valueRef.current) {
     const oldValue = valueRef.current;
     valueRef.current = value;
-    option.effect(value, oldValue);
+    option.effect?.(value, oldValue);
   }
 
   useEffect(() => {

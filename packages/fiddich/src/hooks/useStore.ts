@@ -19,7 +19,7 @@ function useStoreOperator(store: Store): StoreOperatorForReset {
     return {
       store,
       reset: () => {
-        resetStoreStates(store, false);
+        resetStoreStates(store);
         useStoreInfoEventEmitter.fireResetStore(componentName, store);
       },
     };

@@ -92,7 +92,7 @@ export const buildSetAsyncAtomFunction = (storePlaceType: StorePlaceType, contex
 export const buildResetStoreFunction = (storePlaceType: StorePlaceType, context: SubOperationExecutionContext): ResetStore => {
   const store = getStoreForNewInstance(storePlaceType);
   const resetStoreFunction = () => {
-    resetStoreStates(store, false);
+    resetStoreStates(store);
     if (context.type === 'instance effect') {
       operationInEffectInfoEventEmitter.fireResetStore(context.instance, store, context.effectType);
     } else if (context.type === 'selector get') {
