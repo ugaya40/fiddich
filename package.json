@@ -1,16 +1,43 @@
 {
-  "private": true,
-  "workspaces": [
-    "packages/*"
+  "name": "fiddich",
+  "version": "0.17.0",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "author": "Masanori Onoue <ugaya40@hotmail.com> (https://github.com/ugaya40)",
+  "license": "MIT",
+  "private": false,
+  "description": "State management library for React.",
+  "keywords": [
+    "react",
+    "state-management"
+  ],
+  "repository": "git://github.com/ugaya40/fiddich.git",
+  "files": [
+    "dist/",
+    "src/",
+    "README.md"
   ],
   "scripts": {
-    "build": "yarn workspace fiddich build",
-    "test": "yarn workspace fiddich test",
-    "pub": "yarn workspace fiddich pub"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
   },
   "devDependencies": {
-    "npm-run-all": "^4.1.5",
-    "prettier": "^2.8.8",
-    "typescript": "^5.0.4"
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitest/ui": "^1.0.0",
+    "jsdom": "^26.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^1.0.0"
   }
 }
