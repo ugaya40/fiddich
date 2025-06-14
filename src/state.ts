@@ -1,44 +1,36 @@
-import { Compare } from './util';
+import { Compare } from "./util";
+
+export interface StateBase<T> {
+  kind: string;
+  id: string;
+  stableValue: T;
+  compare: Compare<T>;
+  dependencyVersion: number;
+  valueVersion: number;
+  toJSON(): T;
+}
+
+export interface Cell<T> extends StateBase<T>, Disposable {
+  kind: 'cell';
+  dependents: Set<DependentState>;
+  set(newValue: T): void;
+}
+
+export interface Computed<T> extends StateBase<T>, Disposable {
+  kind: 'computed';
+  dependents: Set<DependentState>;
+  dependencies: Set<DependencyState>;
+  compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
+}
+
+export interface LeafComputed<T> extends StateBase<T>, Disposable {
+  kind: 'leafComputed';
+  dependencies: Set<DependencyState>;
+  compute(getter: <V>(target: DependencyState<V>) => V): T;
+  onChange(callback: (prev: T, next: T) => void): void;
+  changeCallback?: (prev: T, next: T) => void;
+}
 
 export type DependentState<T = any> = Computed<T> | LeafComputed<T>;
-
 export type DependencyState<T = any> = Cell<T> | Computed<T>;
-
-export type Cell<T> = {
-  stableValue: T;
-  dependents: Set<DependentState>;
-  version: number;
-
-  set(newValue: T): void;
-
-  compare: Compare<T>;
-} & Disposable;
-
-export type Computed<T> = {
-  stableValue: T;
-  dependents: Set<DependentState>;
-  dependencies: Set<DependencyState>;
-  version: number;
-  
-  // 計算を実行（getterを受け取る）
-  compute(getter: <V>(target: DependencyState<V>) => V): T;
-
-  compare: Compare<T>;
-} & Disposable;
-
-export type LeafComputed<T> = {
-  stableValue: T;
-  dependencies: Set<DependencyState>;
-  version: number;
-  
-  // 計算を実行（getterを受け取る）
-  compute(getter: <V>(target: DependencyState<V>) => V): T;
-  
-  // コールバック登録メソッド
-  onChange(callback: (prev: T, newValue: T) => void): void;
-  
-  // 登録されたコールバック
-  changeCallback?: (prev: T, newValue: T) => void;
-
-  compare: Compare<T>;
-} & Disposable;
+export type State<T = any> = Cell<T> | Computed<T> | LeafComputed<T>;
