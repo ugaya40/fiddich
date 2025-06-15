@@ -1,35 +1,37 @@
 import { Computed, DependencyState, DependentState, Cell, LeafComputed, State } from './state';
 import { assertUnreachable } from './util';
+import { createGet, createSet, createTouch, createDispose, createPending } from './atomicOperations';
+import { createRecomputeDependent } from './atomicOperations/recompute';
 
-type StateCopyBase<T> = {
+export type StateCopyBase<T> = {
   id: string;
   value: T,
   dependencyVersion : number,
   valueVersion: number 
 }
 
-interface CellCopy<T> extends StateCopyBase<T> {
+export interface CellCopy<T> extends StateCopyBase<T> {
   kind: 'cell',
   dependents: Set<DependentCopy>
   original : Cell<T>,
 }
 
-interface ComputedCopy<T> extends StateCopyBase<T> {
+export interface ComputedCopy<T> extends StateCopyBase<T> {
   kind: 'computed',
   dependents: Set<DependentCopy>,
   dependencies: Set<DependencyCopy>,
   original : Computed<T>,
 }
 
-interface LeafComputedCopy<T> extends StateCopyBase<T> {
+export interface LeafComputedCopy<T> extends StateCopyBase<T> {
   kind: 'leafComputed',
   dependencies: Set<DependencyCopy>,
   original : LeafComputed<T>,
 }
 
-type DependencyCopy<T = any> = CellCopy<T> | ComputedCopy<T>;
-type DependentCopy<T = any> = ComputedCopy<T> | LeafComputedCopy<T>;
-type StateCopy<T = any> = CellCopy<T> | ComputedCopy<T> | LeafComputedCopy<T>;
+export type DependencyCopy<T = any> = CellCopy<T> | ComputedCopy<T>;
+export type DependentCopy<T = any> = ComputedCopy<T> | LeafComputedCopy<T>;
+export type StateCopy<T = any> = CellCopy<T> | ComputedCopy<T> | LeafComputedCopy<T>;
 
 
 export function createStateCopyStore() {
@@ -103,39 +105,6 @@ export function createStateCopyStore() {
   }
 }
 
-function createDependencyTracker(copy: ComputedCopy<any> | LeafComputedCopy<any>) {
-  // Dependencies that remain after recomputation are no longer needed
-  const remainingDependencies = new Set(copy.dependencies);
-  // Track if any new dependencies were added during recomputation
-  let hasNewDependencies = false;
-  
-  // Clear current dependencies (bidirectional)
-  for(const dep of copy.dependencies) {
-    dep.dependents.delete(copy);
-  }
-  copy.dependencies.clear();
-  
-  const trackDependency = (targetCopy: DependencyCopy<any>) => {
-    // Already processed in this computation
-    if (copy.dependencies.has(targetCopy)) {
-      return;
-    }
-    
-    // Check if this is a new dependency
-    if (!remainingDependencies.has(targetCopy)) {
-      hasNewDependencies = true;
-    } else {
-      remainingDependencies.delete(targetCopy);
-    }
-    
-    copy.dependencies.add(targetCopy);
-    targetCopy.dependents.add(copy);
-  };
-  
-  const hasChanges = () => hasNewDependencies || remainingDependencies.size > 0;
-  
-  return { trackDependency, hasChanges };
-}
 
 export function createAtomicContext() {
   // Computed/LeafComputed copies that need recalculation
@@ -146,32 +115,15 @@ export function createAtomicContext() {
   const valueChangedDirty = new Set<StateCopy>();
 
   const copyStore = createStateCopyStore();
+  
+  const store: AtomicContextStore = { valueDirty, dependencyDirty, valueChangedDirty, copyStore };
+  const recomputeDependent = createRecomputeDependent(store);
 
   const commit = () => {
 
     for(const copy of valueDirty) {
       if(copy.kind === 'computed' || copy.kind === 'leafComputed') {
-        const { trackDependency, hasChanges } = createDependencyTracker(copy);
-        
-        const getter = <V>(target: DependencyState<V>): V => {
-          const targetCopy = copyStore.getCopy(target);
-          trackDependency(targetCopy);
-          return targetCopy.value;
-        };
-        
-        const oldValue = copy.value;
-        const newValue = copy.original.compute(getter);
-        
-        if (hasChanges()) {
-          copy.dependencyVersion++;
-          dependencyDirty.add(copy);
-        }
-        
-        if (!copy.original.compare(oldValue, newValue)) {
-          copy.value = newValue;
-          copy.valueVersion++;
-          valueChangedDirty.add(copy);
-        }
+        recomputeDependent(copy);
       }
     }
 
@@ -222,4 +174,21 @@ export function createAtomicContext() {
   }
 }
 
+export type AtomicContextStore = {
+  valueDirty: Set<DependentCopy>;
+  dependencyDirty: Set<StateCopy>;
+  valueChangedDirty: Set<StateCopy>;
+  copyStore: ReturnType<typeof createStateCopyStore>;
+};
+
 export type AtomicContext = ReturnType<typeof createAtomicContext>;
+
+export function createAtomicOperations(context: AtomicContext) {
+  return {
+    get: createGet(context),
+    set: createSet(context),
+    touch: createTouch(context),
+    dispose: createDispose(context),
+    pending: createPending(context)
+  };
+}

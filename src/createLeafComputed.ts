@@ -1,5 +1,6 @@
 import { LeafComputed, DependencyState } from './state';
 import { Compare, defaultCompare, generateStateId } from './util';
+import { initializeLeafComputed } from './get';
 
 export function createLeafComputed<T>(
   fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T,
@@ -7,24 +8,15 @@ export function createLeafComputed<T>(
 ): LeafComputed<T> {
   const compare = options?.compare ?? defaultCompare;
   
-  const dependencies = new Set<DependencyState>();
-  
-  const initialGetter = <V>(target: DependencyState<V>): V => {
-    dependencies.add(target);
-    return target.stableValue;
-  };
-  
-  const initialValue = fn({ get: initialGetter });
-  
   const leafComputed: LeafComputed<T> = {
     id: generateStateId(),
     kind: 'leafComputed',
-    stableValue: initialValue,
-    dependencies,
+    stableValue: undefined as any,
+    dependencies: new Set<DependencyState>(),
+    isInitialized: false,
     
     compute(getter: <V>(target: DependencyState<V>) => V): T {
       const result = fn({ get: getter });
-      
       return result;
     },
     
@@ -44,16 +36,15 @@ export function createLeafComputed<T>(
     },
 
     toJSON(): T {
+      if (!this.isInitialized) {
+        initializeLeafComputed(this);
+      }
       return this.stableValue;
     },
 
     valueVersion: 0,
     dependencyVersion: 0
   };
-  
-  for (const dependency of dependencies) {
-    dependency.dependents.add(leafComputed);
-  }
   
   return leafComputed;
 }

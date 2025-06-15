@@ -77,6 +77,8 @@ npm run type-check
 
 ## アーキテクチャと実装の要点
 
+詳細な状態管理の仕組みについては、[docs/state-management.md](docs/state-management.md)を参照してください。
+
 ### コアエンティティ
 
 - **Cell**: 基本的な状態コンテナ（TC39 Signalsに類似するが独自実装）

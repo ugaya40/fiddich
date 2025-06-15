@@ -1,25 +1,24 @@
-import { AtomicContext } from "./atomicContext";
-import { Cell, Computed, DependencyState } from "./state";
+import { createAtomicContext, createAtomicOperations } from './atomicContext';
+import { DependencyState, DependentState, Cell, State } from './state';
 
-interface AtomicOperations {
-  get<T>(target: DependencyState<T>): T;
-  set<T>(target: Cell<T>, value: T): void;
-  pending<T>(target: DependencyState<T> ): void;
-  rejectAllChanges(): void;
-  touch<T>(target: DependencyState<T>): void;
-  dispose<T extends { [Symbol.dispose](): void }>(target: T): void;
-  readonly context: AtomicContext;
-}
+type AtomicUpdateOps = {
+  get: <T>(state: DependencyState<T>) => T;
+  set: <T>(cell: Cell<T>, value: T) => void;
+  touch: <T>(state: DependentState<T>) => void;
+  dispose: <T>(state: State<T>) => void;
+  pending: () => DependentState[];
+};
 
-interface AtomicUpdateOptions {
-  context?: AtomicContext;
-}
-
-export async function atomicUpdate( 
-  fn: (ops: AtomicOperations) => Promise<void>,
-  options?: AtomicUpdateOptions
-): Promise<void> {
-  const opsGet = <T>(target: DependencyState<T>) => {
-
-  };
+export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => T): T {
+  const context = createAtomicContext();
+  const ops = createAtomicOperations(context);
+  
+  try {
+    const result = fn(ops);
+    context.commit();
+    return result;
+  } catch (error) {
+    // Rollback is automatic - we simply discard the context
+    throw error;
+  }
 }

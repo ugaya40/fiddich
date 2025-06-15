@@ -1,5 +1,6 @@
 import { Computed, DependentState, DependencyState } from './state';
 import { Compare, defaultCompare, generateStateId } from './util';
+import { get } from './get';
 
 export function createComputed<T>(
   fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T,
@@ -7,21 +8,13 @@ export function createComputed<T>(
 ): Computed<T> {
   const compare = options?.compare ?? defaultCompare;
   
-  const dependencies = new Set<DependencyState>();
-  
-  const initialGetter = <V>(target: DependencyState<V>): V => {
-    dependencies.add(target);
-    return target.stableValue;
-  };
-  
-  const initialValue = fn({ get: initialGetter });
-  
   const computed: Computed<T> = {
     id: generateStateId(),
     kind: 'computed',
-    stableValue: initialValue,
+    stableValue: undefined as any,
     dependents: new Set<DependentState>(),
-    dependencies,
+    dependencies: new Set<DependencyState>(),
+    isInitialized: false,
     
     compute(getter: <V>(target: DependencyState<V>) => V): T {
       const result = fn({ get: getter });
@@ -40,16 +33,15 @@ export function createComputed<T>(
     },
 
     toJSON(): T {
+      if (!this.isInitialized) {
+        get(this);
+      }
       return this.stableValue;
     },
 
     valueVersion: 0,
     dependencyVersion: 0
   };
-  
-  for (const dependency of dependencies) {
-    dependency.dependents.add(computed);
-  }
   
   return computed;
 }
