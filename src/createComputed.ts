@@ -39,7 +39,6 @@ export function createComputed<T>(
       return this.stableValue;
     },
 
-    valueVersion: 0,
     dependencyVersion: 0
   };
   

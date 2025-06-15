@@ -42,7 +42,6 @@ export function createLeafComputed<T>(
       return this.stableValue;
     },
 
-    valueVersion: 0,
     dependencyVersion: 0
   };
   

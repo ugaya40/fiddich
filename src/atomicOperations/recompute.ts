@@ -1,7 +1,7 @@
 import { AtomicContextStore, DependencyCopy, DependentCopy, ComputedCopy, LeafComputedCopy } from '../atomicContext';
 import { DependencyState } from '../state';
 
-function createDependencyTracker(copy: ComputedCopy<any> | LeafComputedCopy<any>, copyStore: AtomicContextStore['copyStore']) {
+function createDependencyTracker(copy: ComputedCopy<any> | LeafComputedCopy<any>, store: AtomicContextStore, recomputeDependent: (copy: DependentCopy) => void) {
   // Dependencies that remain after recomputation are no longer needed
   const remainingDependencies = new Set(copy.dependencies);
   // Track if any new dependencies were added during recomputation
@@ -31,7 +31,14 @@ function createDependencyTracker(copy: ComputedCopy<any> | LeafComputedCopy<any>
   };
   
   const getter = <V>(target: DependencyState<V>): V => {
-    const targetCopy = copyStore.getCopy(target);
+    const targetCopy = store.copyStore.getCopy(target);
+    
+    // If the dependency is also dirty, process it first
+    if (targetCopy.kind === 'computed' && store.valueDirty.has(targetCopy)) {
+      recomputeDependent(targetCopy);
+      store.valueDirty.delete(targetCopy);
+    }
+    
     trackDependency(targetCopy);
     return targetCopy.value;
   };
@@ -44,21 +51,31 @@ function createDependencyTracker(copy: ComputedCopy<any> | LeafComputedCopy<any>
 export function createRecomputeDependent(store: AtomicContextStore) {
   const { copyStore, dependencyDirty, valueChangedDirty } = store;
   
-  return (copy: DependentCopy) => {
-    const { getter, hasChanges } = createDependencyTracker(copy, copyStore);
+  // Forward declaration for recursive call
+  let recomputeDependent: (copy: DependentCopy) => void;
+  
+  recomputeDependent = (copy: DependentCopy) => {
+    const { getter, hasChanges } = createDependencyTracker(copy, store, recomputeDependent);
     
     const oldValue = copy.value;
     const newValue = copy.original.compute(getter);
     
     if (hasChanges()) {
-      copy.dependencyVersion++;
       dependencyDirty.add(copy);
     }
     
     if (!copy.original.compare(oldValue, newValue)) {
       copy.value = newValue;
-      copy.valueVersion++;
       valueChangedDirty.add(copy);
+      
+      // Cascade update in copy world
+      if (copy.kind === 'computed') {
+        for (const dependent of copy.dependents) {
+          store.valueDirty.add(dependent);
+        }
+      }
     }
   };
+  
+  return recomputeDependent;
 }

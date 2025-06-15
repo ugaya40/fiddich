@@ -2,17 +2,17 @@ import { Computed, DependencyState, DependentState, Cell, LeafComputed, State } 
 import { assertUnreachable } from './util';
 import { createGet, createSet, createTouch, createDispose, createPending } from './atomicOperations';
 import { createRecomputeDependent } from './atomicOperations/recompute';
+import { initializeLeafComputed, initializeComputed } from './get';
 
 export type StateCopyBase<T> = {
   id: string;
-  value: T,
-  dependencyVersion : number,
-  valueVersion: number 
+  value: T
 }
 
 export interface CellCopy<T> extends StateCopyBase<T> {
   kind: 'cell',
-  dependents: Set<DependentCopy>
+  dependents: Set<DependentCopy>,
+  valueVersion: number,
   original : Cell<T>,
 }
 
@@ -20,12 +20,14 @@ export interface ComputedCopy<T> extends StateCopyBase<T> {
   kind: 'computed',
   dependents: Set<DependentCopy>,
   dependencies: Set<DependencyCopy>,
+  dependencyVersion: number,
   original : Computed<T>,
 }
 
 export interface LeafComputedCopy<T> extends StateCopyBase<T> {
   kind: 'leafComputed',
   dependencies: Set<DependencyCopy>,
+  dependencyVersion: number,
   original : LeafComputed<T>,
 }
 
@@ -51,9 +53,8 @@ export function createStateCopyStore() {
           kind: 'cell',
           original: state,
           value: state.stableValue,
-          dependents: new Set([...state.dependents].map(one => getCopy(one))),
-          valueVersion: state.valueVersion,
-          dependencyVersion: state.dependencyVersion
+          dependents: new Set(),
+          valueVersion: state.valueVersion
         };
       
       case 'computed':
@@ -62,9 +63,8 @@ export function createStateCopyStore() {
           kind: 'computed',
           original: state,
           value: state.stableValue,
-          dependents: new Set([...state.dependents].map(one => getCopy(one))),
-          dependencies: new Set([...state.dependencies].map(one => getCopy(one))),
-          valueVersion: state.valueVersion,
+          dependents: new Set(),
+          dependencies: new Set(),
           dependencyVersion: state.dependencyVersion
         };
       
@@ -74,13 +74,39 @@ export function createStateCopyStore() {
           kind: 'leafComputed',
           original: state,
           value: state.stableValue,
-          dependencies: new Set([...state.dependencies].map(one => getCopy(one))),
-          valueVersion: state.valueVersion,
+          dependencies: new Set(),
           dependencyVersion: state.dependencyVersion
         };
       
       default:
         assertUnreachable(state);
+    }
+  }
+
+  function buildDependencies<T>(state: State<T>, copy: StateCopy<T>): void {
+    if (state.kind === 'cell' && copy.kind === 'cell') {
+      for (const dependent of state.dependents) {
+        copy.dependents.add(getCopy(dependent));
+      }
+    } else if (state.kind === 'computed' && copy.kind === 'computed') {
+      // Initialize if needed to ensure dependencies are available
+      if (!state.isInitialized) {
+        initializeComputed(state);
+      }
+      for (const dependent of state.dependents) {
+        copy.dependents.add(getCopy(dependent));
+      }
+      for (const dependency of state.dependencies) {
+        copy.dependencies.add(getCopy(dependency));
+      }
+    } else if (state.kind === 'leafComputed' && copy.kind === 'leafComputed') {
+      // Initialize if needed to ensure dependencies are available
+      if (!state.isInitialized) {
+        initializeLeafComputed(state);
+      }
+      for (const dependency of state.dependencies) {
+        copy.dependencies.add(getCopy(dependency));
+      }
     }
   }
 
@@ -96,7 +122,8 @@ export function createStateCopyStore() {
     } else {
       const newCopy = createCopy(state);
       copyStore.set(state, newCopy);
-      return newCopy
+      buildDependencies(state, newCopy);
+      return newCopy;
     }
   }
 
@@ -127,19 +154,31 @@ export function createAtomicContext() {
       }
     }
 
+    // Phase 1: Check all versions for concurrent modifications
     for(const copy of valueChangedDirty) {
       const original = copy.original;
-      
-      if (original.valueVersion !== copy.valueVersion) {
+      // Only Cell has valueVersion for optimistic concurrency control
+      if (copy.kind === 'cell' && original.kind === 'cell' && original.valueVersion !== copy.valueVersion) {
         throw new Error(`Concurrent value modification detected for ${original.id}`);
       }
-
+    }
+    
+    // Phase 2: Apply all changes and recursively update dependents
+    for(const copy of valueChangedDirty) {
+      const original = copy.original;
       const prevValue = original.stableValue;
       original.stableValue = copy.value;
-      original.valueVersion = copy.valueVersion;
+      
+      // Only Cell has valueVersion
+      if (original.kind === 'cell') {
+        original.valueVersion++;
+      }
+      
       if(original.kind === 'leafComputed' && original.changeCallback) {
         original.changeCallback(prevValue, original.stableValue);
       }
+      
+      // Don't cascade here - already handled in valueDirty processing
     }
 
     for(const copy of dependencyDirty) {
@@ -160,7 +199,7 @@ export function createAtomicContext() {
           newDependency.dependents.add(original);
         }
 
-        original.dependencyVersion = copy.dependencyVersion;
+        original.dependencyVersion++;
       }
     }
   }

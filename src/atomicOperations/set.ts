@@ -9,7 +9,6 @@ export function createSet(context: AtomicContext) {
     
     if (!cell.compare(copy.value, newValue)) {
       copy.value = newValue;
-      copy.valueVersion++;
       valueChangedDirty.add(copy);
       
       // Add dependents to valueDirty

@@ -5,21 +5,20 @@ export interface StateBase<T> {
   id: string;
   stableValue: T;
   compare: Compare<T>;
-  dependencyVersion: number;
-  valueVersion: number;
   toJSON(): T;
 }
 
 export interface Cell<T> extends StateBase<T>, Disposable {
   kind: 'cell';
   dependents: Set<DependentState>;
-  set(newValue: T): void;
+  valueVersion: number;
 }
 
 export interface Computed<T> extends StateBase<T>, Disposable {
   kind: 'computed';
   dependents: Set<DependentState>;
   dependencies: Set<DependencyState>;
+  dependencyVersion: number;
   isInitialized: boolean;
   compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
 }
@@ -27,6 +26,7 @@ export interface Computed<T> extends StateBase<T>, Disposable {
 export interface LeafComputed<T> extends StateBase<T>, Disposable {
   kind: 'leafComputed';
   dependencies: Set<DependencyState>;
+  dependencyVersion: number;
   isInitialized: boolean;
   compute(getter: <V>(target: DependencyState<V>) => V): T;
   onChange(callback: (prev: T, next: T) => void): void;

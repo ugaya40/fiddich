@@ -10,7 +10,7 @@ type AtomicUpdateOps = {
   context: AtomicContext;
 };
 
-export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => T, options?: { context?: AtomicContext }): T {
+export async function atomicUpdateAsync<T>(fn: (ops: AtomicUpdateOps) => Promise<T>, options?: { context?: AtomicContext }): Promise<T> {
   const shouldCommit = !options?.context;
   const context = options?.context || createAtomicContext();
   const baseOps = createAtomicOperations(context);
@@ -20,7 +20,7 @@ export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => T, options?: { con
   };
   
   try {
-    const result = fn(ops);
+    const result = await fn(ops);
     // Only commit if we created our own context
     if (shouldCommit) {
       context.commit();

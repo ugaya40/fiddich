@@ -13,11 +13,6 @@ export function createCell<T>(
     stableValue: initialValue,
     dependents: new Set<DependentState>(),
     
-    set(newValue: T): void {
-      // TODO: 実装予定
-      throw new Error('Cell.set is not implemented yet');
-    },
-    
     compare,
     
     [Symbol.dispose](): void {
@@ -31,8 +26,7 @@ export function createCell<T>(
       return this.stableValue;
     },
 
-    valueVersion: 0,
-    dependencyVersion: 0
+    valueVersion: 0
   };
   
   return cell;

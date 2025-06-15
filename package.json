@@ -23,7 +23,7 @@
     "dev": "tsup --watch",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run",
+    "test:run": "vitest run --reporter=verbose",
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
