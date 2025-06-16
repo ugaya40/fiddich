@@ -1,5 +1,6 @@
 import { AtomicContextStore, DependencyCopy, DependentCopy, ComputedCopy } from '../atomicContext/index';
 import { DependencyState } from '../state';
+import { withCircularDetection } from '../stateUtil';
 
 function createDependencyTracker(copy: ComputedCopy<any>, store: AtomicContextStore, recomputeDependent: (copy: DependentCopy) => void) {
   const remainingDependencies = new Set(copy.dependencies);
@@ -51,7 +52,9 @@ export function createRecomputeDependent(store: AtomicContextStore) {
     const { getter, hasChanges } = createDependencyTracker(copy, store, recomputeDependent);
     
     const oldValue = copy.value;
-    const newValue = copy.original.compute(getter);
+    const newValue = withCircularDetection(copy.original, () => 
+      copy.original.compute(getter)
+    );
     
     if (hasChanges()) {
       dependencyDirty.add(copy);

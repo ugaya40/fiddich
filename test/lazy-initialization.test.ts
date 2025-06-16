@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createCell, createComputed, get, set, atomicUpdate } from '../src';
-import type { Computed, DependencyState } from '../src/state';
+import type { Computed, DependencyState } from '../src';
 
 describe('Computed lazy initialization', () => {
   describe('Basic lazy initialization', () => {

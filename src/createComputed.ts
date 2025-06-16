@@ -1,4 +1,4 @@
-import { Computed, DependentState, DependencyState } from './state';
+import { Computed, DependentState, DependencyState, NullableComputed, OptionalComputed } from './state';
 import { Compare, defaultCompare, generateStateId } from './util';
 import { get } from './get';
 
@@ -45,4 +45,34 @@ export function createComputed<T>(
   };
   
   return current;
+}
+
+/**
+ * Create a Computed that can return a value or null
+ * @example
+ * const userNameComputed = createNullableComputed(
+ *   ({ get }) => get(userCell)?.name ?? null
+ * );
+ * // Type is Computed<string | null>
+ */
+export function createNullableComputed<T>(
+  fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T | null,
+  options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void }
+): NullableComputed<T> {
+  return createComputed<T | null>(fn, options);
+}
+
+/**
+ * Create a Computed that can return a value or undefined
+ * @example
+ * const selectedItemComputed = createOptionalComputed(
+ *   ({ get }) => items.find(item => item.id === get(selectedIdCell))
+ * );
+ * // Type is Computed<Item | undefined>
+ */
+export function createOptionalComputed<T>(
+  fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T | undefined,
+  options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void }
+): OptionalComputed<T> {
+  return createComputed<T | undefined>(fn, options);
 }

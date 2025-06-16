@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createCell, createComputed, get, set, atomicUpdate } from '../src';
-import type { Computed } from '../src/state';
+import type { Computed } from '../src';
 
 describe('Dependency Tracking', () => {
   describe('Basic Dependencies', () => {
@@ -136,6 +136,20 @@ describe('Dependency Tracking', () => {
       computedC = createComputed(({ get }) => get(computedB!) + 1);
       
       expect(() => get(computedA)).toThrow(/Circular dependency/);
+    });
+
+    it('should detect circular dependencies in atomicUpdate', () => {
+      let computedA: Computed<number>;
+      let computedB: Computed<number>;
+      
+      computedA = createComputed(({ get }) => get(computedB!) + 1);
+      computedB = createComputed(({ get }) => get(computedA!) + 1);
+      
+      expect(() => {
+        atomicUpdate((ops) => {
+          ops.get(computedA);
+        });
+      }).toThrow(/Circular dependency/);
     });
   });
 

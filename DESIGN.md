@@ -42,11 +42,11 @@
 
 * **Cell (セル)**: アプリケーションの基本的な「状態」を保持する最小単位。リアクティブな値の入れ物です。TC39で標準化が検討されているSignalに類似した概念ですが、本ライブラリでは将来的にTC39 Signalの仕様に追随する予定はなく、標準化後の混乱を避けるためにCellという名称を採用しています。
 
-* **Computed (コンピューテッド)**: 派生状態。一つ以上のCellまたは他のComputedから値を計算し、依存元が変更されると自動的に再計算されるリアクティブな値です。その計算処理は、オブジェクトのgetterオンリープロパティのような軽量な処理にとどめ、副作用などを記述しないことが推奨されます。
+* **Computed (コンピューテッド)**: 派生状態。一つ以上のCellまたは他のComputedから値を計算し、依存元が変更されると自動的に再計算されるリアクティブな値です。その計算処理は、オブジェクトのgetterオンリープロパティのような軽量な処理にとどめ、副作用などを記述しないことが推奨されます。Computedの計算関数内で循環依存が発生した場合、エラーがスローされます。
 
 * **atomicUpdate (アトミックアップデート)**: 複数の状態変更や副作用を伴う一連の操作を、一つの不可分な単位として実行するための仕組み。後述の**アプリケーションアクション**を定義する際に中心的な役割を果たします。
 
-* **AtomicContext (アトミックコンテキスト)**: 状態変更のバッファリング、一貫性維持、および関連する操作のコンテキスト情報を管理するatomicUpdateの内部的なエンティティです。楽観的同時実行制御のためのバージョン管理機構を持ち、並行して実行される操作間での一貫性を保証します。
+* **AtomicContext (アトミックコンテキスト)**: 状態変更のバッファリング、一貫性維持、および関連する操作のコンテキスト情報を管理するatomicUpdateの内部的なエンティティです。楽観的同時実行制御のためのバージョン管理機構を持ち、並行して実行される操作間での一貫性を保証します。atomicUpdate内では、すべてのStateのコピーを保持し、変更はコピーに対して行われます。コミット時にコピーの内容が元のStateに反映され、ロールバック時はコピーが破棄されます。
 
 * **ReactiveCollection (リアクティブコレクション)**: (例: ReactiveMap, ReactiveArray) コレクション（配列やマップなど）のリアクティブな管理を目的とした専用のエンティティです。内部でCellを利用しつつ、要素の追加・削除に伴う関連リソース（CellやComputedなど）の自動的なSymbol.disposeや、要素自体の変更（ミュータブルなオブジェクトの内部変更も含む）の効率的な検知・通知を行います。atomicUpdateスコープ内での操作時には、オプションでAtomicContextを明示的に引き渡すことで、トランザクショナルな挙動（ロールバック時の状態復元を含む）を保証します。これにより、Cell<Map/Array>とops.touchを直接利用する場合に比べて、より宣言的で安全なコレクション操作を実現します。
 
@@ -100,7 +100,7 @@ createComputed<T>(
 ): Computed<T>
 ```
 
-新しい Computed を作成します。compare オプションで値の比較関数を指定できます。Computedは初回アクセス時まで計算が遅延されるため、atomicUpdate内で作成された場合、そのトランザクション内の最新の値を使用して初期化されます。
+新しい Computed を作成します。compare オプションで値の比較関数を指定できます。Computedは初回アクセス時まで計算が遅延されるため、atomicUpdate内で作成された場合、そのトランザクション内の最新の値を使用して初期化されます。また、循環依存が検出された場合はエラーがスローされます。
 
 #### get
 
@@ -136,6 +136,20 @@ Cell、Computed、またはReactiveCollectionに手動で変更通知を促し�
 * **ReactiveCollection に対して**: コレクションの内部状態がミュータブルに変更されたが、コレクションの操作メソッド（set, push等）を経由しなかった場合に、変更をシステムに通知します。
 
 * atomicUpdate のスコープ外で呼び出された場合、この操作のために内部的に短命な AtomicContext が発行され、即座にコミットされます。
+
+#### pending
+
+```typescript
+pending<T>(state: State<T>, promise: Promise<any>): void
+```
+
+CellまたはComputedを指定されたPromiseと関連付け、ペンディング状態にします。
+
+* 指定されたstateとその依存先（dependents）のすべてにpromiseを関連付けます
+* promiseが解決（成功または失敗）した際に、自動的にペンディング状態が解除されます
+* 主にReact Suspenseとの連携で使用され、非同期処理中のUIの適切な表示を可能にします
+* **基本的にはatomicUpdate内でops.pendingを使用することが推奨されます**
+* このグローバル関数は、atomicUpdate外での処理や、より柔軟な制御が必要な場合のエスケープハッチとして提供されています
 
 #### createReactiveMap
 
@@ -179,7 +193,7 @@ createManagedObject<T>(factory: () => T): T & { [Symbol.dispose](): void }
 
 #### 4.2.2. Computed
 
-一つ以上のリアクティブな値から派生する状態。Computed インスタンスも、不要になった際にリソースを解放するための `[Symbol.dispose](): void` メソッドを実装します。計算結果の変更検知には、作成時に指定された compare 関数（デフォルトは ===）が使用されます。Computedは遅延初期化され、初回アクセス時に計算が実行されます。この仕組みにより、atomicUpdate内で作成されたComputedは、そのトランザクションコンテキスト内の最新の値を参照して初期化されることが保証されます。(副作用に関する注意点はセクション2を参照)
+一つ以上のリアクティブな値から派生する状態。Computed インスタンスも、不要になった際にリソースを解放するための `[Symbol.dispose](): void` メソッドを実装します。計算結果の変更検知には、作成時に指定された compare 関数（デフォルトは ===）が使用されます。Computedは遅延初期化され、初回アクセス時に計算が実行されます。この仕組みにより、atomicUpdate内で作成されたComputedは、そのトランザクションコンテキスト内の最新の値を参照して初期化されることが保証されます。初期化時に循環依存が検出された場合はエラーがスローされます。(副作用に関する注意点はセクション2を参照)
 
 * `[Symbol.dispose](): void`: Computed が依存している他の Cell や Computed からの購読を解除し、内部のキャッシュや購読者リストをクリアします。一度 Symbol.dispose された Computed は再利用できません。
 
@@ -233,7 +247,7 @@ splice(start: number, deleteCount: number, ...items: T[], options?: {context: At
 interface AtomicOperations {
   get<T>(target: Cell<T> | Computed<T> | ReactiveCollection<any, any>): T;
   set<T>(target: Cell<T>, value: T): void;
-  pending(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>): void;
+  pending(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>, promise?: Promise<any>): void;
   rejectAllChanges(): void;
   touch(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>): void;
   dispose<T extends { [Symbol.dispose](): void }>(target: T): void;
@@ -258,8 +272,8 @@ function atomicUpdate(
 
 * **ops.set(cell, value)**: Cellへの変更を AtomicContext の内部バッファに記録します。値の比較は Cell 自身の compare 関数に従います。
 
-* **ops.pending(target)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。
-  * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、この AtomicContext の解決に使われる Promise（通常は atomicUpdate のコールバック関数 fn が返す Promise）と関連付けられます。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
+* **ops.pending(target, promise?)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。
+  * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise または AtomicContext の解決に使われる Promise（atomicUpdate のコールバック関数 fn が返す Promise）と関連付けられます。非同期の atomicUpdate 内では promise 引数は省略可能ですが、同期的な atomicUpdate 内では必須です。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
   * **値の読み取り**: ops.pending を呼び出した後、同じ AtomicContext 内で ops.get(target) を実行すると、先行する ops.set によってバッファリングされている最新の値を読み取ります（target が Cell の場合）。まだ ops.set されていない場合や、target が Computed または ReactiveCollection の場合は、この AtomicContext が開始される前のコミット済みの値（または計算結果）が返されます。
   * **ペンディング状態の解除**: target の値が非同期的に解決され、（target が Cell の場合は ops.set によって）更新された後に AtomicContext がコミットされると、target のペンディング状態は解除されます。
   * このメソッド自体は値を返しません。

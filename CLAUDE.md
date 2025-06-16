@@ -77,7 +77,7 @@ npm run type-check
 
 ## アーキテクチャと実装の要点
 
-詳細な状態管理の仕組みについては、[docs/state-management.md](docs/state-management.md)を参照してください。
+詳細な状態管理の仕組みについては、[docs/architecture.md](docs/architecture.md)を参照してください。
 
 ### コアエンティティ
 

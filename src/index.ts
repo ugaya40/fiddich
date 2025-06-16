@@ -1,5 +1,5 @@
-export { createCell } from './createCell';
-export { createComputed } from './createComputed';
+export { createCell, createNullableCell, createOptionalCell } from './createCell';
+export { createComputed, createNullableComputed, createOptionalComputed } from './createComputed';
 export { atomicUpdate } from './atomicUpdate';
 export { get } from './get';
 export { set } from './set';
@@ -8,4 +8,20 @@ export { pending } from './pending';
 
 export { useValue } from './react/hooks/useValue';
 
-export type { Cell, Computed, State, DependencyState, DependentState } from './state';
+export type { 
+  Cell, 
+  Computed, 
+  State, 
+  DependencyState, 
+  DependentState,
+  StateValue,
+  CellValue,
+  ComputedValue,
+  StateGetter,
+  NullableCell,
+  NullableComputed,
+  OptionalCell,
+  OptionalComputed
+} from './state';
+
+export { isCell, isComputed, isState } from './stateUtil';

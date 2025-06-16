@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createCell, createComputed, get, set, atomicUpdate } from '../src';
-import type { Computed, Cell } from '../src/state';
+import type { Computed, Cell } from '../src';
 
 describe('atomicUpdate operations', () => {
   describe('Basic atomicUpdate', () => {

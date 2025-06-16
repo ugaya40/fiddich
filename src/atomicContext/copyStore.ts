@@ -2,6 +2,7 @@ import { Computed, DependencyState, DependentState, Cell, State } from '../state
 import { assertUnreachable } from '../util';
 import { CellCopy, ComputedCopy, DependentCopy, DependencyCopy, StateCopy } from './types';
 import { AtomicContext } from './index';
+import { withCircularDetection, isCell, isComputed } from '../stateUtil';
 
 function createCopy<T>(state: Cell<T>): CellCopy<T>;
 function createCopy<T>(state: Computed<T>): ComputedCopy<T>;
@@ -29,8 +30,7 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         dependents: new Set(),
         dependencies: new Set(),
         dependencyVersion: state.dependencyVersion,
-        isInitialized: state.isInitialized,
-        compute: state.isInitialized ? undefined : state.compute
+        isInitialized: state.isInitialized
       };
     
     default:
@@ -39,8 +39,7 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
 }
 
 export function createCopyStore(
-  context: Pick<AtomicContext, 'newlyInitialized' | 'valueChangedDirty'>,
-  contextGetter: <V>(state: DependencyState<V>) => V
+  context: Pick<AtomicContext, 'newlyInitialized' | 'valueChangedDirty'>
 ) {
   const copyStoreMap = new Map<State, StateCopy>();
   const beingCopied = new Set<State>();
@@ -52,12 +51,17 @@ export function createCopyStore(
   function getCopy<T>(state: State<T>): StateCopy<T>
   function getCopy<T>(state: State<T>): StateCopy<T> {
     if(copyStoreMap.has(state)) {
-      return copyStoreMap.get(state)!;
+      const existing = copyStoreMap.get(state)!;
+      if (isComputed(state) && !state.isInitialized && beingCopied.has(state) && existing.kind === 'computed' && !existing.isInitialized) {
+        throw new Error(`Circular dependency detected: ${state.id}`);
+      }
+      return existing;
     }
     
-    // Check if we're already copying this state (circular reference)
     if (beingCopied.has(state)) {
-      // Create a placeholder copy to break the cycle
+      if (isComputed(state) && !state.isInitialized) {
+        throw new Error(`Circular dependency detected: ${state.id}`);
+      }
       const placeholder = createCopy(state);
       copyStoreMap.set(state, placeholder);
       return placeholder;
@@ -69,12 +73,12 @@ export function createCopyStore(
       const newCopy = createCopy(state);
       copyStoreMap.set(state, newCopy);
       
-      if (state.kind === 'cell' && newCopy.kind === 'cell') {
+      if (isCell(state) && newCopy.kind === 'cell') {
         for (const dependent of state.dependents) {
           newCopy.dependents.add(getCopy(dependent));
         }
-      } else if (state.kind === 'computed' && newCopy.kind === 'computed') {
-        if (!newCopy.isInitialized && newCopy.compute) {
+      } else if (isComputed(state) && newCopy.kind === 'computed') {
+        if (!newCopy.isInitialized) {
           const dependencies = new Set<DependencyCopy>();
           
           const copyGetter = <V>(target: DependencyState<V>): V => {
@@ -83,7 +87,9 @@ export function createCopyStore(
             return targetCopy.value;
           };
           
-          newCopy.value = newCopy.compute(copyGetter);
+          newCopy.value = withCircularDetection(state, () => {
+            return state.compute(copyGetter);
+          });
           newCopy.dependencies = dependencies;
           
           for (const dep of dependencies) {

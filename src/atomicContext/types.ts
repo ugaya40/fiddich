@@ -19,7 +19,6 @@ export interface ComputedCopy<T> extends StateCopyBase<T> {
   dependencyVersion: number,
   original: Computed<T>,
   isInitialized: boolean,
-  compute?: (getter: (state: DependencyState<any>) => any) => T,
 }
 
 export type DependencyCopy<T = any> = CellCopy<T> | ComputedCopy<T>;

@@ -27,7 +27,7 @@ export function createAtomicContext(): AtomicContext {
   
   partialContext.contextGetter = createGet(partialContext);
   
-  partialContext.copyStore = createCopyStore(partialContext, partialContext.contextGetter);
+  partialContext.copyStore = createCopyStore(partialContext);
   
   partialContext.commit = createCommit(partialContext);
   
