@@ -4,13 +4,15 @@ import { DependencyState, DependentState, Cell, State } from './state';
 type AtomicUpdateOps = {
   get: <T>(state: DependencyState<T>) => T;
   set: <T>(cell: Cell<T>, value: T) => void;
-  touch: <T>(state: DependentState<T>) => void;
-  dispose: <T>(state: State<T>) => void;
-  pending: () => DependentState[];
+  touch: <T>(state: State<T>) => void;
+  dispose: <T extends Disposable>(target: T) => void;
+  pending: <T>(state: State<T>, promise?: Promise<any>) => void;
   context: AtomicContext;
 };
 
-export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => T, options?: { context?: AtomicContext }): T {
+export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => T, options?: { context?: AtomicContext }): T;
+export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => Promise<T>, options?: { context?: AtomicContext }): Promise<T>;
+export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => T | Promise<T>, options?: { context?: AtomicContext }): T | Promise<T> {
   const shouldCommit = !options?.context;
   const context = options?.context || createAtomicContext();
   const baseOps = createAtomicOperations(context);
@@ -19,15 +21,22 @@ export function atomicUpdate<T>(fn: (ops: AtomicUpdateOps) => T, options?: { con
     context
   };
   
-  try {
-    const result = fn(ops);
-    // Only commit if we created our own context
-    if (shouldCommit) {
-      context.commit();
-    }
-    return result;
-  } catch (error) {
-    // Rollback is automatic - we simply discard the context
-    throw error;
+  const result = fn(ops);
+  
+  if (result instanceof Promise) {
+    context.atomicUpdatePromise = result;
+    return result.then(
+      (value) => {
+        if (shouldCommit) {
+          context.commit();
+        }
+        return value;
+      }
+    );
   }
+  
+  if (shouldCommit) {
+    context.commit();
+  }
+  return result;
 }

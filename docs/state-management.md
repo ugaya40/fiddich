@@ -3,7 +3,12 @@
 ## Overview
 
 Fiddichの状態管理は、通常時とatomicUpdate（トランザクション）時で異なる動作をします。
-この文書では、値の取得と依存関係管理の詳細な仕組みを説明します。
+この文書では、現在の実装における値の取得、依存関係管理、および再計算の詳細な仕組みを説明します。
+
+### 重要な設計原則
+- **Copy-on-Write**: atomicUpdate内では、すべての状態のコピーを作成して操作
+- **遅延評価**: Computedの再計算は実際に値が必要になるまで遅延
+- **トランザクショナル**: すべての変更はコミット時に一括適用、エラー時は完全にロールバック
 
 ## State Types
 
@@ -56,28 +61,64 @@ Computed/LeafComputed: {
 
 ### atomicUpdate時の依存関係管理
 
-1. **StateCopyの作成**
+1. **StateCopyの作成とビルド**
    ```typescript
-   const copy = {
-     dependencies: new Set([...state.dependencies].map(getCopy)),
-     dependents: new Set([...state.dependents].map(getCopy))
-   };
+   // createStateCopyStore.getCopy()の動作
+   function getCopy(state) {
+     if (copyStore.has(state)) return copyStore.get(state);
+     
+     const newCopy = createCopy(state);  // 基本構造のコピー
+     copyStore.set(state, newCopy);
+     buildDependencies(state, newCopy);  // 依存関係の複製
+     return newCopy;
+   }
    ```
-   - 元の依存関係をコピーの世界に複製
 
-2. **再計算時の依存関係更新（createDependencyTracker）**
+2. **再計算の仕組み（遅延評価）**
+   ```typescript
+   // ops.set(cell, value)が呼ばれると：
+   // 1. cellのコピーの値を更新
+   // 2. cellの依存先（dependents）をvalueDirtyに追加
+   
+   // ops.get(computed)が呼ばれると：
+   // 1. computedがvalueDirtyに含まれているかチェック
+   // 2. 含まれていれば、その場でrecomputeDependentを実行
+   // 3. 再計算後、valueDirtyから削除
+   ```
+
+3. **再計算時の依存関係更新（createDependencyTracker）**
    ```typescript
    // 差分検出パターン（引き算方式）
    const remainingDependencies = new Set(copy.dependencies);
+   let hasNewDependencies = false;
    
-   // 再計算中に参照されたものをremainingから削除
-   // 残ったもの = もう依存していない
-   // 新規追加 = remainingになかったもの
+   // 既存の依存関係をクリア（双方向）
+   for(const dep of copy.dependencies) {
+     dep.dependents.delete(copy);
+   }
+   copy.dependencies.clear();
+   
+   // 再計算中に新しい依存関係を構築
+   const getter = (target) => {
+     const targetCopy = getCopy(target);
+     
+     // 依存先も再計算が必要なら先に再計算（再帰的）
+     if (targetCopy.kind === 'computed' && valueDirty.has(targetCopy)) {
+       recomputeDependent(targetCopy);
+     }
+     
+     // 依存関係を追跡
+     trackDependency(targetCopy);
+     return targetCopy.value;
+   };
    ```
 
-3. **コミット時の反映**
-   - コピーの依存関係を元のStateに反映
-   - 双方向の参照を適切に更新
+4. **コミット時の処理**
+   - Phase 1: valueDirtyにあるComputed/LeafComputedを再計算
+   - Phase 2: バージョンチェック（楽観的同時実行制御）
+   - Phase 3: valueChangedDirtyの変更を元のStateに反映
+   - Phase 4: dependencyDirtyの依存関係を更新
+   - Phase 5: toDisposeのオブジェクトをdispose
 
 ## 初期化のタイミング
 
@@ -91,23 +132,86 @@ Computed/LeafComputed: {
 3. `computed.toJSON()` - シリアライズ時
 4. 他のComputedから参照された時
 
-## トランザクション（atomicUpdate）の流れ
+## トランザクション（atomicUpdate）の詳細な流れ
 
+### 例：依存関係のある状態更新
 ```typescript
+// 初期状態
+const cellA = createCell(5);
+const cellB = createCell(3);
+const computedSum = createComputed(({ get }) => get(cellA) + get(cellB));
+const computedDouble = createComputed(({ get }) => get(computedSum) * 2);
+
 atomicUpdate((ops) => {
-  // 1. 変更操作
+  // 1. Cellの更新
   ops.set(cellA, 10);
+  // → cellAのコピーのvalueが10に更新
+  // → computedSumとcomputedDoubleがvalueDirtyに追加
   
-  // 2. 新規State作成（遅延初期化）
-  const computed = createComputed(({ get }) => get(cellA) * 2);
+  // 2. Computedの値取得（遅延再計算）
+  const sum = ops.get(computedSum);
+  // → valueDirtyにあるので再計算が必要
+  // → 再計算: get(cellA) + get(cellB) = 10 + 3 = 13
+  // → computedDoubleもvalueDirtyに追加（連鎖）
   
-  // 3. 値の取得（この時点で初期化）
-  const value = ops.get(computed);  // 20（コピーの値を使用）
+  // 3. 依存するComputedの値取得
+  const double = ops.get(computedDouble);
+  // → valueDirtyにあるので再計算
+  // → 再計算: get(computedSum) * 2 = 13 * 2 = 26
   
-  // 4. コミット
-  // - valueChangedDirtyの変更を反映
-  // - dependencyDirtyの依存関係を更新
+  // 4. touchによる手動通知
+  ops.touch(cellB);
+  // → cellBはvalueChangedDirtyに追加
+  // → computedSumが再度valueDirtyに追加
 });
+// → コミット処理が実行される
+```
+
+### コミット処理の詳細
+```typescript
+const commit = () => {
+  // Phase 1: 残っているvalueDirtyを処理
+  for(const copy of valueDirty) {
+    if(copy.kind === 'computed' || copy.kind === 'leafComputed') {
+      recomputeDependent(copy);
+    }
+  }
+  
+  // Phase 2: バージョンチェック
+  for(const copy of valueChangedDirty) {
+    if (copy.kind === 'cell' && 
+        copy.original.valueVersion !== copy.valueVersion) {
+      throw new Error('Concurrent modification');
+    }
+  }
+  
+  // Phase 3: 値の反映とコールバック実行
+  for(const copy of valueChangedDirty) {
+    const prevValue = copy.original.stableValue;
+    copy.original.stableValue = copy.value;
+    
+    if (copy.original.kind === 'cell') {
+      copy.original.valueVersion++;
+    }
+    
+    if(copy.original.kind === 'leafComputed' && 
+       copy.original.changeCallback) {
+      copy.original.changeCallback(prevValue, copy.value);
+    }
+  }
+  
+  // Phase 4: 依存関係の更新
+  for(const copy of dependencyDirty) {
+    // 古い依存関係をクリア
+    // 新しい依存関係を設定
+    // dependencyVersionを更新
+  }
+  
+  // Phase 5: dispose処理
+  for (const disposable of toDispose) {
+    disposable[Symbol.dispose]();
+  }
+};
 ```
 
 ## エラー時のロールバック
@@ -121,12 +225,50 @@ atomicUpdate((ops) => {
 ### createDependencyTracker（差分検出）
 最も複雑な部分。Computed再計算時の依存関係の変更を効率的に検出。
 
-### バージョン管理
-- `valueVersion`: 値の変更を追跡
-- `dependencyVersion`: 依存関係の変更を追跡
-- 楽観的同時実行制御に使用
+```typescript
+function createDependencyTracker(copy, store, recomputeDependent) {
+  // 既存の依存関係を記録（差分検出用）
+  const remainingDependencies = new Set(copy.dependencies);
+  let hasNewDependencies = false;
+  
+  // trackDependency: getter内で呼ばれる度に依存関係を更新
+  const trackDependency = (targetCopy) => {
+    if (!remainingDependencies.has(targetCopy)) {
+      hasNewDependencies = true;  // 新しい依存関係
+    } else {
+      remainingDependencies.delete(targetCopy);  // 既存の依存関係
+    }
+    // 双方向の参照を更新
+    copy.dependencies.add(targetCopy);
+    targetCopy.dependents.add(copy);
+  };
+  
+  // hasChanges: 依存関係に変更があったか
+  // - 新しい依存関係が追加された
+  // - または、以前の依存関係が使われなくなった
+  const hasChanges = () => 
+    hasNewDependencies || remainingDependencies.size > 0;
+}
+```
 
-### 3つのdirtyセット
-- `valueDirty`: 再計算が必要なComputed/LeafComputed
-- `valueChangedDirty`: 値が変更されたState（Cellの直接更新を含む）
-- `dependencyDirty`: 依存関係が変更されたState
+### バージョン管理
+- `valueVersion`: Cellの値の変更を追跡（楽観的同時実行制御）
+- `dependencyVersion`: Computed/LeafComputedの依存関係の変更を追跡
+- コミット時にバージョンチェックを行い、並行変更を検出
+
+### 4つのdirtyセットとtoDispose
+- `valueDirty: Set<DependentCopy>`: 再計算が必要なComputed/LeafComputed
+- `valueChangedDirty: Set<StateCopy>`: 値が変更されたState（Cell/Computed/LeafComputed）
+- `dependencyDirty: Set<StateCopy>`: 依存関係が変更されたState
+- `toDispose: Set<Disposable>`: コミット時にdisposeするオブジェクト
+
+### 再計算の連鎖
+1. Cell Aが変更される → AのdependentsがvalueDirtyに追加
+2. Computed Bがget時に再計算 → Bの値が変わればBのdependentsもvalueDirtyに追加
+3. この連鎖により、影響を受けるすべてのComputedが適切に更新される
+
+### メモリ管理とリソース解放
+- `isDisposable`型ガードでオブジェクトがDisposableかチェック
+- `set`操作時に古い値を自動的にdispose（トランザクショナル）
+- Cell自体のdispose時に保持している値もdispose
+- すべてのdispose処理はコミット時まで遅延

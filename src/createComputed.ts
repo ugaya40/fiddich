@@ -4,11 +4,11 @@ import { get } from './get';
 
 export function createComputed<T>(
   fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T,
-  options?: { compare?: Compare<T> }
+  options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void }
 ): Computed<T> {
   const compare = options?.compare ?? defaultCompare;
   
-  const computed: Computed<T> = {
+  const current: Computed<T> = {
     id: generateStateId(),
     kind: 'computed',
     stableValue: undefined as any,
@@ -23,24 +23,26 @@ export function createComputed<T>(
     
     compare,
     
+    changeCallback: options?.onChange,
+    
     [Symbol.dispose](): void {
-      for (const dependency of this.dependencies) {
-        dependency.dependents.delete(this);
+      for (const dependency of current.dependencies) {
+        dependency.dependents.delete(current);
       }
-      this.dependencies.clear();
+      current.dependencies.clear();
       
-      this.dependents.clear();
+      current.dependents.clear();
     },
 
     toJSON(): T {
-      if (!this.isInitialized) {
-        get(this);
+      if (!current.isInitialized) {
+        get(current);
       }
-      return this.stableValue;
+      return current.stableValue;
     },
 
     dependencyVersion: 0
   };
   
-  return computed;
+  return current;
 }

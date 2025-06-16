@@ -1,10 +1,17 @@
 import { AtomicContext } from '../atomicContext';
-import { DependentState } from '../state';
+import { State } from '../state';
+import { pending } from '../pending';
 
 export function createPending(context: AtomicContext) {
-  const { valueDirty } = context;
-  
-  return (): DependentState[] => {
-    return Array.from(valueDirty).map(copy => copy.original);
+  return <T>(state: State<T>, promise?: Promise<any>): void => {
+    const targetPromise = promise || context.atomicUpdatePromise;
+    
+    if (!targetPromise) {
+      throw new Error(
+        'pending() requires a Promise argument in synchronous atomicUpdate'
+      );
+    }
+    
+    pending(state, targetPromise);
   };
 }

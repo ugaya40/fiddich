@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createCell, createComputed, get, set, atomicUpdate, atomicUpdateAsync } from '../src';
+import { createCell, createComputed, get, set, atomicUpdate } from '../src';
 
 describe('Commit and Rollback', () => {
   describe('Successful commits', () => {
@@ -90,7 +90,7 @@ describe('Commit and Rollback', () => {
       const cell = createCell(10);
       
       await expect(async () => {
-        await atomicUpdateAsync(async (ops) => {
+        await atomicUpdate(async (ops) => {
           ops.set(cell, 100);
           await new Promise(resolve => setTimeout(resolve, 10));
           throw new Error('Async error');

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createCell, createComputed, get, set, atomicUpdate, atomicUpdateAsync } from '../src';
+import { createCell, createComputed, get, set, atomicUpdate } from '../src';
 
 describe('atomicUpdate operations', () => {
   describe('Basic atomicUpdate', () => {
@@ -111,7 +111,7 @@ describe('atomicUpdate operations', () => {
     it('should handle async operations', async () => {
       const cell = createCell(10);
       
-      await atomicUpdateAsync(async (ops) => {
+      await atomicUpdate(async (ops) => {
         await new Promise(resolve => setTimeout(resolve, 10));
         ops.set(cell, 20);
         expect(ops.get(cell)).toBe(20);
@@ -124,7 +124,7 @@ describe('atomicUpdate operations', () => {
       const cell1 = createCell(10);
       const cell2 = createCell(20);
       
-      const result = await atomicUpdateAsync(async (ops) => {
+      const result = await atomicUpdate(async (ops) => {
         await new Promise(resolve => setTimeout(resolve, 10));
         ops.set(cell1, 100);
         
@@ -145,14 +145,14 @@ describe('atomicUpdate operations', () => {
       const cell = createCell(10);
       
       // Start two concurrent updates
-      const update1 = atomicUpdateAsync(async (ops) => {
+      const update1 = atomicUpdate(async (ops) => {
         ops.set(cell, 20);
         await new Promise(resolve => setTimeout(resolve, 50));
         expect(ops.get(cell)).toBe(20); // Should see own changes
         return ops.get(cell);
       });
       
-      const update2 = atomicUpdateAsync(async (ops) => {
+      const update2 = atomicUpdate(async (ops) => {
         await new Promise(resolve => setTimeout(resolve, 25));
         expect(ops.get(cell)).toBe(10); // Should not see update1's changes
         ops.set(cell, 30);

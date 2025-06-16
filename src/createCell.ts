@@ -1,5 +1,5 @@
 import { Cell, DependentState } from './state';
-import { Compare, defaultCompare, generateStateId } from './util';
+import { Compare, defaultCompare, generateStateId, isDisposable } from './util';
 
 export function createCell<T>(
   initialValue: T,
@@ -7,7 +7,7 @@ export function createCell<T>(
 ): Cell<T> {
   const compare = options?.compare ?? defaultCompare;
   
-  const cell: Cell<T> = {
+  const current: Cell<T> = {
     id: generateStateId(),
     kind: 'cell',
     stableValue: initialValue,
@@ -16,18 +16,18 @@ export function createCell<T>(
     compare,
     
     [Symbol.dispose](): void {
-      this.dependents.clear();
-      if (this.stableValue && typeof this.stableValue === 'object' && Symbol.dispose in this.stableValue) {
-        (this.stableValue as any)[Symbol.dispose]();
+      current.dependents.clear();
+      if (isDisposable(current.stableValue)) {
+        current.stableValue[Symbol.dispose]();
       }
     },
 
     toJSON(): T {
-      return this.stableValue;
+      return current.stableValue;
     },
 
     valueVersion: 0
   };
   
-  return cell;
+  return current;
 }

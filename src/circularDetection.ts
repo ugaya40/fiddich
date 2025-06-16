@@ -1,14 +1,13 @@
-import { Computed, LeafComputed } from './state';
+import { Computed } from './state';
 
-// Track currently computing states to detect circular dependencies
-const computingSet = new Set<Computed<any> | LeafComputed<any>>();
+const computingSet = new Set<Computed<any>>();
 
 /**
  * Detect circular dependencies that would cause infinite loops in synchronous compute functions
- * of computed/leafComputed states
+ * of computed states
  */
 export function withCircularDetection<T>(
-  state: Computed<T> | LeafComputed<T>,
+  state: Computed<T>,
   compute: () => T
 ): T {
   if (computingSet.has(state)) {

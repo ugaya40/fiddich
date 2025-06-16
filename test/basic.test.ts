@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createCell, createComputed, get, set, atomicUpdate, atomicUpdateAsync } from '../src';
+import { createCell, createComputed, get, set, atomicUpdate } from '../src';
 
 describe('Basic get/set operations', () => {
   describe('Cell operations', () => {
