@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createCell, createComputed, get, set, atomicUpdate } from '../src';
+import { createCell, createComputed, createNullableCell, get, set, atomicUpdate } from '../src';
 import type { Computed, Cell } from '../src';
 
 describe('atomicUpdate operations', () => {
@@ -71,7 +71,7 @@ describe('atomicUpdate operations', () => {
     });
 
     it('should handle complex state creation pattern', () => {
-      const storeCell = createCell<{ count: Cell<number>; doubled: Computed<number> } | null>(null);
+      const storeCell = createNullableCell<{ count: Cell<number>; doubled: Computed<number> }>(null);
       
       atomicUpdate((ops) => {
         const count = createCell(0);
