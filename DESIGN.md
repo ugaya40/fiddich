@@ -96,11 +96,14 @@ createCell<T>(
 ```typescript
 createComputed<T>(
   fn: (arg: { get: <V>(target: Cell<V> | Computed<V>) => V }) => T,
-  options?: { compare?: (oldValue: T, newValue: T) => boolean }
+  options?: { 
+    compare?: (oldValue: T, newValue: T) => boolean,
+    onChange?: (newValue: T, oldValue: T) => void
+  }
 ): Computed<T>
 ```
 
-新しい Computed を作成します。compare オプションで値の比較関数を指定できます。Computedは初回アクセス時まで計算が遅延されるため、atomicUpdate内で作成された場合、そのトランザクション内の最新の値を使用して初期化されます。また、循環依存が検出された場合はエラーがスローされます。
+新しい Computed を作成します。compare オプションで値の比較関数を指定でき、onChange オプションで値が変更された際のコールバックを指定できます。Computedは初回アクセス時まで計算が遅延されるため、atomicUpdate内で作成された場合、そのトランザクション内の最新の値を使用して初期化されます。また、循環依存が検出された場合はエラーがスローされます。
 
 #### get
 
@@ -127,7 +130,7 @@ Cell の値を設定します。Cell 作成時に指定された compare 関数�
 touch(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>): void
 ```
 
-Cell、Computed、またはReactiveCollectionに手動で変更通知を促します。
+Cell、Computed、またはReactiveCollectionに手動で変更通知を促します。**これはエスケープハッチであり、基本的なシナリオでは使用しません。**
 
 * **Cell に対して**: Cell が保持するミュータブルなオブジェクトやコレクションの参照自体は変わらずに、その内部状態が変更されたことをシステムに通知します。この通知後、Cell の値は compare 関数（またはデフォルト）によって再評価され、変更があれば購読者に通知されます。
 
@@ -140,7 +143,7 @@ Cell、Computed、またはReactiveCollectionに手動で変更通知を促し�
 #### pending
 
 ```typescript
-pending<T>(state: State<T>, promise: Promise<any>): void
+pending<T>(state: Cell<T> | Computed<T>, promise: Promise<any>): void
 ```
 
 CellまたはComputedを指定されたPromiseと関連付け、ペンディング状態にします。
@@ -273,14 +276,14 @@ function atomicUpdate(
 * **ops.set(cell, value)**: Cellへの変更を AtomicContext の内部バッファに記録します。値の比較は Cell 自身の compare 関数に従います。
 
 * **ops.pending(target, promise?)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。
-  * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise または AtomicContext の解決に使われる Promise（atomicUpdate のコールバック関数 fn が返す Promise）と関連付けられます。非同期の atomicUpdate 内では promise 引数は省略可能ですが、同期的な atomicUpdate 内では必須です。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
+  * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise と関連付けられます。非同期の atomicUpdate 内（コールバック関数が Promise を返す場合）では promise 引数を省略でき、その場合は atomicUpdate のコールバック関数が返す Promise が自動的に使用されます。同期的な atomicUpdate 内では promise 引数は必須です。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
   * **値の読み取り**: ops.pending を呼び出した後、同じ AtomicContext 内で ops.get(target) を実行すると、先行する ops.set によってバッファリングされている最新の値を読み取ります（target が Cell の場合）。まだ ops.set されていない場合や、target が Computed または ReactiveCollection の場合は、この AtomicContext が開始される前のコミット済みの値（または計算結果）が返されます。
   * **ペンディング状態の解除**: target の値が非同期的に解決され、（target が Cell の場合は ops.set によって）更新された後に AtomicContext がコミットされると、target のペンディング状態は解除されます。
   * このメソッド自体は値を返しません。
 
 * **ops.rejectAllChanges()**: バッファされた全ての状態変更（ReactiveCollectionへの変更も含む）を破棄します。
 
-* **ops.touch(target)**: Cell、Computed、またはReactiveCollectionに、現在のトランザクション内で変更があったことを通知します。
+* **ops.touch(target)**: Cell、Computed、またはReactiveCollectionに、現在のトランザクション内で変更があったことを通知します。これはエスケープハッチであり、基本的なシナリオでは使用しません。通常は適切な依存関係の設計により、自動的な変更通知に任せるべきです。
 
 * **ops.dispose(target)**: 対象オブジェクトの Symbol.dispose メソッドの実行を、現在の AtomicContext のコミット時まで遅延させます。トランザクションがロールバックされた場合、この Symbol.dispose 処理は実行されません。target は `[Symbol.dispose](): void` メソッドを持つオブジェクトである必要があります。これにより、リソース解放処理もトランザクションの原子性に含めることができます。
 

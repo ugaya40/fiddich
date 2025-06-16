@@ -108,16 +108,16 @@ Computed: {
    }
    ```
 
-3. **再計算の仕組み（遅延評価）**
+3. **再計算の仕組み（Push型評価）**
    ```typescript
    // ops.set(cell, value)が呼ばれると：
    // 1. cellのコピーの値を更新
    // 2. cellの依存先（dependents）をvalueDirtyに追加
    
-   // ops.get(computed)が呼ばれると：
-   // 1. computedがvalueDirtyに含まれているかチェック
-   // 2. 含まれていれば、その場でrecomputeDependentを実行
-   // 3. 再計算後、valueDirtyから削除
+   // コミット時のhandleValueDirty：
+   // 1. valueDirtyをrank順にソート
+   // 2. 低いrankから順に処理（依存元から依存先へ）
+   // 3. 各Computedを再計算し、変更があれば依存先を追加
    ```
 
 4. **再計算時の依存関係更新（createDependencyTracker）**
@@ -285,10 +285,40 @@ function createDependencyTracker(copy, store, recomputeDependent) {
 - `newlyInitialized: Set<ComputedCopy>`: atomicUpdate中に初期化されたComputed
 - `toDispose: Set<Disposable>`: コミット時にdisposeするオブジェクト
 
-### 再計算の連鎖
+### Rankベースの実行順序管理
+
+#### ダイヤモンド依存の問題
+```
+root (Cell)
+├─ left (Computed)  ─┐
+└─ right (Computed) ─┘→ bottom (Computed)
+```
+
+素朴な実装では、bottomがleftとrightの両方に依存している場合、
+rootが更新されるとbottomが2回計算される可能性がある。
+
+#### Rankによる解決
+```typescript
+// 初期化時
+root.rank = 0     // Cellはrankは0
+left.rank = 1     // max(root.rank) + 1
+right.rank = 1    // max(root.rank) + 1
+bottom.rank = 2   // max(left.rank, right.rank) + 1
+
+// handleValueDirtyでの処理
+valueDirty = {left(1), right(1), bottom(2)}
+// rank順にソート: [left(1), right(1), bottom(2)]
+// leftとrightが先に処理され、bottomは一度だけ計算される
+```
+
+### 再計算の流れ（Push型）
 1. Cell Aが変更される → AのdependentsがvalueDirtyに追加
-2. Computed Bがget時に再計算 → Bの値が変わればBのdependentsもvalueDirtyに追加
-3. この連鎖により、影響を受けるすべてのComputedが適切に更新される
+2. handleValueDirtyでrank順に処理
+   - 低いrank（依存元）から順に処理
+   - 各Computedを再計算
+   - 値が変わればそのdependentsをvalueDirtyに追加
+3. whileループで新たに追加されたノードも処理
+4. すべての影響を受けるComputedが正しい順序で1回だけ更新される
 
 ### メモリ管理とリソース解放
 - `isDisposable`型ガードでオブジェクトがDisposableかチェック
@@ -488,3 +518,9 @@ export function lazyFunction<T extends (...args: any[]) => any>(
 - 既存のコピーが存在し、かつ`copyingStates`に含まれている場合のみ循環参照と判定（より正確な検出）
 - 初期化されていないComputedが再帰的にアクセスされた場合、循環依存エラー
 - `withCircularDetection`と組み合わせて二重の安全性を確保
+
+### ｒベースの実行順序管理
+- 各StateCopyに`rank`フィールドを追加
+- `rank = max(dependencies.rank) + 1`で計算
+- handleValueDirtyでrank順にソートして処理
+- ダイヤモンド依存でも正しい順序で1回だけ計算

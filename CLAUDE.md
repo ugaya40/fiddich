@@ -101,7 +101,7 @@ npm run type-check
 #### ✅ 実装済み
 - 基本的な型定義（Cell, Computed）in `src/state.ts`
 - StateCopyStoreの実装 in `src/atomicContext/`
-- AtomicContextの実装（楽観的同時実行制御、遅延評価）
+- AtomicContextの実装（楽観的同時実行制御、Push型評価）
 - AtomicUpdateの実装（トランザクション管理）
 - Cell/Computedの作成関数（createCell, createComputed）
 - get/set/touch/pending/disposeなどのトップレベル関数
@@ -109,12 +109,20 @@ npm run type-check
 - 循環依存検出（本体の計算時とコピー作成時の2段階）
 - pending機能（非同期状態管理、React Suspense連携）
 - React連携（useValueフック）
-- 包括的なテストファイル（basic, atomic-update, dependency-tracking, commit-rollback等）
+- 包括的なテストファイル（basic, atomic-update, dependency-tracking, commit-rollback, diamond-dependency等）
 - TypeScript/tsup/Vitest設定
 
 #### ❌ 未実装
 - ReactiveCollection（ReactiveMap/ReactiveArray）
 - createManagedObject（リソース管理の自動化）
+
+### 最近の主要な改善
+
+#### Rankベースの実行順序管理
+- ダイヤモンド依存の問題を解決
+- 各StateCopyに`rank`フィールドを追加（依存グラフの深さを表す）
+- `handleValueDirty`でrank順にソートして処理
+- 各Computedが正しい順序で1回だけ計算される
 
 ## 開発の進め方
 
