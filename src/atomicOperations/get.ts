@@ -1,23 +1,17 @@
-import { AtomicContext } from '../atomicContext';
+import { AtomicContext } from '../atomicContext/index';
 import { DependencyState } from '../state';
 import { createRecomputeDependent } from './recompute';
-import { initializeComputedStateWithGetter } from '../stateUtil';
 
 export function createGet(context: AtomicContext) {
-  const { copyStore, valueDirty } = context;
   const recompute = createRecomputeDependent(context);
   
   const get = <T>(state: DependencyState<T>): T => {
-    if (state.kind === 'computed' && !state.isInitialized) {
-      initializeComputedStateWithGetter(state, get);
-    }
-    
-    const targetCopy = copyStore.getCopy(state);
+    const targetCopy = context.copyStore.getCopy(state);
     
     if (targetCopy.kind === 'computed') {
-      if (valueDirty.has(targetCopy)) {
+      if (context.valueDirty.has(targetCopy)) {
         recompute(targetCopy);
-        valueDirty.delete(targetCopy);
+        context.valueDirty.delete(targetCopy);
       }
     }
     

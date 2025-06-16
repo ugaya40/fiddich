@@ -1,4 +1,4 @@
-import { AtomicContext } from '../atomicContext';
+import { AtomicContext } from '../atomicContext/index';
 import { State } from '../state';
 import { pending } from '../pending';
 

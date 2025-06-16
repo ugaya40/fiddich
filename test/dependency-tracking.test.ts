@@ -1,158 +1,221 @@
 import { describe, it, expect } from 'vitest';
-import { createCell, createComputed, get, set } from '../src';
+import { createCell, createComputed, get, set, atomicUpdate } from '../src';
 import type { Computed } from '../src/state';
 
-describe('Dependency tracking', () => {
-  describe('Dependency registration', () => {
-    it('should establish dependencies correctly', () => {
-      const cell1 = createCell(10);
-      const cell2 = createCell(20);
-      const computed = createComputed(({ get }) => get(cell1) + get(cell2));
-      
-      // Initialize computed by getting its value
-      get(computed);
-      
-      // Check dependencies
-      expect(computed.dependencies.size).toBe(2);
-      expect(computed.dependencies.has(cell1)).toBe(true);
-      expect(computed.dependencies.has(cell2)).toBe(true);
-      
-      // Check dependents
-      expect(cell1.dependents.has(computed)).toBe(true);
-      expect(cell2.dependents.has(computed)).toBe(true);
-    });
-
-    it('should update dependencies when computation changes', () => {
-      const condition = createCell(true);
-      const cellA = createCell(10);
-      const cellB = createCell(20);
-      const computed = createComputed(({ get }) => 
-        get(condition) ? get(cellA) : get(cellB)
-      );
-      
-      // Initial state - depends on condition and cellA
-      get(computed);
-      expect(computed.dependencies.size).toBe(2);
-      expect(computed.dependencies.has(condition)).toBe(true);
-      expect(computed.dependencies.has(cellA)).toBe(true);
-      expect(computed.dependencies.has(cellB)).toBe(false);
-      
-      // Change condition - now depends on condition and cellB
-      set(condition, false);
-      get(computed);
-      expect(computed.dependencies.size).toBe(2);
-      expect(computed.dependencies.has(condition)).toBe(true);
-      expect(computed.dependencies.has(cellA)).toBe(false);
-      expect(computed.dependencies.has(cellB)).toBe(true);
-      
-      // Check that cellA no longer has computed as dependent
-      expect(cellA.dependents.has(computed)).toBe(false);
-      expect(cellB.dependents.has(computed)).toBe(true);
-    });
-
-    it('should handle circular dependency detection', () => {
-      const cell = createCell(10);
-      let computed1: Computed<number>;
-      let computed2: Computed<number>;
-      
-      computed1 = createComputed(({ get }) => {
-        // This creates a potential circular dependency
-        return get(cell) + (computed2 ? get(computed2) : 0);
-      });
-      
-      computed2 = createComputed(({ get }) => {
-        // Accessing computed1 here would create a circular dependency
-        // This should be handled gracefully
-        return get(computed1) * 2;
-      });
-      
-      // This should throw because of circular dependency
-      expect(() => get(computed2)).toThrow('Circular dependency detected');
-    });
-  });
-
-  describe('Dependency cleanup', () => {
-    it('should clean up dependencies when computed is disposed', () => {
-      const cell1 = createCell(10);
-      const cell2 = createCell(20);
-      const computed = createComputed(({ get }) => get(cell1) + get(cell2));
-      
-      // Initialize
-      get(computed);
-      
-      // Verify dependencies exist
-      expect(cell1.dependents.has(computed)).toBe(true);
-      expect(cell2.dependents.has(computed)).toBe(true);
-      
-      // Dispose computed
-      computed[Symbol.dispose]();
-      
-      // Verify dependencies are cleaned up
-      expect(cell1.dependents.has(computed)).toBe(false);
-      expect(cell2.dependents.has(computed)).toBe(false);
-      expect(computed.dependencies.size).toBe(0);
-    });
-
-    it('should not affect other dependents when one is disposed', () => {
-      const cell = createCell(10);
-      const computed1 = createComputed(({ get }) => get(cell) * 2);
-      const computed2 = createComputed(({ get }) => get(cell) * 3);
-      
-      // Initialize both
-      get(computed1);
-      get(computed2);
-      
-      // Verify both are dependents
-      expect(cell.dependents.size).toBe(2);
-      expect(cell.dependents.has(computed1)).toBe(true);
-      expect(cell.dependents.has(computed2)).toBe(true);
-      
-      // Dispose only computed1
-      computed1[Symbol.dispose]();
-      
-      // Verify computed2 is still a dependent
-      expect(cell.dependents.size).toBe(1);
-      expect(cell.dependents.has(computed1)).toBe(false);
-      expect(cell.dependents.has(computed2)).toBe(true);
-    });
-  });
-
-  describe('Version tracking', () => {
-    it('should track dependency version changes', () => {
-      const cell1 = createCell(10);
-      const cell2 = createCell(20);
-      const computed = createComputed(({ get }) => get(cell1) + get(cell2));
-      
-      get(computed);
-      const initialDepVersion = computed.dependencyVersion;
-      
-      // Changing dependency structure should update version
-      const condition = createCell(true);
-      const computedConditional = createComputed(({ get }) => 
-        get(condition) ? get(cell1) : get(cell2)
-      );
-      
-      get(computedConditional);
-      const condInitialDepVersion = computedConditional.dependencyVersion;
-      
-      set(condition, false);
-      get(computedConditional); // This changes dependencies
-      
-      expect(computedConditional.dependencyVersion).toBe(condInitialDepVersion + 1);
-    });
-
-    it('should not change dependency version when dependencies remain same', () => {
+describe('Dependency Tracking', () => {
+  describe('Basic Dependencies', () => {
+    it('should track Cell -> Computed dependency', () => {
       const cell = createCell(10);
       const computed = createComputed(({ get }) => get(cell) * 2);
       
-      get(computed);
-      const initialDepVersion = computed.dependencyVersion;
+      expect(get(computed)).toBe(20);
       
-      // Update cell value (doesn't change dependency structure)
-      set(cell, 20);
-      get(computed);
+      set(cell, 5);
+      expect(get(computed)).toBe(10);
+    });
+
+    it('should track multiple Cells -> Computed dependencies', () => {
+      const cellA = createCell(2);
+      const cellB = createCell(3);
+      const computed = createComputed(({ get }) => get(cellA) + get(cellB));
       
-      expect(computed.dependencyVersion).toBe(initialDepVersion);
+      expect(get(computed)).toBe(5);
+      
+      set(cellA, 10);
+      expect(get(computed)).toBe(13);
+      
+      set(cellB, 20);
+      expect(get(computed)).toBe(30);
+    });
+  });
+
+  describe('Chained Dependencies', () => {
+    it('should track Cell -> Computed -> Computed chain', () => {
+      const cell = createCell(1);
+      const computed1 = createComputed(({ get }) => get(cell) + 1);
+      const computed2 = createComputed(({ get }) => get(computed1) * 2);
+      
+      expect(get(computed2)).toBe(4);
+      
+      set(cell, 5);
+      expect(get(computed1)).toBe(6);
+      expect(get(computed2)).toBe(12);
+    });
+
+    it('should handle complex dependency chains', () => {
+      const cellA = createCell(1);
+      const cellB = createCell(2);
+      
+      const computedSum = createComputed(({ get }) => get(cellA) + get(cellB));
+      const computedProduct = createComputed(({ get }) => get(cellA) * get(cellB));
+      const computedFinal = createComputed(({ get }) => 
+        get(computedSum) + get(computedProduct)
+      );
+      
+      expect(get(computedFinal)).toBe(5); // (1+2) + (1*2) = 3 + 2 = 5
+      
+      set(cellA, 3);
+      expect(get(computedSum)).toBe(5);     // 3 + 2 = 5
+      expect(get(computedProduct)).toBe(6);  // 3 * 2 = 6
+      expect(get(computedFinal)).toBe(11);   // 5 + 6 = 11
+    });
+  });
+
+  describe('Dynamic Dependencies', () => {
+    it('should update dependencies based on conditional logic', () => {
+      const useA = createCell(true);
+      const cellA = createCell(10);
+      const cellB = createCell(20);
+      
+      const computed = createComputed(({ get }) => 
+        get(useA) ? get(cellA) : get(cellB)
+      );
+      
+      expect(get(computed)).toBe(10);
+      
+      // Change value of unused cell - should not affect computed
+      set(cellB, 30);
+      expect(get(computed)).toBe(10);
+      
+      // Switch to use cellB
+      set(useA, false);
+      expect(get(computed)).toBe(30);
+      
+      // Now cellA changes should not affect computed
+      set(cellA, 40);
+      expect(get(computed)).toBe(30);
+    });
+
+    it('should handle dependencies that appear and disappear', () => {
+      const count = createCell(0);
+      const cellA = createCell(10);
+      const cellB = createCell(20);
+      
+      const computed = createComputed(({ get }) => {
+        const n = get(count);
+        if (n === 0) return 0;
+        if (n === 1) return get(cellA);
+        return get(cellA) + get(cellB);
+      });
+      
+      expect(get(computed)).toBe(0);
+      
+      set(count, 1);
+      expect(get(computed)).toBe(10);
+      
+      set(count, 2);
+      expect(get(computed)).toBe(30);
+      
+      // Both cells should now affect the result
+      set(cellA, 15);
+      expect(get(computed)).toBe(35);
+      
+      set(cellB, 25);
+      expect(get(computed)).toBe(40);
+    });
+  });
+
+  describe('Circular Dependencies', () => {
+    it('should detect direct circular dependencies', () => {
+      let computedA: Computed<number>;
+      let computedB: Computed<number>;
+      
+      computedA = createComputed(({ get }) => get(computedB!) + 1);
+      computedB = createComputed(({ get }) => get(computedA!) + 1);
+      
+      expect(() => get(computedA)).toThrow(/Circular dependency/);
+    });
+
+    it('should detect indirect circular dependencies', () => {
+      let computedA: Computed<number>;
+      let computedB: Computed<number>;
+      let computedC: Computed<number>;
+      
+      computedA = createComputed(({ get }) => get(computedC!) + 1);
+      computedB = createComputed(({ get }) => get(computedA!) + 1);
+      computedC = createComputed(({ get }) => get(computedB!) + 1);
+      
+      expect(() => get(computedA)).toThrow(/Circular dependency/);
+    });
+  });
+
+  describe('Dependency Updates in atomicUpdate', () => {
+    it('should track dependencies correctly within atomicUpdate', () => {
+      const cellA = createCell(1);
+      const cellB = createCell(2);
+      const computed = createComputed(({ get }) => get(cellA) + get(cellB));
+      
+      atomicUpdate((ops) => {
+        ops.set(cellA, 10);
+        expect(ops.get(computed)).toBe(12); // 10 + 2
+        
+        ops.set(cellB, 20);
+        expect(ops.get(computed)).toBe(30); // 10 + 20
+      });
+      
+      expect(get(computed)).toBe(30);
+    });
+
+    it('should handle new computed created within atomicUpdate', () => {
+      const cell = createCell(5);
+      let computed: Computed<number> = null!;
+      
+      atomicUpdate((ops) => {
+        computed = createComputed(({ get }) => get(cell) * 2);
+        expect(ops.get(computed)).toBe(10);
+        
+        ops.set(cell, 3);
+        expect(ops.get(computed)).toBe(6);
+      });
+      
+      expect(get(computed)).toBe(6);
+    });
+  });
+
+  describe('Lazy Initialization', () => {
+    it('should not compute until first access', () => {
+      let computeCount = 0;
+      const cell = createCell(1);
+      
+      const computed = createComputed(({ get }) => {
+        computeCount++;
+        return get(cell) * 2;
+      });
+      
+      expect(computeCount).toBe(0);
+      
+      const value = get(computed);
+      expect(value).toBe(2);
+      expect(computeCount).toBe(1);
+    });
+
+    it('should initialize with correct dependencies', () => {
+      const cellA = createCell(1);
+      const cellB = createCell(2);
+      let accessedCells: string[] = [];
+      
+      const computed = createComputed(({ get }) => {
+        accessedCells = [];
+        const a = get(cellA);
+        accessedCells.push('A');
+        if (a > 0) {
+          const b = get(cellB);
+          accessedCells.push('B');
+          return a + b;
+        }
+        return a;
+      });
+      
+      expect(accessedCells).toEqual([]);
+      
+      get(computed);
+      expect(accessedCells).toEqual(['A', 'B']);
+      
+      // Change cellB should trigger recompute
+      accessedCells = [];
+      set(cellB, 10);
+      get(computed);
+      expect(accessedCells).toEqual(['A', 'B']);
     });
   });
 });

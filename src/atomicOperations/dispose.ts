@@ -1,4 +1,4 @@
-import { AtomicContext } from '../atomicContext';
+import { AtomicContext } from '../atomicContext/index';
 
 export function createDispose(context: AtomicContext) {
   const { toDispose } = context;

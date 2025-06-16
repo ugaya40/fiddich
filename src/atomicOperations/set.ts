@@ -1,4 +1,4 @@
-import { AtomicContext } from '../atomicContext';
+import { AtomicContext } from '../atomicContext/index';
 import { Cell } from '../state';
 import { isDisposable } from '../util';
 import { createDispose } from './dispose';

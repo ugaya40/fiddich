@@ -1,4 +1,4 @@
-import { AtomicContextStore, DependencyCopy, DependentCopy, ComputedCopy } from '../atomicContext';
+import { AtomicContextStore, DependencyCopy, DependentCopy, ComputedCopy } from '../atomicContext/index';
 import { DependencyState } from '../state';
 
 function createDependencyTracker(copy: ComputedCopy<any>, store: AtomicContextStore, recomputeDependent: (copy: DependentCopy) => void) {

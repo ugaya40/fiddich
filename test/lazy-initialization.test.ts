@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createCell, createComputed, get, set, atomicUpdate } from '../src';
-import type { Computed } from '../src/state';
+import type { Computed, DependencyState } from '../src/state';
 
 describe('Computed lazy initialization', () => {
   describe('Basic lazy initialization', () => {
     it('should not compute value until first access', () => {
       const cell = createCell(10);
-      const computeFn = vi.fn(({ get }: any) => get(cell) * 2);
+      const computeFn = vi.fn((arg: { get: <V>(state: DependencyState<V>) => V }) => arg.get(cell) * 2);
       const computed = createComputed(computeFn);
       
       // Should not be called yet
@@ -42,7 +42,7 @@ describe('Computed lazy initialization', () => {
 
     it('should cache value after initialization', () => {
       const cell = createCell(10);
-      const computeFn = vi.fn(({ get }: any) => get(cell) * 2);
+      const computeFn = vi.fn((arg: { get: <V>(state: DependencyState<V>) => V }) => arg.get(cell) * 2);
       const computed = createComputed(computeFn);
       
       // First access
@@ -58,7 +58,7 @@ describe('Computed lazy initialization', () => {
   describe('Lazy initialization in atomicUpdate', () => {
     it('should initialize with atomicUpdate context values', () => {
       const cell = createCell(10);
-      let computedRef: any;
+      let computedRef: Computed<number> = null!;
       
       atomicUpdate((ops) => {
         ops.set(cell, 100);
@@ -66,7 +66,8 @@ describe('Computed lazy initialization', () => {
         
         // Access inside atomicUpdate should use updated value
         expect(ops.get(computedRef)).toBe(200);
-        expect(computedRef.isInitialized).toBe(true);
+        // computedRef itself is not initialized yet (only the copy is)
+        expect(computedRef.isInitialized).toBe(false);
       });
       
       // After commit, should maintain the value
@@ -75,7 +76,7 @@ describe('Computed lazy initialization', () => {
 
     it('should handle computed created but not accessed in atomicUpdate', () => {
       const cell = createCell(10);
-      let computedRef: any;
+      let computedRef: Computed<number> = null!;
       
       atomicUpdate((ops) => {
         ops.set(cell, 100);
@@ -92,8 +93,8 @@ describe('Computed lazy initialization', () => {
     it('should handle complex initialization scenario', () => {
       const baseCell = createCell(10);
       const multiplierCell = createCell(2);
-      let computed1: any;
-      let computed2: any;
+      let computed1: Computed<number> = null!;
+      let computed2: Computed<number> = null!;
       
       // Create computed1 outside atomicUpdate
       computed1 = createComputed(({ get }) => get(baseCell) * get(multiplierCell));
@@ -164,7 +165,7 @@ describe('Computed lazy initialization', () => {
   describe('Edge cases', () => {
     it('should handle self-referential computed gracefully', () => {
       const cell = createCell(10);
-      let computedRef: any;
+      let computedRef: Computed<number> = null!;
       
       // This creates a potential infinite loop
       computedRef = createComputed(({ get }) => {

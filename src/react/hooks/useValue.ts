@@ -19,8 +19,6 @@ export function useValue<T>(state: State<T>): T {
       };
     },
     () => getSuspense(state),
-    
-    // getServerSnapshot (same as client for now)
     () => getSuspense(state)
   );
   

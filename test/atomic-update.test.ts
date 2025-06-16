@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createCell, createComputed, get, set, atomicUpdate } from '../src';
+import type { Computed, Cell } from '../src/state';
 
 describe('atomicUpdate operations', () => {
   describe('Basic atomicUpdate', () => {
@@ -58,7 +59,7 @@ describe('atomicUpdate operations', () => {
 
     it('should create computed with updated values', () => {
       const cell = createCell(10);
-      let computedRef: any;
+      let computedRef: Computed<number> = null!;
       
       atomicUpdate((ops) => {
         ops.set(cell, 100);
@@ -70,7 +71,7 @@ describe('atomicUpdate operations', () => {
     });
 
     it('should handle complex state creation pattern', () => {
-      const storeCell = createCell<{ count: any; doubled: any } | null>(null);
+      const storeCell = createCell<{ count: Cell<number>; doubled: Computed<number> } | null>(null);
       
       atomicUpdate((ops) => {
         const count = createCell(0);
