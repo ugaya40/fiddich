@@ -1,4 +1,4 @@
-import { createGet, createSet, createTouch, createDispose, createPending } from '../atomicOperations';
+import { createGet, createSet, createTouch, createDispose, createPending, createRejectAllChanges } from '../atomicOperations';
 import { createCopyStore } from './copyStore';
 import { createCommit } from './commit';
 import { AtomicContext, DependentCopy, StateCopy, ComputedCopy } from './types';
@@ -40,6 +40,7 @@ export function createAtomicOperations(context: AtomicContext) {
     set: lazyFunction(() => createSet(context)),
     touch: lazyFunction(() => createTouch(context)),
     dispose: lazyFunction(() => createDispose(context)),
-    pending: lazyFunction(() => createPending(context))
+    pending: lazyFunction(() => createPending(context)),
+    rejectAllChanges: lazyFunction(() => createRejectAllChanges(context))
   };
 }

@@ -82,8 +82,7 @@ npm run type-check
 ### コアエンティティ
 
 - **Cell**: 基本的な状態コンテナ（TC39 Signalsに類似するが独自実装）
-- **Computed**: 他のCell/Computedから派生する計算値（副作用を含まない軽量な処理推奨）
-- **LeafComputed**: 値の変更時にコールバックを実行できるComputed
+- **Computed**: 他のCell/Computedから派生する計算値（副作用を含まない軽量な処理推奨、onChangeオプションで値変更時のコールバックも可能）
 - **AtomicContext**: トランザクション管理の中核、状態変更のバッファリングと一貫性維持
 - **AtomicUpdate**: 複数の状態変更を原子的に実行するためのAPI
 
@@ -100,41 +99,34 @@ npm run type-check
 ### 現在の実装状況（2025年6月）
 
 #### ✅ 実装済み
-- 基本的な型定義（Cell, Computed, LeafComputed）in `src/state.ts`
-- StateCopyStoreの基本実装 in `src/atomicContext.ts`
+- 基本的な型定義（Cell, Computed）in `src/state.ts`
+- StateCopyStoreの実装 in `src/atomicContext/`
+- AtomicContextの実装（楽観的同時実行制御、遅延評価）
+- AtomicUpdateの実装（トランザクション管理）
+- Cell/Computedの作成関数（createCell, createComputed）
+- get/set/touch/pending/disposeなどのトップレベル関数
+- ops.rejectAllChanges（atomicUpdate内での全変更破棄・リセット機能）
+- 循環依存検出（本体の計算時とコピー作成時の2段階）
+- pending機能（非同期状態管理、React Suspense連携）
+- React連携（useValueフック）
+- 包括的なテストファイル（basic, atomic-update, dependency-tracking, commit-rollback等）
 - TypeScript/tsup/Vitest設定
 
-#### 🚧 実装中
-- AtomicContextの完全な実装（構造は定義済み、ロジック未実装）
-- AtomicUpdateの実装（インターフェース定義済み、実装未完了）
-- Cell.setメソッド（createCell.tsでTODOコメント）
-- Computed/LeafComputedの作成関数
-
 #### ❌ 未実装
-- src/index.ts（エントリーポイント）
-- get/set/touchなどのトップレベル関数
 - ReactiveCollection（ReactiveMap/ReactiveArray）
-- createManagedObject
-- テストファイル
-- React連携（useValueフックなど）
+- createManagedObject（リソース管理の自動化）
 
 ## 開発の進め方
 
-### 実装の優先順位
-1. **最初に実装すべきもの**
-   - src/index.tsの作成（エクスポートの定義）
-   - Cell.setメソッドの実装
-   - 基本的なget関数の実装
-
-2. **次に実装すべきもの**
-   - atomicUpdateの完全な実装
-   - Computed/LeafComputedの実装
-   - 基本的なテストの作成
-
-3. **その後の実装**
-   - ReactiveCollectionの実装
+### 実装の優先順位（2025年6月時点）
+1. **次に実装すべきもの**
+   - ReactiveCollection（ReactiveMap/ReactiveArray）の実装
    - createManagedObjectの実装
-   - React連携機能
+
+2. **その後の検討事項**
+   - パフォーマンス最適化
+   - より高度なReact連携機能（SSR対応等）
+   - デバッグツールの提供
 
 ### デバッグ時の注意点
 - Symbol.disposeはTypeScript 5.2以降の機能

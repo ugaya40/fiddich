@@ -18,7 +18,8 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         original: state,
         value: state.stableValue,
         dependents: new Set(),
-        valueVersion: state.valueVersion
+        valueVersion: state.valueVersion,
+        rank: 0  // Cells have rank 0
       };
     
     case 'computed':
@@ -30,7 +31,8 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         dependents: new Set(),
         dependencies: new Set(),
         dependencyVersion: state.dependencyVersion,
-        isInitialized: state.isInitialized
+        isInitialized: state.isInitialized,
+        rank: 0  // Will be calculated later based on dependencies
       };
     
     default:
@@ -98,6 +100,11 @@ export function createCopyStore(
             dep.dependents.add(newCopy);
           }
           
+          // Calculate rank based on dependencies
+          newCopy.rank = dependencies.size > 0 
+            ? Math.max(...[...dependencies].map(d => d.rank)) + 1
+            : 0;
+          
           newCopy.isInitialized = true;
           context.newlyInitialized.add(newCopy);
           context.valueChangedDirty.add(newCopy);
@@ -106,8 +113,14 @@ export function createCopyStore(
             newCopy.dependents.add(getCopy(dependent));
           }
           for (const dependency of state.dependencies) {
-            newCopy.dependencies.add(getCopy(dependency));
+            const depCopy = getCopy(dependency);
+            newCopy.dependencies.add(depCopy);
           }
+          
+          // Calculate rank for already initialized computed
+          newCopy.rank = newCopy.dependencies.size > 0
+            ? Math.max(...[...newCopy.dependencies].map(d => d.rank)) + 1
+            : 0;
         }
       }
       
@@ -117,5 +130,10 @@ export function createCopyStore(
     }
   }
   
-  return { getCopy };
+  function clear() {
+    copyStoreMap.clear();
+    copyingStates.clear();
+  }
+  
+  return { getCopy, clear };
 }

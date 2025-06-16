@@ -7,6 +7,7 @@ type AtomicUpdateOps = {
   touch: <T>(state: State<T>) => void;
   dispose: <T extends Disposable>(target: T) => void;
   pending: <T>(state: State<T>, promise?: Promise<any>) => void;
+  rejectAllChanges: () => void;
   context: AtomicContext;
 };
 

@@ -24,10 +24,16 @@ function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
 function handleValueDirty(context: AtomicContext) {
   const recomputeDependent = createRecomputeDependent(context);
   
-  for(const copy of context.valueDirty) {
-    if(isComputedCopy(copy)) {
+  while (context.valueDirty.size > 0) {
+    // Sort by rank
+    const sorted = [...context.valueDirty].sort((a, b) => a.rank - b.rank);
+    
+    // Process the first node (lowest rank)
+    const copy = sorted[0];
+    if (isComputedCopy(copy)) {
       recomputeDependent(copy);
     }
+    context.valueDirty.delete(copy);
   }
 }
 

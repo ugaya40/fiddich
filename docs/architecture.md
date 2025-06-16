@@ -70,34 +70,41 @@ Computed: {
    ```typescript
    // createCopyStore.getCopy()の動作
    function getCopy(state) {
-     if (copyStore.has(state)) {
+     const existing = copyStoreMap.get(state);
+     if (existing) {
        // 循環参照チェック: 初期化中のComputedが再度アクセスされた場合
-       if (state.kind === 'computed' && !state.isInitialized && 
-           beingCopied.has(state) && !existing.isInitialized) {
+       // copyingStatesに含まれている = 現在コピー作成中 = 循環参照
+       const isCircularDependency = 
+         isComputed(state) && 
+         !state.isInitialized && 
+         copyingStates.has(state) &&  // キーとなるチェック: コピー作成中 = 循環参照
+         isComputedCopy(existing) && 
+         !existing.isInitialized;
+       
+       if (isCircularDependency) {
          throw new Error(`Circular dependency detected: ${state.id}`);
        }
-       return copyStore.get(state);
+       return existing;
      }
      
-     // 循環参照の検出
-     if (beingCopied.has(state)) {
-       if (state.kind === 'computed' && !state.isInitialized) {
-         throw new Error(`Circular dependency detected: ${state.id}`);
+     copyingStates.add(state);
+     
+     try {
+       const newCopy = createCopy(state);  // 基本構造のコピー
+       copyStoreMap.set(state, newCopy);
+       
+       // 未初期化Computedの場合、コピー世界で初期化
+       if (isComputed(state) && !state.isInitialized) {
+         const value = withCircularDetection(state, () => 
+           state.compute(copyGetter)
+         );
+         // 依存関係の設定
        }
+       
+       return newCopy;
+     } finally {
+       copyingStates.delete(state);  // 確実にクリーンアップ
      }
-     
-     const newCopy = createCopy(state);  // 基本構造のコピー
-     copyStore.set(state, newCopy);
-     
-     // 未初期化Computedの場合、コピー世界で初期化
-     if (state.kind === 'computed' && !state.isInitialized) {
-       const value = withCircularDetection(state, () => 
-         state.compute(copyGetter)
-       );
-       // 依存関係の設定
-     }
-     
-     return newCopy;
    }
    ```
 
@@ -414,9 +421,10 @@ export function lazyFunction<T extends (...args: any[]) => any>(
 ```
 
 ### コピー作成の最適化
-- `beingCopied`セットで循環参照を検出
+- `copyingStates`セットで循環参照を検出
 - 早期にcopyStoreMapに登録して自己参照を処理
 - 依存関係の再帰的コピーを効率化
+- try-finallyで`copyingStates`を確実にクリーンアップ
 
 ## モジュール構造
 
@@ -476,6 +484,7 @@ export function lazyFunction<T extends (...args: any[]) => any>(
 - 初期化フラグ（`isInitialized`）のみをコピーで管理
 
 ### getCopyの循環参照検出
-- `beingCopied`セットで現在コピー中のStateを追跡
+- `copyingStates`セットで現在コピー中のStateを追跡
+- 既存のコピーが存在し、かつ`copyingStates`に含まれている場合のみ循環参照と判定（より正確な検出）
 - 初期化されていないComputedが再帰的にアクセスされた場合、循環依存エラー
 - `withCircularDetection`と組み合わせて二重の安全性を確保

@@ -58,6 +58,17 @@ export function createRecomputeDependent(store: AtomicContextStore) {
     
     if (hasChanges()) {
       dependencyDirty.add(copy);
+      
+      // Update rank based on new dependencies
+      const newRank = copy.dependencies.size > 0
+        ? Math.max(...[...copy.dependencies].map(d => d.rank)) + 1
+        : 0;
+      
+      if (newRank > copy.rank) {
+        copy.rank = newRank;
+        // Note: We don't need to propagate rank updates to dependents
+        // because they will be recalculated when processed
+      }
     }
     
     if (!copy.original.compare(oldValue, newValue)) {
