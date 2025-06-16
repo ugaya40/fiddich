@@ -1,5 +1,6 @@
 import { AtomicContext } from '../atomicContext/index';
 import { State } from '../state';
+import { isCellCopy, isComputedCopy } from '../stateUtil';
 
 export function createTouch(context: AtomicContext) {
   const { copyStore, valueDirty, valueChangedDirty } = context;
@@ -7,12 +8,12 @@ export function createTouch(context: AtomicContext) {
   return <T>(state: State<T>): void => {
     const copy = copyStore.getCopy(state);
     
-    if (copy.kind === 'cell') {
+    if (isCellCopy(copy)) {
       valueChangedDirty.add(copy);
       for (const dependent of copy.dependents) {
         valueDirty.add(dependent);
       }
-    } else if (copy.kind === 'computed') {
+    } else if (isComputedCopy(copy)) {
       valueDirty.add(copy);
     }
   };

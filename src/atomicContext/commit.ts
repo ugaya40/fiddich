@@ -1,5 +1,6 @@
 import { AtomicContext, ComputedCopy } from './types';
 import { createRecomputeDependent } from '../atomicOperations/recompute';
+import { isCellCopy, isComputedCopy, isCell, isComputed } from '../stateUtil';
 
 function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
   for (const copy of newlyInitialized) {
@@ -24,7 +25,7 @@ function handleValueDirty(context: AtomicContext) {
   const recomputeDependent = createRecomputeDependent(context);
   
   for(const copy of context.valueDirty) {
-    if(copy.kind === 'computed') {
+    if(isComputedCopy(copy)) {
       recomputeDependent(copy);
     }
   }
@@ -33,7 +34,7 @@ function handleValueDirty(context: AtomicContext) {
 function handleConcurrentModification(context: AtomicContext) {
   for(const copy of context.valueChangedDirty) {
     const original = copy.original;
-    if (copy.kind === 'cell' && original.kind === 'cell' && original.valueVersion !== copy.valueVersion) {
+    if (isCellCopy(copy) && isCell(original) && original.valueVersion !== copy.valueVersion) {
       throw new Error(`Concurrent value modification detected for ${original.id}`);
     }
   }
@@ -45,11 +46,11 @@ function handleValueChanges(context: AtomicContext) {
     const prevValue = original.stableValue;
     original.stableValue = copy.value;
     
-    if (original.kind === 'cell') {
+    if (isCell(original)) {
       original.valueVersion++;
     }
     
-    if(original.kind === 'computed' && original.changeCallback) {
+    if(isComputed(original) && original.changeCallback) {
       original.changeCallback(prevValue, original.stableValue);
     }
   }
@@ -57,7 +58,7 @@ function handleValueChanges(context: AtomicContext) {
 
 function handleDependencyChanges(context: AtomicContext) {
   for(const copy of context.dependencyDirty) {
-    if(copy.kind === 'computed') {
+    if(isComputedCopy(copy)) {
       const original = copy.original;
       
       if (original.dependencyVersion !== copy.dependencyVersion) {

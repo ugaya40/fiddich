@@ -1,5 +1,6 @@
 import { Cell, Computed, DependencyState, State } from './state';
 import { get } from './get';
+import type { CellCopy, ComputedCopy, StateCopy } from './atomicContext/types';
 
 const computingSet = new Set<Computed<any>>();
 
@@ -73,4 +74,18 @@ export function isComputed<T = any>(value: any): value is Computed<T> {
  */
 export function isState<T = any>(value: any): value is State<T> {
   return isCell(value) || isComputed(value);
+}
+
+/**
+ * Internal type predicate to check if a copy is a CellCopy
+ */
+export function isCellCopy<T = any>(copy: StateCopy<T>): copy is CellCopy<T> {
+  return copy.kind === 'cell';
+}
+
+/**
+ * Internal type predicate to check if a copy is a ComputedCopy
+ */
+export function isComputedCopy<T = any>(copy: StateCopy<T>): copy is ComputedCopy<T> {
+  return copy.kind === 'computed';
 }
