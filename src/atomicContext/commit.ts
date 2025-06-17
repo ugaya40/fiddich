@@ -1,6 +1,6 @@
 import { AtomicContext, ComputedCopy } from './types';
 import { createRecomputeDependent } from '../atomicOperations/recompute';
-import { isCellCopy, isComputedCopy, isCell, isComputed } from '../stateUtil';
+import { isCellCopy, isComputedCopy, isCell } from '../stateUtil';
 
 function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
   for (const copy of newlyInitialized) {
@@ -12,10 +12,6 @@ function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
       for (const depCopy of copy.dependencies) {
         original.dependencies.add(depCopy.original);
         depCopy.original.dependents.add(original);
-      }
-      
-      if (original.changeCallback) {
-        original.changeCallback(copy.value, copy.value);
       }
     }
   }
@@ -56,7 +52,7 @@ function handleValueChanges(context: AtomicContext) {
       original.valueVersion++;
     }
     
-    if(isComputed(original) && original.changeCallback) {
+    if(original.changeCallback) {
       original.changeCallback(prevValue, original.stableValue);
     }
   }

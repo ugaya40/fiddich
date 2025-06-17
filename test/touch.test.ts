@@ -3,17 +3,17 @@ import { createCell, createComputed, get, touch, atomicUpdate } from '../src';
 
 describe('Touch functionality', () => {
   describe('Basic touch behavior', () => {
-    it('should increment version without changing value', () => {
+    it('should not increment version for normal values', () => {
       const cell = createCell({ count: 0 });
       const originalVersion = cell.valueVersion;
       
       touch(cell);
       
       expect(get(cell)).toEqual({ count: 0 });
-      expect(cell.valueVersion).toBe(originalVersion + 1);
+      expect(cell.valueVersion).toBe(originalVersion); // Version should not change
     });
 
-    it('should trigger recomputation for mutable changes', () => {
+    it('should not trigger recomputation for normal cell values', () => {
       let computeCount = 0;
       const cell = createCell({ items: [1, 2, 3] });
       const computed = createComputed(({ get }) => {
@@ -25,13 +25,33 @@ describe('Touch functionality', () => {
       expect(get(computed)).toBe(3);
       expect(computeCount).toBe(1);
       
-      // Mutate array in-place
-      get(cell).items.push(4);
-      
-      // Touch to notify about mutation
+      // Touch without mutation
       touch(cell);
       
-      expect(get(computed)).toBe(4);
+      // Computed should not be recalculated
+      expect(get(computed)).toBe(3);
+      expect(computeCount).toBe(1);
+    });
+
+    it('should trigger updates for NaN values', () => {
+      const cell = createCell(NaN);
+      const originalVersion = cell.valueVersion;
+      let computeCount = 0;
+      const computed = createComputed(({ get }) => {
+        computeCount++;
+        return get(cell);
+      });
+      
+      // Initialize
+      expect(get(computed)).toBeNaN();
+      expect(computeCount).toBe(1);
+      
+      // Touch NaN cell
+      touch(cell);
+      
+      // Should trigger update because NaN !== NaN
+      expect(cell.valueVersion).toBe(originalVersion + 1);
+      expect(get(computed)).toBeNaN();
       expect(computeCount).toBe(2);
     });
 
@@ -85,25 +105,55 @@ describe('Touch functionality', () => {
       expect(compute2Count).toBe(1);
     });
 
-    it('should trigger onChange callback when value changes', () => {
+    it('should not trigger onChange for Cell with normal values', () => {
       const onChange = vi.fn();
-      const cell = createCell({ text: 'hello' });
-      const computed = createComputed(
-        ({ get }) => get(cell).text.toUpperCase(),
-        { onChange }
-      );
+      const cell = createCell('hello', { onChange });
       
-      // Initialize
-      expect(get(computed)).toBe('HELLO');
-      expect(onChange).toHaveBeenCalledWith('HELLO', 'HELLO');
-      onChange.mockClear();
-      
-      // Mutate and touch
-      get(cell).text = 'world';
       touch(cell);
       
-      expect(get(computed)).toBe('WORLD');
-      expect(onChange).toHaveBeenCalledWith('HELLO', 'WORLD');
+      expect(onChange).toHaveBeenCalledTimes(0);
+    });
+
+    it('should trigger onChange for Cell with NaN', () => {
+      const onChange = vi.fn();
+      const cell = createCell(NaN, { onChange });
+      
+      touch(cell);
+      
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(NaN, NaN);
+    });
+
+    it('should trigger updates with custom compare that returns false', () => {
+      let computeCount = 0;
+      const onChange = vi.fn();
+      const cell = createCell(
+        { value: 1 },
+        { 
+          compare: () => false, // Always consider as changed
+          onChange
+        }
+      );
+      const computed = createComputed(({ get }) => {
+        computeCount++;
+        return get(cell).value * 2;
+      });
+      
+      // Initialize
+      expect(get(computed)).toBe(2);
+      expect(computeCount).toBe(1);
+      
+      // Touch with custom compare that returns false
+      touch(cell);
+      
+      // Should trigger updates even though value is same
+      expect(get(computed)).toBe(2);
+      expect(computeCount).toBe(2);
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(
+        { value: 1 },
+        { value: 1 }
+      );
     });
   });
 
@@ -122,20 +172,17 @@ describe('Touch functionality', () => {
       expect(computeCount).toBe(1);
       
       atomicUpdate((ops) => {
-        // Multiple mutations
-        ops.get(cell1).value = 10;
+        // Touch without mutation should not trigger recomputation
         ops.touch(cell1);
-        
-        ops.get(cell2).value = 20;
         ops.touch(cell2);
         
-        // Should see final result with minimal recomputation
-        expect(ops.get(computed)).toBe(30);
-        expect(computeCount).toBe(2); // Only one additional computation
+        // Computed should not be recalculated
+        expect(ops.get(computed)).toBe(3);
+        expect(computeCount).toBe(1); // No additional computation
       });
       
-      expect(get(computed)).toBe(30);
-      expect(computeCount).toBe(2);
+      expect(get(computed)).toBe(3);
+      expect(computeCount).toBe(1);
     });
   });
 

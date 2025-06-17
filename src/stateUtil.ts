@@ -47,10 +47,6 @@ export function initializeComputedStateWithGetter<T>(
     
     state.isInitialized = true;
     
-    if (state.changeCallback) {
-      state.changeCallback(state.stableValue, state.stableValue);
-    }
-    
     return state.stableValue;
   });
 }

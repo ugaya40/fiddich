@@ -3,7 +3,7 @@ import { Compare, defaultCompare, generateStateId, isDisposable } from './util';
 
 export function createCell<T>(
   initialValue: T,
-  options?: { compare?: Compare<T> }
+  options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void }
 ): Cell<T> {
   const compare = options?.compare ?? defaultCompare;
   
@@ -14,6 +14,8 @@ export function createCell<T>(
     dependents: new Set<DependentState>(),
     
     compare,
+    
+    changeCallback: options?.onChange,
     
     [Symbol.dispose](): void {
       current.dependents.clear();
@@ -40,7 +42,7 @@ export function createCell<T>(
  */
 export function createNullableCell<T>(
   initialValue: T | null = null,
-  options?: { compare?: Compare<T | null> }
+  options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void }
 ): NullableCell<T> {
   return createCell<T | null>(initialValue, options);
 }
@@ -53,7 +55,7 @@ export function createNullableCell<T>(
  */
 export function createOptionalCell<T>(
   initialValue?: T,
-  options?: { compare?: Compare<T | undefined> }
+  options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void }
 ): OptionalCell<T> {
   return createCell<T | undefined>(initialValue, options);
 }

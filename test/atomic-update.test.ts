@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createCell, createComputed, createNullableCell, get, set, atomicUpdate } from '../src';
 import type { Computed, Cell } from '../src';
 
@@ -41,6 +41,19 @@ describe('atomicUpdate operations', () => {
       
       expect(result).toBe(40);
       expect(get(cell)).toBe(20);
+    });
+
+    it('should trigger Cell onChange on commit', () => {
+      const onChange = vi.fn();
+      const cell = createCell<number>(10, { onChange });
+      
+      atomicUpdate((ops) => {
+        ops.set(cell, 20);
+        expect(onChange).toHaveBeenCalledTimes(0); // Not called yet
+      });
+      
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(10, 20);
     });
   });
 

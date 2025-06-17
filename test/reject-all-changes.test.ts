@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createCell, createComputed, atomicUpdate, get, set } from '../src';
 import { createDisposable, createSimpleChain, wait } from './test-helpers';
 
@@ -103,6 +103,19 @@ describe('rejectAllChanges', () => {
       
       // Computed should be initialized with original value
       expect(get(computed1)).toBe(20);
+      expect(get(cell)).toBe(10);
+    });
+
+    it('should not trigger onChange when changes are rejected', () => {
+      const onChange = vi.fn();
+      const cell = createCell<number>(10, { onChange });
+      
+      atomicUpdate((ops) => {
+        ops.set(cell, 20);
+        ops.rejectAllChanges();
+      });
+      
+      expect(onChange).toHaveBeenCalledTimes(0);
       expect(get(cell)).toBe(10);
     });
 

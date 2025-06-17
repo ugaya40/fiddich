@@ -2,6 +2,58 @@ import { describe, it, expect, vi } from 'vitest';
 import { createCell, createComputed, get, set } from '../src';
 
 describe('Custom Compare Functions', () => {
+  describe('Cell with onChange', () => {
+    it('should trigger onChange when value changes', () => {
+      const onChange = vi.fn();
+      const cell = createCell(10, { onChange });
+      
+      expect(onChange).toHaveBeenCalledTimes(0); // Initial value doesn't trigger
+      
+      set(cell, 20);
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(10, 20);
+      
+      set(cell, 30);
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(onChange).toHaveBeenCalledWith(20, 30);
+    });
+
+    it('should not trigger onChange when value is same', () => {
+      const onChange = vi.fn();
+      const cell = createCell('hello', { onChange });
+      
+      set(cell, 'hello'); // Same value
+      expect(onChange).toHaveBeenCalledTimes(0);
+      
+      set(cell, 'world');
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith('hello', 'world');
+    });
+
+    it('should work with custom compare and onChange', () => {
+      const onChange = vi.fn();
+      const cell = createCell(
+        { id: 1, name: 'Alice' },
+        {
+          compare: (a, b) => a.id === b.id && a.name === b.name,
+          onChange
+        }
+      );
+      
+      // Same object according to compare
+      set(cell, { id: 1, name: 'Alice' });
+      expect(onChange).toHaveBeenCalledTimes(0);
+      
+      // Different object
+      set(cell, { id: 1, name: 'Bob' });
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(
+        { id: 1, name: 'Alice' },
+        { id: 1, name: 'Bob' }
+      );
+    });
+  });
+
   describe('Cell with custom compare', () => {
     it('should use custom compare for object values', () => {
       const cell = createCell(
@@ -92,17 +144,18 @@ describe('Custom Compare Functions', () => {
       );
       
       expect(get(computed)).toEqual({ sum: 3, product: 2 });
-      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledTimes(0); // Initial value doesn't trigger onChange
       
       // Change values but keep sum the same
       set(cell, { x: 2, y: 1 });
       expect(get(computed)).toEqual({ sum: 3, product: 2 });
-      expect(onChange).toHaveBeenCalledTimes(1); // No onChange because sum is same
+      expect(onChange).toHaveBeenCalledTimes(0); // No onChange because sum is same
       
       // Change values to different sum
       set(cell, { x: 2, y: 3 });
       expect(get(computed)).toEqual({ sum: 5, product: 6 });
-      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith({ sum: 3, product: 2 }, { sum: 5, product: 6 });
     });
 
     it('should not propagate when computed value is same according to compare', () => {

@@ -7,6 +7,7 @@ export interface StateBase<T> {
   compare: Compare<T>;
   toJSON(): T;
   pendingPromise?: Promise<any>;
+  changeCallback?: (prev: T, next: T) => void;
 }
 
 export interface Cell<T> extends StateBase<T>, Disposable {
@@ -22,7 +23,6 @@ export interface Computed<T> extends StateBase<T>, Disposable {
   dependencyVersion: number;
   isInitialized: boolean;
   compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
-  changeCallback?: (prev: T, next: T) => void;
 }
 
 export type DependentState<T = any> = Computed<T>;
@@ -74,4 +74,4 @@ export type NullableComputed<T> = Computed<T | null>;
  * type ConfigCell = OptionalCell<Config>; // Cell<Config | undefined>
  */
 export type OptionalCell<T> = Cell<T | undefined>;
-export type OptionalComputed<T> = Computed<T | undefined>;
+export type なOptionalComputed<T> = Computed<T | undefined>;

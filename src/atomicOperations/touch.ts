@@ -9,9 +9,11 @@ export function createTouch(context: AtomicContext) {
     const copy = copyStore.getCopy(state);
     
     if (isCellCopy(copy)) {
-      valueChangedDirty.add(copy);
-      for (const dependent of copy.dependents) {
-        valueDirty.add(dependent);
+      if (!copy.original.compare(copy.value, copy.value)) {
+        valueChangedDirty.add(copy);
+        for (const dependent of copy.dependents) {
+          valueDirty.add(dependent);
+        }
       }
     } else if (isComputedCopy(copy)) {
       valueDirty.add(copy);
