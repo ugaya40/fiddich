@@ -271,13 +271,12 @@ function atomicUpdate(
 
 引数 `ops` は、現在の AtomicContext スコープ内で状態操作を行うための関数群及び現在のコンテキストへのアクセスを提供します。
 
-* **ops.get(target)**: AtomicContext の内部バッファを優先して値を読み取ります。
+* **ops.get(target)**: 常にトランザクション内の最新の状態を反映した値を返します。Computed の場合は必要に応じて再計算されます。
 
 * **ops.set(cell, value)**: Cellへの変更を AtomicContext の内部バッファに記録します。値の比較は Cell 自身の compare 関数に従います。
 
 * **ops.pending(target, promise?)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。
   * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise と関連付けられます。非同期の atomicUpdate 内（コールバック関数が Promise を返す場合）では promise 引数を省略でき、その場合は atomicUpdate のコールバック関数が返す Promise が自動的に使用されます。同期的な atomicUpdate 内では promise 引数は必須です。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
-  * **値の読み取り**: ops.pending を呼び出した後、同じ AtomicContext 内で ops.get(target) を実行すると、先行する ops.set によってバッファリングされている最新の値を読み取ります（target が Cell の場合）。まだ ops.set されていない場合や、target が Computed または ReactiveCollection の場合は、この AtomicContext が開始される前のコミット済みの値（または計算結果）が返されます。
   * **ペンディング状態の解除**: target の値が非同期的に解決され、（target が Cell の場合は ops.set によって）更新された後に AtomicContext がコミットされると、target のペンディング状態は解除されます。
   * このメソッド自体は値を返しません。
 
