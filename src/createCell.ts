@@ -3,7 +3,7 @@ import { Compare, defaultCompare, generateStateId, isDisposable } from './util';
 
 export function createCell<T>(
   initialValue: T,
-  options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void }
+  options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void; onScheduledNotify?: () => void }
 ): Cell<T> {
   const compare = options?.compare ?? defaultCompare;
   
@@ -16,6 +16,7 @@ export function createCell<T>(
     compare,
     
     changeCallback: options?.onChange,
+    onScheduledNotify: options?.onScheduledNotify,
     
     [Symbol.dispose](): void {
       current.dependents.clear();
@@ -42,7 +43,7 @@ export function createCell<T>(
  */
 export function createNullableCell<T>(
   initialValue: T | null = null,
-  options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void }
+  options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void; onScheduledNotify?: () => void }
 ): NullableCell<T> {
   return createCell<T | null>(initialValue, options);
 }
@@ -55,7 +56,7 @@ export function createNullableCell<T>(
  */
 export function createOptionalCell<T>(
   initialValue?: T,
-  options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void }
+  options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void; onScheduledNotify?: () => void }
 ): OptionalCell<T> {
   return createCell<T | undefined>(initialValue, options);
 }

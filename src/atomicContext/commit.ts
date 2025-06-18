@@ -1,6 +1,6 @@
 import { AtomicContext, ComputedCopy } from './types';
 import { createRecomputeDependent } from '../atomicOperations/recompute';
-import { isCellCopy, isComputedCopy, isCell } from '../stateUtil';
+import { isCellCopy, isComputedCopy, isCell, scheduleNotifications } from '../stateUtil';
 
 function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
   for (const copy of newlyInitialized) {
@@ -43,6 +43,8 @@ function handleConcurrentModification(context: AtomicContext) {
 }
 
 function handleValueChanges(context: AtomicContext) {
+  const scheduledNotifications: Array<() => void> = [];
+  
   for(const copy of context.valueChangedDirty) {
     const original = copy.original;
     const prevValue = original.stableValue;
@@ -55,6 +57,14 @@ function handleValueChanges(context: AtomicContext) {
     if(original.changeCallback) {
       original.changeCallback(prevValue, original.stableValue);
     }
+    
+    if(original.onScheduledNotify) {
+      scheduledNotifications.push(original.onScheduledNotify);
+    }
+  }
+  
+  if (scheduledNotifications.length > 0) {
+    scheduleNotifications(scheduledNotifications);
   }
 }
 

@@ -9,7 +9,7 @@ export function useValue<T>(state: State<T>): T {
     (onStoreChange) => {
       const watcher = createComputed(
         ({ get }) => get(state),
-        { onChange: onStoreChange }
+        { onScheduledNotify: onStoreChange }
       );
       
       initializeComputedState(watcher);

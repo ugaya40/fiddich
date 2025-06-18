@@ -8,6 +8,7 @@ export interface StateBase<T> {
   toJSON(): T;
   pendingPromise?: Promise<any>;
   changeCallback?: (prev: T, next: T) => void;
+  onScheduledNotify?: () => void;
 }
 
 export interface Cell<T> extends StateBase<T>, Disposable {
@@ -74,4 +75,4 @@ export type NullableComputed<T> = Computed<T | null>;
  * type ConfigCell = OptionalCell<Config>; // Cell<Config | undefined>
  */
 export type OptionalCell<T> = Cell<T | undefined>;
-export type なOptionalComputed<T> = Computed<T | undefined>;
+export type OptionalComputed<T> = Computed<T | undefined>;

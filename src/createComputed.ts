@@ -4,7 +4,7 @@ import { get } from './get';
 
 export function createComputed<T>(
   fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T,
-  options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void }
+  options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void; onScheduledNotify?: () => void }
 ): Computed<T> {
   const compare = options?.compare ?? defaultCompare;
   
@@ -24,6 +24,7 @@ export function createComputed<T>(
     compare,
     
     changeCallback: options?.onChange,
+    onScheduledNotify: options?.onScheduledNotify,
     
     [Symbol.dispose](): void {
       for (const dependency of current.dependencies) {
@@ -57,7 +58,7 @@ export function createComputed<T>(
  */
 export function createNullableComputed<T>(
   fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T | null,
-  options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void }
+  options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void; onScheduledNotify?: () => void }
 ): NullableComputed<T> {
   return createComputed<T | null>(fn, options);
 }
@@ -72,7 +73,7 @@ export function createNullableComputed<T>(
  */
 export function createOptionalComputed<T>(
   fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T | undefined,
-  options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void }
+  options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void; onScheduledNotify?: () => void }
 ): OptionalComputed<T> {
   return createComputed<T | undefined>(fn, options);
 }

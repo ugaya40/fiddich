@@ -5,7 +5,7 @@ describe('Custom Compare Functions', () => {
   describe('Cell with onChange', () => {
     it('should trigger onChange when value changes', () => {
       const onChange = vi.fn();
-      const cell = createCell(10, { onChange });
+      const cell = createCell<number>(10, { onChange });
       
       expect(onChange).toHaveBeenCalledTimes(0); // Initial value doesn't trigger
       
@@ -20,7 +20,7 @@ describe('Custom Compare Functions', () => {
 
     it('should not trigger onChange when value is same', () => {
       const onChange = vi.fn();
-      const cell = createCell('hello', { onChange });
+      const cell = createCell<string>('hello', { onChange });
       
       set(cell, 'hello'); // Same value
       expect(onChange).toHaveBeenCalledTimes(0);

@@ -85,3 +85,23 @@ export function isCellCopy<T = any>(copy: StateCopy<T>): copy is CellCopy<T> {
 export function isComputedCopy<T = any>(copy: StateCopy<T>): copy is ComputedCopy<T> {
   return copy.kind === 'computed';
 }
+
+/**
+ * Batch notifications scheduler
+ */
+let scheduled = false;
+const pendingNotifications: Array<() => void> = [];
+
+export function scheduleNotifications(notifications: Array<() => void>): void {
+  pendingNotifications.push(...notifications);
+  
+  if (!scheduled) {
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
+      const toExecute = [...pendingNotifications];
+      pendingNotifications.length = 0;
+      toExecute.forEach(notify => notify());
+    });
+  }
+}
