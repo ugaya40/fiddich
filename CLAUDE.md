@@ -10,7 +10,7 @@
 
 #### ⚠️ Claudeが過去に犯した重大な失敗と教訓 ⚠️
 
-**循環依存検出問題での失敗（2025年1月）:**
+**循環依存検出問題での失敗（2025年6月）:**
 - 場当たり的な対応を繰り返し、コードベースを混乱させた
 - コードを理解せずに修正を試み、ユーザーの生産性を著しく損なった
 - デバッグコードを無計画に追加し、問題を複雑化させた
@@ -78,7 +78,7 @@ npm run type-check
   - CommonJS形式: `dist/index.cjs`
   - TypeScript型定義: `dist/index.d.ts`
 - ソースコード: `src/` ディレクトリ
-- テストコード: `test/` ディレクトリ（現在未実装）
+- テストコード: `test/` ディレクトリ
 - パッケージタイプ: ESモジュール + CommonJS（tsupで両対応）
 
 ## 技術スタック
@@ -131,15 +131,15 @@ npm run type-check
 #### ✅ 実装済み
 - 基本的な型定義（Cell, Computed）in `src/state.ts`
 - StateCopyStoreの実装 in `src/atomicContext/`
-- AtomicContextの実装（楽観的同時実行制御、Push型評価）
+- AtomicContextの実装（楽観的同時実行制御、Pull型評価）
 - AtomicUpdateの実装（トランザクション管理）
 - Cell/Computedの作成関数（createCell, createComputed）
 - get/set/touch/pending/disposeなどのトップレベル関数
 - ops.rejectAllChanges（atomicUpdate内での全変更破棄・リセット機能）
-- 循環依存検出（本体の計算時とコピー作成時の2段階）
+- 循環依存検出（スコープベースのCircularDetectorによる静的・動的循環依存の検出）
 - pending機能（非同期状態管理、React Suspense連携）
-- React連携（useValueフック）
-- 包括的なテストファイル（basic, atomic-update, dependency-tracking, commit-rollback, diamond-dependency等）
+- React連携（useValueフック - useCallbackで最適化済み）
+- 包括的なテストファイル（basic, atomic-update, dependency-tracking, commit-rollback, diamond-dependency, circular-detection等）
 - TypeScript/tsup/Vitest設定
 
 #### ❌ 未実装
@@ -147,6 +147,16 @@ npm run type-check
 - createManagedObject（リソース管理の自動化）
 
 ### 最近の主要な改善
+
+#### Pull型評価への移行（2025年6月）
+- 従来のPush型（依存グラフ全体をvalueDirtyにマーク）からPull型（必要時に収集）へ変更
+- `collectNeedsRecomputation`で再計算が必要なComputedを収集
+- 値が変わらない場合の伝播停止機能を維持しつつ、循環依存検出との両立を実現
+
+#### スコープベースの循環依存検出
+- グローバルな`CircularDetector`を使用し、各操作の起点ごとに検出
+- 入れ子のスコープでも正確に動作（ルートスコープの管理）
+- 4つの起点：トップレベルget、ops.get、getCopy、handleValueDirty
 
 #### Rankベースの実行順序管理
 - ダイヤモンド依存の問題を解決

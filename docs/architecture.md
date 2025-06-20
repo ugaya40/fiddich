@@ -328,31 +328,63 @@ valueDirty = {left(1), right(1), bottom(2)}
 
 ## 循環依存検出
 
-Computedの初期化時と再計算時に循環依存を検出して無限ループを防止：
+スコープベースの`CircularDetector`により、Computedの初期化時と再計算時に循環依存を検出：
 
 ```typescript
-// stateUtil.tsに配置
-const computingSet = new Set<Computed<any>>();
+// stateUtil.tsのglobalCircularDetector
+type CircularDetector = {
+  setScope: (obj: {}) => void,
+  exitScope: (obj: {}) => void,
+  add(targetUnit: string, target: Computed | ComputedCopy): void,
+}
 
-export function withCircularDetection<T>(state: Computed<T>, compute: () => T): T {
-  if (computingSet.has(state)) {
-    throw new Error(`Circular dependency detected: ${state.id}`);
-  }
+function createCircularDetector(): CircularDetector {
+  let rootObject: {} | null = null;
+  const map = new Map<string, Set<string>>();
   
-  computingSet.add(state);
-  try {
-    return compute();
-  } finally {
-    computingSet.delete(state);
-  }
+  const setScope = (obj: {}) => {
+    if (rootObject == null) {
+      rootObject = obj; // 最初のスコープがルートになる
+    }
+  };
+  
+  const exitScope = (obj: {}) => {
+    if (obj === rootObject) {
+      map.clear(); // ルートスコープ終了時のみクリア
+      rootObject = null;
+    }
+  };
+  
+  const add = (targetUnit: string, target: Computed | ComputedCopy) => {
+    // targetUnitごとに独立したSetで管理
+    if (!map.has(targetUnit)) {
+      map.set(targetUnit, new Set());
+    }
+    const targetSet = map.get(targetUnit)!;
+    
+    if (targetSet.has(target.id)) {
+      throw new Error(`Circular dependency detected: ${target.id}`);
+    }
+    targetSet.add(target.id);
+  };
+  
+  return { setScope, exitScope, add };
 }
 ```
 
-### 検出される場所
-1. **通常の初期化時**: `initializeComputedStateWithGetter`内
-2. **atomicUpdate内での初期化**: `getCopy`でのComputed初期化時
-3. **再計算時**: `recomputeDependent`内
-4. **動的な依存関係変更時**: atomicUpdate内で依存関係が変わっても検出
+### 入れ子スコープの扱い
+- 最初に`setScope`を呼んだオブジェクトがルートスコープとなる
+- 入れ子で`setScope/exitScope`が呼ばれても、ルートスコープのみが有効
+- ルートスコープが終了するまで、すべての循環依存情報が保持される
+- これにより、深い再帰呼び出しでも正確に循環依存を検出
+
+### 検出される場所（4つの起点）
+1. **トップレベルget（初期化）**: `initializeComputedState`内
+2. **ops.get（再計算とコピー初期化）**: `createGet`および`createInnerGet`内  
+3. **getCopy（コピー初期化）**: `copyStore.getCopy`内で未初期化Computed処理時
+4. **handleValueDirty（コミット時）**: `commit.ts`のhandleValueDirty内
+
+各起点はtargetUnit（'initialize', 'recompute', 'copy-initialize'など）で文脈を区別。
 
 ## Pending機能（非同期状態の伝播）
 
