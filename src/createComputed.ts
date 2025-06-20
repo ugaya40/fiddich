@@ -1,9 +1,9 @@
-import { Computed, DependentState, DependencyState, NullableComputed, OptionalComputed } from './state';
+import { Computed, NullableComputed, OptionalComputed, State } from './state';
 import { Compare, defaultCompare, generateStateId } from './util';
 import { get } from './get';
 
 export function createComputed<T>(
-  fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T,
+  fn: (arg: { get: <V>(target: State<V>) => V }) => T,
   options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void; onScheduledNotify?: () => void }
 ): Computed<T> {
   const compare = options?.compare ?? defaultCompare;
@@ -12,11 +12,11 @@ export function createComputed<T>(
     id: generateStateId(),
     kind: 'computed',
     stableValue: undefined as any,
-    dependents: new Set<DependentState>(),
-    dependencies: new Set<DependencyState>(),
+    dependents: new Set<Computed>(),
+    dependencies: new Set<State>(),
     isInitialized: false,
     
-    compute(getter: <V>(target: DependencyState<V>) => V): T {
+    compute(getter: <V>(target: State<V>) => V): T {
       const result = fn({ get: getter });
       return result;
     },
@@ -57,7 +57,7 @@ export function createComputed<T>(
  * // Type is Computed<string | null>
  */
 export function createNullableComputed<T>(
-  fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T | null,
+  fn: (arg: { get: <V>(target: State<V>) => V }) => T | null,
   options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void; onScheduledNotify?: () => void }
 ): NullableComputed<T> {
   return createComputed<T | null>(fn, options);
@@ -72,7 +72,7 @@ export function createNullableComputed<T>(
  * // Type is Computed<Item | undefined>
  */
 export function createOptionalComputed<T>(
-  fn: (arg: { get: <V>(target: DependencyState<V>) => V }) => T | undefined,
+  fn: (arg: { get: <V>(target: State<V>) => V }) => T | undefined,
   options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void; onScheduledNotify?: () => void }
 ): OptionalComputed<T> {
   return createComputed<T | undefined>(fn, options);

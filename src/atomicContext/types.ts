@@ -1,29 +1,27 @@
-import { Computed, DependencyState, Cell, State } from '../state';
+import { Computed, Cell, State } from '../state';
 
-export type StateCopyBase<T> = {
+export type StateCopyBase<T = any> = {
   id: string;
   value: T;
   rank: number;
 }
 
-export interface CellCopy<T> extends StateCopyBase<T> {
+export interface CellCopy<T = any> extends StateCopyBase<T> {
   kind: 'cell',
-  dependents: Set<DependentCopy>,
+  dependents: Set<ComputedCopy>,
   valueVersion: number,
   original: Cell<T>,
 }
 
-export interface ComputedCopy<T> extends StateCopyBase<T> {
+export interface ComputedCopy<T = any> extends StateCopyBase<T> {
   kind: 'computed',
-  dependents: Set<DependentCopy>,
-  dependencies: Set<DependencyCopy>,
+  dependents: Set<ComputedCopy>,
+  dependencies: Set<StateCopy>,
   dependencyVersion: number,
   original: Computed<T>,
   isInitialized: boolean,
 }
 
-export type DependencyCopy<T = any> = CellCopy<T> | ComputedCopy<T>;
-export type DependentCopy<T = any> = ComputedCopy<T>;
 export type StateCopy<T = any> = CellCopy<T> | ComputedCopy<T>;
 
 export type CopyStore = {
@@ -32,22 +30,26 @@ export type CopyStore = {
 };
 
 export type AtomicContextStore = {
-  valueDirty: Set<DependentCopy>;
+  valueDirty: Set<ComputedCopy>;
   dependencyDirty: Set<StateCopy>;
   valueChangedDirty: Set<StateCopy>;
+  notificationDirty: Set<StateCopy>;
   copyStore: CopyStore;
   toDispose: Set<Disposable>;
-  newlyInitialized: Set<ComputedCopy<any>>;
+  newlyInitialized: Set<ComputedCopy>;
+  touchedStates: Set<StateCopy>;
 };
 
 export type AtomicContext = {
-  valueDirty: Set<DependentCopy>;
+  valueDirty: Set<ComputedCopy>;
   dependencyDirty: Set<StateCopy>;
   valueChangedDirty: Set<StateCopy>;
+  notificationDirty: Set<StateCopy>;
   copyStore: CopyStore;
   toDispose: Set<Disposable>;
-  newlyInitialized: Set<ComputedCopy<any>>;
+  newlyInitialized: Set<ComputedCopy>;
+  touchedStates: Set<StateCopy>;
   commit: () => void;
   atomicUpdatePromise: Promise<any> | undefined;
-  contextGetter: <T>(state: DependencyState<T>) => T;
+  contextGetter: <T>(state: State<T>) => T;
 };

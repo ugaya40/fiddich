@@ -1,54 +1,25 @@
-import { Cell, Computed, DependencyState, State } from './state';
+import { Cell, Computed, State } from './state';
 import { get } from './get';
 import type { CellCopy, ComputedCopy, StateCopy } from './atomicContext/types';
 
-const computingSet = new Set<Computed<any>>();
-
-export function withCircularDetection<T>(
-  state: Computed<T>,
-  compute: () => T
-): T {
-  if (computingSet.has(state)) {
-    throw new Error(`Circular dependency detected: ${state.id}`);
-  }
-  
-  computingSet.add(state);
-  try {
-    return compute();
-  } finally {
-    computingSet.delete(state);
-  }
-}
-
 export function initializeComputedState<T>(state: Computed<T>): void {
-  initializeComputedStateWithGetter(state, get);
-}
-
-export function initializeComputedStateWithGetter<T>(
-  state: Computed<T>,
-  getFunction: <V>(state: DependencyState<V>) => V
-): void {
   if (state.isInitialized) return;
   
-  withCircularDetection(state, () => {
-    const dependencies = new Set<DependencyState>();
-    
-    const getter = <V>(target: DependencyState<V>): V => {
-      dependencies.add(target);
-      return getFunction(target);
-    };
-    
-    state.stableValue = state.compute(getter);
-    
-    state.dependencies = dependencies;
-    for (const dep of dependencies) {
-      dep.dependents.add(state);
-    }
-    
-    state.isInitialized = true;
-    
-    return state.stableValue;
-  });
+  const dependencies = new Set<State>();
+  
+  const getter = <V>(target: State<V>): V => {
+    dependencies.add(target);
+    return get(target);
+  };
+  
+  state.stableValue = state.compute(getter);
+  
+  state.dependencies = dependencies;
+  for (const dep of dependencies) {
+    dep.dependents.add(state);
+  }
+  
+  state.isInitialized = true;
 }
 
 /**
@@ -90,17 +61,17 @@ export function isComputedCopy<T = any>(copy: StateCopy<T>): copy is ComputedCop
  * Batch notifications scheduler
  */
 let scheduled = false;
-const pendingNotifications: Array<() => void> = [];
+const pendingNotifications = new Set<() => void>();
 
 export function scheduleNotifications(notifications: Array<() => void>): void {
-  pendingNotifications.push(...notifications);
+  notifications.forEach(notify => pendingNotifications.add(notify));
   
   if (!scheduled) {
     scheduled = true;
     queueMicrotask(() => {
       scheduled = false;
       const toExecute = [...pendingNotifications];
-      pendingNotifications.length = 0;
+      pendingNotifications.clear();
       toExecute.forEach(notify => notify());
     });
   }

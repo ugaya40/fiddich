@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createCell, createComputed, get, set, atomicUpdate } from '../src';
-import type { Computed, DependencyState } from '../src';
+import type { Computed, State } from '../src';
 
 describe('Computed lazy initialization', () => {
   describe('Basic lazy initialization', () => {
     it('should not compute value until first access', () => {
       const cell = createCell(10);
-      const computeFn = vi.fn((arg: { get: <V>(state: DependencyState<V>) => V }) => arg.get(cell) * 2);
+      const computeFn = vi.fn((arg: { get: <V>(state: State<V>) => V }) => arg.get(cell) * 2);
       const computed = createComputed(computeFn);
       
       // Should not be called yet
@@ -42,7 +42,7 @@ describe('Computed lazy initialization', () => {
 
     it('should cache value after initialization', () => {
       const cell = createCell(10);
-      const computeFn = vi.fn((arg: { get: <V>(state: DependencyState<V>) => V }) => arg.get(cell) * 2);
+      const computeFn = vi.fn((arg: { get: <V>(state: State<V>) => V }) => arg.get(cell) * 2);
       const computed = createComputed(computeFn);
       
       // First access

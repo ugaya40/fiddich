@@ -1,8 +1,8 @@
 import { createAtomicContext, createAtomicOperations, AtomicContext } from './atomicContext';
-import { DependencyState, DependentState, Cell, State } from './state';
+import { Cell, State } from './state';
 
 type AtomicUpdateOps = {
-  get: <T>(state: DependencyState<T>) => T;
+  get: <T>(state: State<T>) => T;
   set: <T>(cell: Cell<T>, value: T) => void;
   touch: <T>(state: State<T>) => void;
   dispose: <T extends Disposable>(target: T) => void;

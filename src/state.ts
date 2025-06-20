@@ -1,6 +1,6 @@
 import { Compare } from "./util";
 
-export interface StateBase<T> {
+export interface StateBase<T = any> {
   kind: string;
   id: string;
   stableValue: T;
@@ -11,23 +11,21 @@ export interface StateBase<T> {
   onScheduledNotify?: () => void;
 }
 
-export interface Cell<T> extends StateBase<T>, Disposable {
+export interface Cell<T = any> extends StateBase<T>, Disposable {
   kind: 'cell';
-  dependents: Set<DependentState>;
+  dependents: Set<Computed<any>>;
   valueVersion: number;
 }
 
-export interface Computed<T> extends StateBase<T>, Disposable {
+export interface Computed<T = any> extends StateBase<T>, Disposable {
   kind: 'computed';
-  dependents: Set<DependentState>;
-  dependencies: Set<DependencyState>;
+  dependents: Set<Computed<any>>;
+  dependencies: Set<State<any>>;
   dependencyVersion: number;
   isInitialized: boolean;
   compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
 }
 
-export type DependentState<T = any> = Computed<T>;
-export type DependencyState<T = any> = Cell<T> | Computed<T>;
 export type State<T = any> = Cell<T> | Computed<T>;
 
 /**

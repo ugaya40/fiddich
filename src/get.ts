@@ -1,7 +1,7 @@
-import { DependencyState } from './state';
+import { State } from './state';
 import { initializeComputedState, isCell, isComputed } from './stateUtil';
 
-export function get<T>(state: DependencyState<T>): T {
+export function get<T>(state: State<T>): T {
   if (isCell(state)) {
     return state.stableValue;
   } else if (isComputed(state)) {

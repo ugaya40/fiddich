@@ -1,4 +1,4 @@
-import { Cell, DependentState, NullableCell, OptionalCell } from './state';
+import { Cell, Computed, NullableCell, OptionalCell } from './state';
 import { Compare, defaultCompare, generateStateId, isDisposable } from './util';
 
 export function createCell<T>(
@@ -11,7 +11,7 @@ export function createCell<T>(
     id: generateStateId(),
     kind: 'cell',
     stableValue: initialValue,
-    dependents: new Set<DependentState>(),
+    dependents: new Set<Computed>(),
     
     compare,
     

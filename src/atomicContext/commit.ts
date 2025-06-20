@@ -1,5 +1,5 @@
-import { AtomicContext, ComputedCopy } from './types';
-import { createRecomputeDependent } from '../atomicOperations/recompute';
+import { AtomicContext, ComputedCopy, StateCopy } from './types';
+import { createRecomputeComputed } from '../atomicOperations/recompute';
 import { isCellCopy, isComputedCopy, isCell, scheduleNotifications } from '../stateUtil';
 
 function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
@@ -18,7 +18,7 @@ function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
 }
 
 function handleValueDirty(context: AtomicContext) {
-  const recomputeDependent = createRecomputeDependent(context);
+  const recomputeDependent = createRecomputeComputed(context);
   
   while (context.valueDirty.size > 0) {
     // Sort by rank
@@ -43,8 +43,6 @@ function handleConcurrentModification(context: AtomicContext) {
 }
 
 function handleValueChanges(context: AtomicContext) {
-  const scheduledNotifications: Array<() => void> = [];
-  
   for(const copy of context.valueChangedDirty) {
     const original = copy.original;
     const prevValue = original.stableValue;
@@ -57,14 +55,6 @@ function handleValueChanges(context: AtomicContext) {
     if(original.changeCallback) {
       original.changeCallback(prevValue, original.stableValue);
     }
-    
-    if(original.onScheduledNotify) {
-      scheduledNotifications.push(original.onScheduledNotify);
-    }
-  }
-  
-  if (scheduledNotifications.length > 0) {
-    scheduleNotifications(scheduledNotifications);
   }
 }
 
@@ -98,6 +88,27 @@ function handleDisposables(context: AtomicContext) {
   }
 }
 
+function handleNotifications(context: AtomicContext) {
+  const scheduledNotifications: Array<() => void> = [];
+  
+  // Merge valueChangedDirty and notificationDirty
+  const allNotifications = new Set<StateCopy<any>>([
+    ...context.valueChangedDirty,
+    ...context.notificationDirty
+  ]);
+  
+  for (const copy of allNotifications) {
+    const original = copy.original;
+    if (original.onScheduledNotify) {
+      scheduledNotifications.push(original.onScheduledNotify);
+    }
+  }
+  
+  if (scheduledNotifications.length > 0) {
+    scheduleNotifications(scheduledNotifications);
+  }
+}
+
 export function createCommit(context: AtomicContext): () => void {
   return () => {
     handleNewlyInitialized(context.newlyInitialized);
@@ -109,6 +120,8 @@ export function createCommit(context: AtomicContext): () => void {
     handleValueChanges(context);
     
     handleDependencyChanges(context);
+    
+    handleNotifications(context);
     
     handleDisposables(context);
   };

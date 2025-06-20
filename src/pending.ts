@@ -1,4 +1,5 @@
 import { State } from './state';
+import { touch } from './touch';
 
 export function pending<T>(state: State<T>, promise: Promise<any>): void {
   const visited = new Set<State>();
@@ -19,6 +20,10 @@ export function pending<T>(state: State<T>, promise: Promise<any>): void {
   }
   
   collectStates(state);
+  
+  for (const s of states) {
+    touch(s);
+  }
   
   promise.finally(() => {
     for (const s of states) {

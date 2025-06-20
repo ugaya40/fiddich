@@ -12,8 +12,6 @@ export type {
   Cell, 
   Computed, 
   State, 
-  DependencyState, 
-  DependentState,
   StateValue,
   CellValue,
   ComputedValue,
