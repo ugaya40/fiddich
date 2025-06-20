@@ -271,7 +271,7 @@ describe('Touch functionality', () => {
       expect(onScheduledNotify).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle circular dependencies gracefully', () => {
+    it('should detect circular dependencies on touch commit', () => {
       const cellA = createCell(1);
       const cellB = createCell(2);
       
@@ -287,15 +287,12 @@ describe('Touch functionality', () => {
       // Initialize
       expect(get(computedB)).toBe(3); // 2 + 1
       
-      // Change dependency pattern
+      // Change dependency pattern to create circular dependency
       useA = false;
       
-      // This will update computedA's dependencies
-      touch(computedA);
-      
-      // Now computedA depends on computedB, and computedB depends on computedA
-      // Touch should still work without infinite loop
-      expect(() => touch(cellA)).not.toThrow();
+      // Touch computedA will trigger recomputation in commit phase
+      // This should detect circular dependency between computedA and computedB
+      expect(() => touch(computedA)).toThrow(/Circular dependency/);
     });
 
     it('should handle touching during computation', () => {

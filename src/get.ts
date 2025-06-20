@@ -1,5 +1,5 @@
 import { State } from './state';
-import { initializeComputedState, isCell, isComputed } from './stateUtil';
+import { initializeComputedState, isCell, isComputed, globalCircularDetector } from './stateUtil';
 
 export function get<T>(state: State<T>): T {
   if (isCell(state)) {

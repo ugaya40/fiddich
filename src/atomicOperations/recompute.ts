@@ -1,8 +1,8 @@
 import { AtomicContextStore, ComputedCopy, StateCopy } from '../atomicContext/index';
-import { State } from '../state';
-import { isComputedCopy } from '../stateUtil';
+import { globalCircularDetector, markDependentsAsValueDirty, markDependentsAsTouched } from '../stateUtil';
+import { createInnerGet } from './get';
 
-function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore, recomputeDependent: (copy: ComputedCopy) => void) {
+function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore, recomputeComputed: (copy: ComputedCopy) => void) {
   // Start with all existing dependencies in a "remaining" set
   // As we re-discover dependencies during recomputation, we'll remove them from this set
   // Any dependencies left in this set at the end are no longer needed
@@ -35,19 +35,7 @@ function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore, 
     targetCopy.dependents.add(copy);
   };
   
-  const getter = <V>(target: State<V>): V => {
-    const targetCopy = store.copyStore.getCopy(target);
-    
-    // If the dependency is a computed that needs recalculation, do it now
-    if (isComputedCopy(targetCopy) && store.valueDirty.has(targetCopy)) {
-      recomputeDependent(targetCopy);
-      store.valueDirty.delete(targetCopy);
-    }
-    
-    // Track this as an active dependency
-    trackDependency(targetCopy);
-    return targetCopy.value;
-  };
+  const getter = createInnerGet(store, trackDependency, recomputeComputed);
   
   // Dependencies changed if we have new ones or some old ones are no longer used
   const hasChanges = () => hasNewDependencies || remainingDependencies.size > 0;
@@ -85,23 +73,17 @@ export function createRecomputeComputed(store: AtomicContextStore) {
     if (hasValueChanged) {
       copy.value = newValue;
       valueChangedDirty.add(copy);
-
-      for (const dependent of copy.dependents) {
-        store.valueDirty.add(dependent);
-      }
+      
+      markDependentsAsValueDirty(copy, store);
     } 
     
     if (isTouched) {
       if(!hasValueChanged) {
         notificationDirty.add(copy);
-        for (const dependent of copy.dependents) {
-          store.valueDirty.add(dependent);
-        }
+        markDependentsAsValueDirty(copy, store);
       }
 
-      for (const dependent of copy.dependents) {
-        touchedStates.add(dependent);
-      }
+      markDependentsAsTouched(copy, store);
     }
   };
   

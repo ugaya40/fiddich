@@ -51,5 +51,4 @@ export type AtomicContext = {
   touchedStates: Set<StateCopy>;
   commit: () => void;
   atomicUpdatePromise: Promise<any> | undefined;
-  contextGetter: <T>(state: State<T>) => T;
 };

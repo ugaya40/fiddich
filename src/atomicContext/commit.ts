@@ -1,6 +1,6 @@
 import { AtomicContext, ComputedCopy, StateCopy } from './types';
 import { createRecomputeComputed } from '../atomicOperations/recompute';
-import { isCellCopy, isComputedCopy, isCell, scheduleNotifications } from '../stateUtil';
+import { isCellCopy, isComputedCopy, isCell, scheduleNotifications, globalCircularDetector } from '../stateUtil';
 
 function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
   for (const copy of newlyInitialized) {
@@ -27,7 +27,14 @@ function handleValueDirty(context: AtomicContext) {
     // Process the first node (lowest rank)
     const copy = sorted[0];
     if (isComputedCopy(copy)) {
-      recomputeDependent(copy);
+      const detector = globalCircularDetector();
+      const scope = {};
+      detector.setScope(scope);
+      try {
+        recomputeDependent(copy);
+      } finally {
+        detector.exitScope(scope);
+      }
     }
     context.valueDirty.delete(copy);
   }

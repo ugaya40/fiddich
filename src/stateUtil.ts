@@ -1,9 +1,13 @@
 import { Cell, Computed, State } from './state';
 import { get } from './get';
-import type { CellCopy, ComputedCopy, StateCopy } from './atomicContext/types';
+import type { CellCopy, ComputedCopy, StateCopy, AtomicContext, AtomicContextStore } from './atomicContext/types';
 
 export function initializeComputedState<T>(state: Computed<T>): void {
   if (state.isInitialized) return;
+  
+  const detector = globalCircularDetector();
+  const scope = {};
+  detector.setScope(scope);
   
   const dependencies = new Set<State>();
   
@@ -12,7 +16,13 @@ export function initializeComputedState<T>(state: Computed<T>): void {
     return get(target);
   };
   
-  state.stableValue = state.compute(getter);
+  try {
+    detector.add('initialize',state);
+    state.stableValue = state.compute(getter);
+  }
+  finally {
+    detector.exitScope(scope)
+  }
   
   state.dependencies = dependencies;
   for (const dep of dependencies) {
@@ -75,4 +85,97 @@ export function scheduleNotifications(notifications: Array<() => void>): void {
       toExecute.forEach(notify => notify());
     });
   }
+}
+
+/**
+ * Mark direct dependents of a state copy as valueDirty
+ */
+export function markDependentsAsValueDirty(
+  copy: StateCopy,
+  context: AtomicContextStore
+) {
+  // Only mark direct dependents (no recursion)
+  for (const dependent of copy.dependents) {
+    if (isComputedCopy(dependent)) {
+      context.valueDirty.add(dependent);
+    }
+  }
+}
+
+/**
+ * Recursively mark all dependents as touched
+ */
+function markDependentsAsTouchedInternal(
+  copy: StateCopy,
+  context: AtomicContextStore,
+  visited: Set<StateCopy>
+) {
+  if (visited.has(copy)) return;
+  visited.add(copy);
+  
+  for (const dependent of copy.dependents) {
+    context.touchedStates.add(dependent);
+    // Recursively process
+    markDependentsAsTouchedInternal(dependent, context, visited);
+  }
+}
+
+/**
+ * Mark all dependents of a state copy as touched
+ */
+export function markDependentsAsTouched(
+  copy: StateCopy,
+  context: AtomicContextStore
+) {
+  const visited = new Set<StateCopy>();
+  markDependentsAsTouchedInternal(copy, context, visited);
+}
+
+type CircularDetector = {
+  setScope: (obj: {}) => void,
+  exitScope: (obj: {}) => void,
+  add(targetUnit: string ,target: Computed | ComputedCopy): void,
+}
+
+
+function createCircularDetector() : CircularDetector {
+  let rootObject: {} | null = null;
+  const map = new Map<string, Set<string>>();
+
+  const add = (targetUnit: string ,target: Computed | ComputedCopy) => {
+    let targetSet: Set<string> | undefined = undefined;
+    if(!map.has(targetUnit)) {
+      targetSet = new Set();
+      map.set(targetUnit, targetSet);
+    } else {
+      targetSet = map.get(targetUnit)!;
+    }
+    
+    if(targetSet.has(target.id)) {
+      throw new Error(`Circular dependency detected: ${target.id}`);
+    }
+    targetSet.add(target.id);
+  };
+  const setScope = (obj: {}) => {
+    if(rootObject == null) {
+      rootObject = obj;
+    }
+  };
+  const exitScope = (obj: {}) => {
+    if(obj === rootObject) {
+      map.clear();
+      rootObject = null;
+    }
+  };
+  
+  return {
+    add,
+    setScope,
+    exitScope
+  }
+}
+
+const detector = createCircularDetector();
+export function globalCircularDetector() {
+  return detector;
 }

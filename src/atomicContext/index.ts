@@ -26,10 +26,8 @@ export function createAtomicContext(): AtomicContext {
     touchedStates,
     commit: null!,
     atomicUpdatePromise: undefined,
-    contextGetter: null!
   };
   
-  partialContext.contextGetter = createGet(partialContext);
   
   partialContext.copyStore = createCopyStore(partialContext);
   
@@ -40,7 +38,7 @@ export function createAtomicContext(): AtomicContext {
 
 export function createAtomicOperations(context: AtomicContext) {
   return {
-    get: context.contextGetter,
+    get: lazyFunction(() => createGet(context)),
     set: lazyFunction(() => createSet(context)),
     touch: lazyFunction(() => createTouch(context)),
     dispose: lazyFunction(() => createDispose(context)),
