@@ -1,8 +1,10 @@
 import { AtomicContextStore, ComputedCopy, StateCopy } from '../atomicContext/index';
-import { globalCircularDetector, markDependentsAsValueDirty, markDependentsAsTouched } from '../stateUtil';
-import { createInnerGet } from './get';
+import { State } from '../state';
+import { markDirectDependentsAsValueDirty } from '../stateUtil';
+import { getForRecompute } from './get';
+import { propagateTouchedRecursively } from './touch';
 
-function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore, recomputeComputed: (copy: ComputedCopy) => void) {
+function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore) {
   // Start with all existing dependencies in a "remaining" set
   // As we re-discover dependencies during recomputation, we'll remove them from this set
   // Any dependencies left in this set at the end are no longer needed
@@ -35,7 +37,7 @@ function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore, 
     targetCopy.dependents.add(copy);
   };
   
-  const getter = createInnerGet(store, trackDependency, recomputeComputed);
+  const getter = <T>(state: State<T>) => getForRecompute<T>(state, store, trackDependency);
   
   // Dependencies changed if we have new ones or some old ones are no longer used
   const hasChanges = () => hasNewDependencies || remainingDependencies.size > 0;
@@ -43,49 +45,45 @@ function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore, 
   return { getter, hasChanges };
 }
 
-export function createRecomputeComputed(store: AtomicContextStore) {
+export function recompute(copy: ComputedCopy, store: AtomicContextStore) {
   const { dependencyDirty, valueChangedDirty, notificationDirty, touchedStates } = store;
-  
-  const recomputeComputed = (copy: ComputedCopy) => {
-    const { getter, hasChanges } = createDependencyTracker(copy, store, recomputeComputed);
-    
-    const oldValue = copy.value;
-    const newValue = copy.original.compute(getter);
-    
-    if (hasChanges()) {
-      dependencyDirty.add(copy);
-      
-      // Update rank based on new dependencies
-      const newRank = copy.dependencies.size > 0
-        ? Math.max(...[...copy.dependencies].map(d => d.rank)) + 1
-        : 0;
-      
-      if (newRank > copy.rank) {
-        copy.rank = newRank;
-        // Note: We don't need to propagate rank updates to dependents
-        // because they will be recalculated when processed
-      }
-    }
-    
-    const isTouched = touchedStates.has(copy);
-    const hasValueChanged = !copy.original.compare(oldValue, newValue);
-    
-    if (hasValueChanged) {
-      copy.value = newValue;
-      valueChangedDirty.add(copy);
-      
-      markDependentsAsValueDirty(copy, store);
-    } 
-    
-    if (isTouched) {
-      if(!hasValueChanged) {
-        notificationDirty.add(copy);
-        markDependentsAsValueDirty(copy, store);
-      }
 
-      markDependentsAsTouched(copy, store);
-    }
-  };
+  const { getter, hasChanges } = createDependencyTracker(copy, store);
+    
+  const oldValue = copy.value;
+  const newValue = copy.original.compute(getter);
   
-  return recomputeComputed;
+  if (hasChanges()) {
+    dependencyDirty.add(copy);
+    
+    // Update rank based on new dependencies
+    const newRank = copy.dependencies.size > 0
+      ? Math.max(...[...copy.dependencies].map(d => d.rank)) + 1
+      : 0;
+    
+    if (newRank > copy.rank) {
+      copy.rank = newRank;
+      // Note: We don't need to propagate rank updates to dependents
+      // because they will be recalculated when processed
+    }
+  }
+  
+  const isTouched = touchedStates.has(copy);
+  const hasValueChanged = !copy.original.compare(oldValue, newValue);
+  
+  if (hasValueChanged) {
+    copy.value = newValue;
+    valueChangedDirty.add(copy);
+    
+    markDirectDependentsAsValueDirty(copy, store);
+  } 
+  
+  if (isTouched) {
+    if(!hasValueChanged) {
+      notificationDirty.add(copy);
+      markDirectDependentsAsValueDirty(copy, store);
+    }
+
+    propagateTouchedRecursively(copy, store);
+  }
 }

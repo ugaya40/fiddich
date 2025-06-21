@@ -25,6 +25,7 @@ export interface ComputedCopy<T = any> extends StateCopyBase<T> {
 export type StateCopy<T = any> = CellCopy<T> | ComputedCopy<T>;
 
 export type CopyStore = {
+  copyStoreMap: Map<State, StateCopy>,
   getCopy: <T>(state: State<T>) => StateCopy<T>;
   clear: () => void;
 };

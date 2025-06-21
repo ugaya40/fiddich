@@ -22,4 +22,4 @@ export type {
   OptionalComputed
 } from './state';
 
-export { isCell, isComputed, isState } from './stateUtil';
+export { isCell, isComputed, isState } from './stateUtil/typeUtil';

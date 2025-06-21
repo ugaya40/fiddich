@@ -2,16 +2,14 @@ import { AtomicContext } from '../atomicContext/index';
 import { State } from '../state';
 import { pending } from '../pending';
 
-export function createPending(context: AtomicContext) {
-  return <T>(state: State<T>, promise?: Promise<any>): void => {
-    const targetPromise = promise || context.atomicUpdatePromise;
+export function pendingForAtomicOperation<T>(state: State<T>, context: AtomicContext, promise?: Promise<any>) {
+  const targetPromise = promise || context.atomicUpdatePromise;
     
-    if (!targetPromise) {
-      throw new Error(
-        'pending() requires a Promise argument in synchronous atomicUpdate'
-      );
-    }
-    
-    pending(state, targetPromise);
-  };
+  if (!targetPromise) {
+    throw new Error(
+      'pending() requires a Promise argument in synchronous atomicUpdate'
+    );
+  }
+  
+  pending(state, targetPromise);
 }

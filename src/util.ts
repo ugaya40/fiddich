@@ -18,28 +18,3 @@ export function generateStateId(): string {
   counter++;
   return `${counter}`;
 }
-
-/**
- * Creates a lazily initialized function.
- * The factory is called only once on the first invocation,
- * and the result is cached for subsequent calls.
- * 
- * @example
- * const lazyGet = lazyFunction(() => createGet(context));
- * 
- * // createGet is not called yet
- * lazyGet(state); // createGet is called here, then get(state) is executed
- * lazyGet(state2); // uses cached get function
- */
-export function lazyFunction<T extends (...args: any[]) => any>(
-  factory: () => T
-): T {
-  let fn: T | undefined;
-  
-  return ((...args) => {
-    if (!fn) {
-      fn = factory();
-    }
-    return fn(...args);
-  }) as T;
-}

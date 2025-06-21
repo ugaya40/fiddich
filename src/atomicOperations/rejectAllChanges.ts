@@ -1,15 +1,13 @@
 import { AtomicContext } from '../atomicContext/types';
 
-export function createRejectAllChanges(context: AtomicContext) {
-  return () => {
-    context.valueDirty.clear();
-    context.dependencyDirty.clear();
-    context.valueChangedDirty.clear();
-    context.notificationDirty.clear();
-    context.newlyInitialized.clear();
-    context.toDispose.clear();
-    context.touchedStates.clear();
-    
-    context.copyStore.clear();
-  };
+export function rejectAllChanges(context: AtomicContext) {
+  context.valueDirty.clear();
+  context.dependencyDirty.clear();
+  context.valueChangedDirty.clear();
+  context.notificationDirty.clear();
+  context.newlyInitialized.clear();
+  context.toDispose.clear();
+  context.touchedStates.clear();
+  
+  context.copyStore.clear();
 }

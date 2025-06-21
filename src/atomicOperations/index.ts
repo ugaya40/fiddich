@@ -1,6 +1,6 @@
-export { createGet } from './get';
-export { createSet } from './set';
-export { createTouch } from './touch';
-export { createDispose } from './dispose';
-export { createPending } from './pending';
-export { createRejectAllChanges } from './rejectAllChanges';
+export { getForAtomicOperation } from './get';
+export { setForAtomicOperation } from './set';
+export { touchForAtomicOperation } from './touch';
+export { dispose } from './dispose';
+export { pendingForAtomicOperation } from './pending';
+export { rejectAllChanges } from './rejectAllChanges';

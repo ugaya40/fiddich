@@ -1,8 +1,8 @@
-import { createGet, createSet, createTouch, createDispose, createPending, createRejectAllChanges } from '../atomicOperations';
+import { touchForAtomicOperation, getForAtomicOperation, pendingForAtomicOperation, rejectAllChanges, dispose, setForAtomicOperation } from '../atomicOperations';
 import { createCopyStore } from './copyStore';
-import { createCommit } from './commit';
+import { commit } from './commit';
 import { AtomicContext, StateCopy, ComputedCopy } from './types';
-import { lazyFunction } from '../util';
+import { Cell, State } from '../state';
 
 export * from './types';
 
@@ -28,21 +28,19 @@ export function createAtomicContext(): AtomicContext {
     atomicUpdatePromise: undefined,
   };
   
-  
   partialContext.copyStore = createCopyStore(partialContext);
-  
-  partialContext.commit = createCommit(partialContext);
+  partialContext.commit = () => commit(partialContext);
   
   return partialContext;
 }
 
 export function createAtomicOperations(context: AtomicContext) {
   return {
-    get: lazyFunction(() => createGet(context)),
-    set: lazyFunction(() => createSet(context)),
-    touch: lazyFunction(() => createTouch(context)),
-    dispose: lazyFunction(() => createDispose(context)),
-    pending: lazyFunction(() => createPending(context)),
-    rejectAllChanges: lazyFunction(() => createRejectAllChanges(context))
+    get: <T>(state: State<T>) => getForAtomicOperation(state, context),
+    set: <T>(cell: Cell<T>, newValue: T) => setForAtomicOperation(cell, newValue, context),
+    touch: (state: State) => touchForAtomicOperation(state, context),
+    dispose: <T extends Disposable>(target: T) => dispose(target, context),
+    pending: (state: State, promise?: Promise<any>) => pendingForAtomicOperation(state, context, promise),
+    rejectAllChanges: () => rejectAllChanges(context)
   };
 }

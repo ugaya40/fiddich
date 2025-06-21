@@ -1,9 +1,6 @@
 import { AtomicContext } from '../atomicContext/index';
 
-export function createDispose(context: AtomicContext) {
+export function dispose<T extends Disposable>(target: T, context: AtomicContext) {
   const { toDispose } = context;
-  
-  return <T extends Disposable>(target: T): void => {
-    toDispose.add(target);
-  };
+  toDispose.add(target);
 }

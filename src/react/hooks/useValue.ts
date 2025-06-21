@@ -2,7 +2,7 @@ import { useSyncExternalStore, useCallback } from 'react';
 import { State } from '../../state';
 import { createComputed } from '../../createComputed';
 import { getSuspense } from '../getSuspense';
-import { initializeComputedState } from '../../stateUtil';
+import { initializeComputed } from '../../stateUtil/initializeComputed';
 
 export function useValue<T>(state: State<T>): T {
   const subscribe = useCallback(
@@ -12,7 +12,7 @@ export function useValue<T>(state: State<T>): T {
         { onScheduledNotify: onStoreChange }
       );
       
-      initializeComputedState(watcher);
+      initializeComputed(watcher);
       
       return () => {
         watcher[Symbol.dispose]();

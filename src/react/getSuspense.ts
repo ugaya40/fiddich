@@ -1,5 +1,6 @@
 import { State } from '../state';
-import { initializeComputedState, isComputed } from '../stateUtil';
+import { initializeComputed } from '../stateUtil/initializeComputed';
+import { isComputed } from '../stateUtil/typeUtil';
 
 export function getSuspense<T>(state: State<T>): T {
   if (state.pendingPromise) {
@@ -8,7 +9,7 @@ export function getSuspense<T>(state: State<T>): T {
   
   if(isComputed(state)) {
     if (!state.isInitialized) {
-      initializeComputedState(state);
+      initializeComputed(state);
     }
   }
 

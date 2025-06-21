@@ -1,12 +1,13 @@
 import { State } from './state';
-import { initializeComputedState, isCell, isComputed, globalCircularDetector } from './stateUtil';
+import { initializeComputed } from './stateUtil/initializeComputed';
+import { isCell, isComputed } from './stateUtil/typeUtil';
 
 export function get<T>(state: State<T>): T {
   if (isCell(state)) {
     return state.stableValue;
   } else if (isComputed(state)) {
     if (!state.isInitialized) {
-      initializeComputedState(state);
+      initializeComputed(state);
     }
     return state.stableValue;
   }

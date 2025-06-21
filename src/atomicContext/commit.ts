@@ -1,6 +1,8 @@
 import { AtomicContext, ComputedCopy, StateCopy } from './types';
-import { createRecomputeComputed } from '../atomicOperations/recompute';
-import { isCellCopy, isComputedCopy, isCell, scheduleNotifications, globalCircularDetector } from '../stateUtil';
+import { recompute } from '../atomicOperations/recompute';
+import { scheduleNotifications } from '../stateUtil';
+import { globalCircularDetector } from '../stateUtil/circularDetector';
+import { isCell, isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
 
 function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
   for (const copy of newlyInitialized) {
@@ -18,7 +20,6 @@ function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy<any>>) {
 }
 
 function handleValueDirty(context: AtomicContext) {
-  const recomputeDependent = createRecomputeComputed(context);
   
   while (context.valueDirty.size > 0) {
     // Sort by rank
@@ -31,7 +32,7 @@ function handleValueDirty(context: AtomicContext) {
       const scope = {};
       detector.setScope(scope);
       try {
-        recomputeDependent(copy);
+        recompute(copy,context);
       } finally {
         detector.exitScope(scope);
       }
@@ -116,20 +117,18 @@ function handleNotifications(context: AtomicContext) {
   }
 }
 
-export function createCommit(context: AtomicContext): () => void {
-  return () => {
-    handleNewlyInitialized(context.newlyInitialized);
+export function commit(context: AtomicContext): void {
+  handleNewlyInitialized(context.newlyInitialized);
     
-    handleValueDirty(context);
-    
-    handleConcurrentModification(context);
-    
-    handleValueChanges(context);
-    
-    handleDependencyChanges(context);
-    
-    handleNotifications(context);
-    
-    handleDisposables(context);
-  };
+  handleValueDirty(context);
+  
+  handleConcurrentModification(context);
+  
+  handleValueChanges(context);
+  
+  handleDependencyChanges(context);
+  
+  handleNotifications(context);
+  
+  handleDisposables(context);
 }
