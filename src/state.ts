@@ -1,4 +1,4 @@
-import { Compare } from "./util";
+import type { Compare } from './util';
 
 export interface StateBase<T = any> {
   kind: string;
@@ -13,14 +13,14 @@ export interface StateBase<T = any> {
 
 export interface Cell<T = any> extends StateBase<T>, Disposable {
   kind: 'cell';
-  dependents: Set<Computed<any>>;
+  dependents: Set<Computed>;
   valueVersion: number;
 }
 
 export interface Computed<T = any> extends StateBase<T>, Disposable {
   kind: 'computed';
-  dependents: Set<Computed<any>>;
-  dependencies: Set<State<any>>;
+  dependents: Set<Computed>;
+  dependencies: Set<State>;
   dependencyVersion: number;
   isInitialized: boolean;
   compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
@@ -67,7 +67,7 @@ export type NullableCell<T> = Cell<T | null>;
 export type NullableComputed<T> = Computed<T | null>;
 
 /**
- * Helper for creating optional state patterns  
+ * Helper for creating optional state patterns
  * @example
  * const configCell = createCell<Config | undefined>(undefined);
  * type ConfigCell = OptionalCell<Config>; // Cell<Config | undefined>

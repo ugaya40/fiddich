@@ -23,12 +23,17 @@
     "dev": "tsup --watch",
     "test": "vitest run --reporter=verbose",
     "test:ui": "vitest --ui",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "lint": "biome check ./src ./test",
+    "lint:fix": "biome check --write ./src ./test",
+    "format": "biome format --write ./src ./test",
+    "check": "biome check ./src ./test && npm run type-check"
   },
   "peerDependencies": {
     "react": ">=18.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.0.4",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitest/ui": "^1.0.0",

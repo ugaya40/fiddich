@@ -1,5 +1,5 @@
-import { AtomicContext, ComputedCopy } from '../atomicContext/index';
-import { State } from '../state';
+import type { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/index';
+import type { State } from '../state';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 import { recompute } from './recompute';
@@ -14,12 +14,12 @@ function collectNeedsRecomputationInternal(
     return;
   }
   visited.add(computed);
-  
+
   if (context.valueDirty.has(computed)) {
     collected.add(computed);
     return;
   }
-  
+
   let needsRecompute = false;
   for (const dep of computed.dependencies) {
     if (isComputedCopy(dep)) {
@@ -29,7 +29,7 @@ function collectNeedsRecomputationInternal(
       }
     }
   }
-  
+
   if (needsRecompute) {
     collected.add(computed);
   }
@@ -41,29 +41,26 @@ function collectNeedsRecomputation(
 ): Set<ComputedCopy> {
   const collected = new Set<ComputedCopy>();
   const visited = new Set<ComputedCopy>();
-  
+
   collectNeedsRecomputationInternal(target, context, collected, visited);
-  
+
   return collected;
 }
 
-function recomputeCollected(
-  collected: Set<ComputedCopy>,
-  context: AtomicContext,
-) {
+function recomputeCollected(collected: Set<ComputedCopy>, context: AtomicContext) {
   // Sort by rank ascending
   const sorted = [...collected].sort((a, b) => a.rank - b.rank);
-  
+
   const detector = globalCircularDetector();
   const scope = {};
   detector.setScope(scope);
-  
+
   try {
     for (const copy of sorted) {
       // Recompute if still valueDirty
       if (context.valueDirty.has(copy)) {
         detector.add('recompute', copy);
-        recompute(copy,context);
+        recompute(copy, context);
         context.valueDirty.delete(copy);
       }
     }
@@ -72,14 +69,13 @@ function recomputeCollected(
   }
 }
 
-
 export function getForRecompute<T>(
   target: State<T>,
   context: AtomicContext,
-  dependencyTracker: (targetCopy: any) => void,
+  dependencyTracker: (targetCopy: StateCopy) => void
 ) {
   const targetCopy = context.copyStore.getCopy(target);
-    
+
   // For computed, traverse dependencies and recompute what's needed
   if (isComputedCopy(targetCopy)) {
     const needsRecompute = collectNeedsRecomputation(targetCopy, context);
@@ -87,7 +83,7 @@ export function getForRecompute<T>(
       recomputeCollected(needsRecompute, context);
     }
   }
-  
+
   // Track this as an active dependency
   dependencyTracker(targetCopy);
   return targetCopy.value;
@@ -95,13 +91,13 @@ export function getForRecompute<T>(
 
 export function getForAtomicOperation<T>(state: State<T>, context: AtomicContext) {
   const targetCopy = context.copyStore.getCopy(state);
-    
+
   if (isComputedCopy(targetCopy)) {
     const needsRecompute = collectNeedsRecomputation(targetCopy, context);
     if (needsRecompute.size > 0) {
       recomputeCollected(needsRecompute, context);
     }
   }
-  
+
   return targetCopy.value;
 }

@@ -1,4 +1,4 @@
-import { AtomicContext } from '../atomicContext/types';
+import type { AtomicContext } from '../atomicContext/types';
 
 export function rejectAllChanges(context: AtomicContext) {
   context.valueDirty.clear();
@@ -8,6 +8,6 @@ export function rejectAllChanges(context: AtomicContext) {
   context.newlyInitialized.clear();
   context.toDispose.clear();
   context.touchedStates.clear();
-  
+
   context.copyStore.clear();
 }

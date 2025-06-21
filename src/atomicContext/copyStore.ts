@@ -1,13 +1,13 @@
-import { Computed, Cell, State } from '../state';
-import { assertUnreachable } from '../util';
-import { CellCopy, ComputedCopy, StateCopy } from './types';
-import { AtomicContext } from './index';
-import { isCell, isCellCopy, isComputed, isComputedCopy } from '../stateUtil/typeUtil';
+import type { Cell, Computed, State } from '../state';
 import { initializeComputedCopy } from '../stateUtil/initializeComputedCopy';
+import { isCell, isCellCopy, isComputed, isComputedCopy } from '../stateUtil/typeUtil';
+import { assertUnreachable } from '../util';
+import type { AtomicContext } from './index';
+import type { CellCopy, ComputedCopy, StateCopy } from './types';
 
 function createCopy<T>(state: Cell<T>): CellCopy<T>;
 function createCopy<T>(state: Computed<T>): ComputedCopy<T>;
-function createCopy<T>(state: State<T>): StateCopy<T>
+function createCopy<T>(state: State<T>): StateCopy<T>;
 function createCopy<T>(state: State<T>): StateCopy<T> {
   switch (state.kind) {
     case 'cell':
@@ -18,9 +18,9 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         value: state.stableValue,
         dependents: new Set(),
         valueVersion: state.valueVersion,
-        rank: 0  // Cells have rank 0
+        rank: 0, // Cells have rank 0
       };
-    
+
     case 'computed':
       return {
         id: state.id,
@@ -31,9 +31,9 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         dependencies: new Set(),
         dependencyVersion: state.dependencyVersion,
         isInitialized: state.isInitialized,
-        rank: 0  // Will be calculated later based on dependencies
+        rank: 0, // Will be calculated later based on dependencies
       };
-    
+
     default:
       assertUnreachable(state);
   }
@@ -41,54 +41,53 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
 
 function getCopyInternal<T>(state: Cell<T>, context: AtomicContext): CellCopy<T>;
 function getCopyInternal<T>(state: Computed<T>, context: AtomicContext): ComputedCopy<T>;
-function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<T>
+function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<T>;
 function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<T> {
   const { copyStoreMap } = context.copyStore;
   const existing = copyStoreMap.get(state);
-  if(existing) {
+  if (existing) {
     return existing;
   }
 
-  const newCopy = createCopy(state);
-  
+  const newCopy = createCopy<T>(state);
+
   // Must add to map immediately to handle recursive dependencies correctly.
   // If we delay this, dependent copies might create duplicate copies of this state.
   copyStoreMap.set(state, newCopy);
-  
+
   if (isCell(state) && isCellCopy(newCopy)) {
     for (const dependent of state.dependents) {
-      newCopy.dependents.add(getCopyInternal(dependent,context));
+      newCopy.dependents.add(getCopyInternal(dependent, context));
     }
   } else if (isComputed(state) && isComputedCopy(newCopy)) {
     if (!newCopy.isInitialized) {
       initializeComputedCopy(newCopy, state, context);
     } else {
       for (const dependent of state.dependents) {
-        newCopy.dependents.add(getCopyInternal(dependent,context));
+        newCopy.dependents.add(getCopyInternal(dependent, context));
       }
       for (const dependency of state.dependencies) {
-        const depCopy = getCopyInternal(dependency,context);
+        const depCopy = getCopyInternal(dependency, context);
         newCopy.dependencies.add(depCopy);
       }
-      
+
       // Calculate rank for already initialized computed
-      newCopy.rank = newCopy.dependencies.size > 0
-        ? Math.max(...[...newCopy.dependencies].map(d => d.rank)) + 1
-        : 0;
+      newCopy.rank =
+        newCopy.dependencies.size > 0
+          ? Math.max(...[...newCopy.dependencies].map((d) => d.rank)) + 1
+          : 0;
     }
   }
-  
+
   return newCopy;
 }
 
-export function createCopyStore(
-  context: AtomicContext
-) {
+export function createCopyStore(context: AtomicContext) {
   const copyStoreMap = new Map<State, StateCopy>();
-  
+
   function getCopy<T>(state: Cell<T>): CellCopy<T>;
   function getCopy<T>(state: Computed<T>): ComputedCopy<T>;
-  function getCopy<T>(state: State<T>): StateCopy<T>
+  function getCopy<T>(state: State<T>): StateCopy<T>;
   function getCopy<T>(state: State<T>): StateCopy<T> {
     return getCopyInternal(state, context);
   }
@@ -97,6 +96,5 @@ export function createCopyStore(
     copyStoreMap.clear();
   }
 
-  
-  return {copyStoreMap, getCopy, clear };
+  return { copyStoreMap, getCopy, clear };
 }

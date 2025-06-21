@@ -1,26 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createCell, createComputed, get, set, atomicUpdate } from '../src';
+import { describe, expect, it } from 'vitest';
+import type { StateGetter } from '../src';
+import { atomicUpdate, createCell, createComputed, get, set } from '../src';
 
 describe('Minimal Computation', () => {
   describe('Diamond dependency pattern', () => {
     it('should compute each node only once in diamond pattern', () => {
-      let rootCount = 0;
       let leftCount = 0;
       let rightCount = 0;
       let bottomCount = 0;
 
       const root = createCell(10);
-      
+
       const left = createComputed(({ get }) => {
         leftCount++;
         return get(root) * 2;
       });
-      
+
       const right = createComputed(({ get }) => {
         rightCount++;
         return get(root) * 3;
       });
-      
+
       const bottom = createComputed(({ get }) => {
         bottomCount++;
         return get(left) + get(right);
@@ -35,7 +35,7 @@ describe('Minimal Computation', () => {
       // Update root
       set(root, 20);
       expect(get(bottom)).toBe(100); // 40 + 60
-      
+
       // Each computed should be calculated exactly once more
       expect(leftCount).toBe(2);
       expect(rightCount).toBe(2);
@@ -43,9 +43,9 @@ describe('Minimal Computation', () => {
     });
 
     it('should handle multiple diamond patterns', () => {
-      let computeCounts: Record<string, number> = {};
-      
-      const createTrackedComputed = <T>(name: string, fn: (get: any) => T) => {
+      const computeCounts: Record<string, number> = {};
+
+      const createTrackedComputed = <T>(name: string, fn: (get: StateGetter) => T) => {
         computeCounts[name] = 0;
         return createComputed(({ get }) => {
           computeCounts[name]++;
@@ -54,11 +54,11 @@ describe('Minimal Computation', () => {
       };
 
       const a = createCell(1);
-      const b = createTrackedComputed('b', get => get(a) * 2);
-      const c = createTrackedComputed('c', get => get(a) * 3);
-      const d = createTrackedComputed('d', get => get(b) + get(c));
-      const e = createTrackedComputed('e', get => get(b) * get(c));
-      const f = createTrackedComputed('f', get => get(d) + get(e));
+      const b = createTrackedComputed('b', (get) => get(a) * 2);
+      const c = createTrackedComputed('c', (get) => get(a) * 3);
+      const d = createTrackedComputed('d', (get) => get(b) + get(c));
+      const e = createTrackedComputed('e', (get) => get(b) * get(c));
+      const f = createTrackedComputed('f', (get) => get(d) + get(e));
 
       // Initial
       expect(get(f)).toBe(11); // (2 + 3) + (2 * 3) = 5 + 6
@@ -67,7 +67,7 @@ describe('Minimal Computation', () => {
       // Update
       set(a, 2);
       expect(get(f)).toBe(34); // (4 + 6) + (4 * 6) = 10 + 24
-      
+
       // Each should be computed exactly once
       expect(computeCounts).toEqual({ b: 2, c: 2, d: 2, e: 2, f: 2 });
     });
@@ -79,12 +79,12 @@ describe('Minimal Computation', () => {
       let dependentCount = 0;
 
       const cell = createCell(1.4);
-      
+
       const computed = createComputed(({ get }) => {
         computeCount++;
         return Math.floor(get(cell));
       });
-      
+
       const dependent = createComputed(({ get }) => {
         dependentCount++;
         return get(computed) * 100;
@@ -110,8 +110,8 @@ describe('Minimal Computation', () => {
 
     it('should handle complex propagation stopping chains', () => {
       const counts: Record<string, number> = {};
-      
-      const createTracked = <T>(name: string, fn: (get: any) => T) => {
+
+      const createTracked = <T>(name: string, fn: (get: StateGetter) => T) => {
         counts[name] = 0;
         return createComputed(({ get }) => {
           counts[name]++;
@@ -120,15 +120,15 @@ describe('Minimal Computation', () => {
       };
 
       const input = createCell(15);
-      
+
       // Divides by 10 and floors: 15 -> 1, 25 -> 2
-      const level1 = createTracked('level1', get => Math.floor(get(input) / 10));
-      
+      const level1 = createTracked('level1', (get) => Math.floor(get(input) / 10));
+
       // Unchanged when level1 is same
-      const level2 = createTracked('level2', get => get(level1) * 100);
-      
+      const level2 = createTracked('level2', (get) => get(level1) * 100);
+
       // Should not recompute when level2 unchanged
-      const level3 = createTracked('level3', get => `Value: ${get(level2)}`);
+      const level3 = createTracked('level3', (get) => `Value: ${get(level2)}`);
 
       // Initial
       expect(get(level3)).toBe('Value: 100');
@@ -155,17 +155,17 @@ describe('Minimal Computation', () => {
       const condition = createCell(true);
       const leftValue = createCell(10);
       const rightValue = createCell(20);
-      
+
       const leftBranch = createComputed(({ get }) => {
         leftCount++;
         return get(leftValue) * 2;
       });
-      
+
       const rightBranch = createComputed(({ get }) => {
         rightCount++;
         return get(rightValue) * 3;
       });
-      
+
       const result = createComputed(({ get }) => {
         resultCount++;
         return get(condition) ? get(leftBranch) : get(rightBranch);
@@ -197,7 +197,7 @@ describe('Minimal Computation', () => {
       expect(leftCount).toBe(2); // leftBranch IS recomputed to maintain consistency
       expect(rightCount).toBe(1);
       expect(resultCount).toBe(2); // result is not recomputed
-      
+
       // Verify leftBranch has correct value if accessed directly
       expect(get(leftBranch)).toBe(100); // 50 * 2
     });
@@ -210,7 +210,7 @@ describe('Minimal Computation', () => {
       const a = createCell(1);
       const b = createCell(2);
       const c = createCell(3);
-      
+
       const sum = createComputed(({ get }) => {
         computeCount++;
         return get(a) + get(b) + get(c);
@@ -234,8 +234,8 @@ describe('Minimal Computation', () => {
 
     it('should handle complex batch updates efficiently', () => {
       const counts: Record<string, number> = {};
-      
-      const createTracked = <T>(name: string, fn: (get: any) => T) => {
+
+      const createTracked = <T>(name: string, fn: (get: StateGetter) => T) => {
         counts[name] = 0;
         return createComputed(({ get }) => {
           counts[name]++;
@@ -244,19 +244,16 @@ describe('Minimal Computation', () => {
       };
 
       const cells = Array.from({ length: 5 }, (_, i) => createCell(i));
-      
+
       // Each intermediate depends on multiple cells
-      const intermediate1 = createTracked('int1', get => 
-        get(cells[0]) + get(cells[1])
+      const intermediate1 = createTracked('int1', (get) => get(cells[0]) + get(cells[1]));
+      const intermediate2 = createTracked(
+        'int2',
+        (get) => get(cells[2]) + get(cells[3]) + get(cells[4])
       );
-      const intermediate2 = createTracked('int2', get => 
-        get(cells[2]) + get(cells[3]) + get(cells[4])
-      );
-      
+
       // Final depends on both intermediates
-      const final = createTracked('final', get => 
-        get(intermediate1) * get(intermediate2)
-      );
+      const final = createTracked('final', (get) => get(intermediate1) * get(intermediate2));
 
       // Initial
       expect(get(final)).toBe(9); // (0+1) * (2+3+4) = 1 * 9
@@ -291,7 +288,7 @@ describe('Minimal Computation', () => {
 
       // Update cell
       set(cell, 20);
-      
+
       // Recomputed immediately on set
       expect(computeCount).toBe(2);
 
@@ -302,8 +299,8 @@ describe('Minimal Computation', () => {
 
     it('should handle lazy evaluation in dependency chains', () => {
       const counts: Record<string, number> = {};
-      
-      const createTracked = <T>(name: string, fn: (get: any) => T) => {
+
+      const createTracked = <T>(name: string, fn: (get: StateGetter) => T) => {
         counts[name] = 0;
         return createComputed(({ get }) => {
           counts[name]++;
@@ -312,9 +309,9 @@ describe('Minimal Computation', () => {
       };
 
       const a = createCell(1);
-      const b = createTracked('b', get => get(a) * 2);
-      const c = createTracked('c', get => get(b) * 3);
-      const d = createTracked('d', get => get(c) * 4);
+      const b = createTracked('b', (get) => get(a) * 2);
+      const c = createTracked('c', (get) => get(b) * 3);
+      const d = createTracked('d', (get) => get(c) * 4);
 
       // Nothing computed yet
       expect(counts).toEqual({ b: 0, c: 0, d: 0 });
@@ -338,7 +335,7 @@ describe('Minimal Computation', () => {
         { value: 10, metadata: 'v1' },
         { compare: (a, b) => a.value === b.value }
       );
-      
+
       const computed = createComputed(({ get }) => {
         computeCount++;
         return get(cell).value * 2;
@@ -365,7 +362,7 @@ describe('Minimal Computation', () => {
 
       const toggle = createCell(true);
       const value = createCell(10);
-      
+
       const computed = createComputed(({ get }) => {
         computeCount++;
         // Conditional dependency that might be empty

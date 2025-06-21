@@ -1,19 +1,16 @@
-import { useSyncExternalStore, useCallback } from 'react';
-import { State } from '../../state';
+import { useCallback, useSyncExternalStore } from 'react';
 import { createComputed } from '../../createComputed';
-import { getValueForSuspense } from '../getValueForSuspense';
+import type { State } from '../../state';
 import { initializeComputed } from '../../stateUtil/initializeComputed';
+import { getValueForSuspense } from '../getValueForSuspense';
 
 export function useValue<T>(state: State<T>): T {
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      const watcher = createComputed(
-        ({ get }) => get(state),
-        { onScheduledNotify: onStoreChange }
-      );
-      
+      const watcher = createComputed(({ get }) => get(state), { onScheduledNotify: onStoreChange });
+
       initializeComputed(watcher);
-      
+
       return () => {
         watcher[Symbol.dispose]();
       };
@@ -26,6 +23,6 @@ export function useValue<T>(state: State<T>): T {
     () => getValueForSuspense(state),
     () => getValueForSuspense(state)
   );
-  
+
   return value;
 }

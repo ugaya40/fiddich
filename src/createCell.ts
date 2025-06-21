@@ -1,23 +1,27 @@
-import { Cell, Computed, NullableCell, OptionalCell } from './state';
-import { Compare, defaultCompare, generateStateId, isDisposable } from './util';
+import type { Cell, Computed, NullableCell, OptionalCell } from './state';
+import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
 
 export function createCell<T>(
   initialValue: T,
-  options?: { compare?: Compare<T>; onChange?: (prev: T, next: T) => void; onScheduledNotify?: () => void }
+  options?: {
+    compare?: Compare<T>;
+    onChange?: (prev: T, next: T) => void;
+    onScheduledNotify?: () => void;
+  }
 ): Cell<T> {
   const compare = options?.compare ?? defaultCompare;
-  
+
   const current: Cell<T> = {
     id: generateStateId(),
     kind: 'cell',
     stableValue: initialValue,
     dependents: new Set<Computed>(),
-    
+
     compare,
-    
+
     changeCallback: options?.onChange,
     onScheduledNotify: options?.onScheduledNotify,
-    
+
     [Symbol.dispose](): void {
       current.dependents.clear();
       if (isDisposable(current.stableValue)) {
@@ -29,9 +33,9 @@ export function createCell<T>(
       return current.stableValue;
     },
 
-    valueVersion: 0
+    valueVersion: 0,
   };
-  
+
   return current;
 }
 
@@ -43,7 +47,11 @@ export function createCell<T>(
  */
 export function createNullableCell<T>(
   initialValue: T | null = null,
-  options?: { compare?: Compare<T | null>; onChange?: (prev: T | null, next: T | null) => void; onScheduledNotify?: () => void }
+  options?: {
+    compare?: Compare<T | null>;
+    onChange?: (prev: T | null, next: T | null) => void;
+    onScheduledNotify?: () => void;
+  }
 ): NullableCell<T> {
   return createCell<T | null>(initialValue, options);
 }
@@ -56,7 +64,11 @@ export function createNullableCell<T>(
  */
 export function createOptionalCell<T>(
   initialValue?: T,
-  options?: { compare?: Compare<T | undefined>; onChange?: (prev: T | undefined, next: T | undefined) => void; onScheduledNotify?: () => void }
+  options?: {
+    compare?: Compare<T | undefined>;
+    onChange?: (prev: T | undefined, next: T | undefined) => void;
+    onScheduledNotify?: () => void;
+  }
 ): OptionalCell<T> {
   return createCell<T | undefined>(initialValue, options);
 }

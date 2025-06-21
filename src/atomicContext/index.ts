@@ -1,8 +1,15 @@
-import { touchForAtomicOperation, getForAtomicOperation, pendingForAtomicOperation, rejectAllChanges, dispose, setForAtomicOperation } from '../atomicOperations';
-import { createCopyStore } from './copyStore';
+import {
+  dispose,
+  getForAtomicOperation,
+  pendingForAtomicOperation,
+  rejectAllChanges,
+  setForAtomicOperation,
+  touchForAtomicOperation,
+} from '../atomicOperations';
+import type { Cell, State } from '../state';
 import { commit } from './commit';
-import { AtomicContext, StateCopy, ComputedCopy } from './types';
-import { Cell, State } from '../state';
+import { createCopyStore } from './copyStore';
+import type { AtomicContext, ComputedCopy, StateCopy } from './types';
 
 export * from './types';
 
@@ -12,9 +19,9 @@ export function createAtomicContext(): AtomicContext {
   const valueChangedDirty = new Set<StateCopy>();
   const notificationDirty = new Set<StateCopy>();
   const toDispose = new Set<Disposable>();
-  const newlyInitialized = new Set<ComputedCopy<any>>();
+  const newlyInitialized = new Set<ComputedCopy>();
   const touchedStates = new Set<StateCopy>();
-  
+
   const partialContext: AtomicContext = {
     valueDirty,
     dependencyDirty,
@@ -30,7 +37,7 @@ export function createAtomicContext(): AtomicContext {
 
   partialContext.copyStore = createCopyStore(partialContext);
   partialContext.commit = () => commit(partialContext);
-  
+
   return partialContext;
 }
 
@@ -40,7 +47,8 @@ export function createAtomicOperations(context: AtomicContext) {
     set: <T>(cell: Cell<T>, newValue: T) => setForAtomicOperation(cell, newValue, context),
     touch: (state: State) => touchForAtomicOperation(state, context),
     dispose: <T extends Disposable>(target: T) => dispose(target, context),
-    pending: (state: State, promise?: Promise<any>) => pendingForAtomicOperation(state, context, promise),
-    rejectAllChanges: () => rejectAllChanges(context)
+    pending: <T>(state: State<T>, promise?: Promise<any>) =>
+      pendingForAtomicOperation(state, context, promise),
+    rejectAllChanges: () => rejectAllChanges(context),
   };
 }
