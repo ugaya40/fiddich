@@ -1,4 +1,4 @@
-import { AtomicContext, AtomicContextStore, ComputedCopy } from '../atomicContext/index';
+import { AtomicContext, ComputedCopy } from '../atomicContext/index';
 import { State } from '../state';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
 import { isComputedCopy } from '../stateUtil/typeUtil';
@@ -6,7 +6,7 @@ import { recompute } from './recompute';
 
 function collectNeedsRecomputationInternal(
   computed: ComputedCopy,
-  context: AtomicContextStore,
+  context: AtomicContext,
   collected: Set<ComputedCopy>,
   visited: Set<ComputedCopy>
 ) {
@@ -37,7 +37,7 @@ function collectNeedsRecomputationInternal(
 
 function collectNeedsRecomputation(
   target: ComputedCopy,
-  context: AtomicContextStore
+  context: AtomicContext
 ): Set<ComputedCopy> {
   const collected = new Set<ComputedCopy>();
   const visited = new Set<ComputedCopy>();
@@ -49,7 +49,7 @@ function collectNeedsRecomputation(
 
 function recomputeCollected(
   collected: Set<ComputedCopy>,
-  context: AtomicContextStore,
+  context: AtomicContext,
 ) {
   // Sort by rank ascending
   const sorted = [...collected].sort((a, b) => a.rank - b.rank);
@@ -75,8 +75,8 @@ function recomputeCollected(
 
 export function getForRecompute<T>(
   target: State<T>,
-  context: AtomicContextStore,
-  trackDependency: (targetCopy: any) => void,
+  context: AtomicContext,
+  dependencyTracker: (targetCopy: any) => void,
 ) {
   const targetCopy = context.copyStore.getCopy(target);
     
@@ -89,7 +89,7 @@ export function getForRecompute<T>(
   }
   
   // Track this as an active dependency
-  trackDependency(targetCopy);
+  dependencyTracker(targetCopy);
   return targetCopy.value;
 }
 

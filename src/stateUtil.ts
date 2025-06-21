@@ -1,4 +1,4 @@
-import type { StateCopy, AtomicContextStore } from './atomicContext/types';
+import type { AtomicContext, StateCopy } from './atomicContext/types';
 import { isComputedCopy } from './stateUtil/typeUtil';
 
 let scheduled = false;
@@ -20,7 +20,7 @@ export function scheduleNotifications(notifications: Array<() => void>): void {
 
 export function markDirectDependentsAsValueDirty(
   copy: StateCopy,
-  context: AtomicContextStore
+  context: AtomicContext
 ) {
   for (const dependent of copy.dependents) {
     if (isComputedCopy(dependent)) {

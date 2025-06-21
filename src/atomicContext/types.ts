@@ -30,17 +30,6 @@ export type CopyStore = {
   clear: () => void;
 };
 
-export type AtomicContextStore = {
-  valueDirty: Set<ComputedCopy>;
-  dependencyDirty: Set<StateCopy>;
-  valueChangedDirty: Set<StateCopy>;
-  notificationDirty: Set<StateCopy>;
-  copyStore: CopyStore;
-  toDispose: Set<Disposable>;
-  newlyInitialized: Set<ComputedCopy>;
-  touchedStates: Set<StateCopy>;
-};
-
 export type AtomicContext = {
   valueDirty: Set<ComputedCopy>;
   dependencyDirty: Set<StateCopy>;
@@ -50,6 +39,6 @@ export type AtomicContext = {
   toDispose: Set<Disposable>;
   newlyInitialized: Set<ComputedCopy>;
   touchedStates: Set<StateCopy>;
-  commit: () => void;
   atomicUpdatePromise: Promise<any> | undefined;
+  commit: () => void;
 };

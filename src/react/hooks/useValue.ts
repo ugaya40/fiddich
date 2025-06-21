@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useCallback } from 'react';
 import { State } from '../../state';
 import { createComputed } from '../../createComputed';
-import { getSuspense } from '../getSuspense';
+import { getValueForSuspense } from '../getValueForSuspense';
 import { initializeComputed } from '../../stateUtil/initializeComputed';
 
 export function useValue<T>(state: State<T>): T {
@@ -23,8 +23,8 @@ export function useValue<T>(state: State<T>): T {
 
   const value = useSyncExternalStore(
     subscribe,
-    () => getSuspense(state),
-    () => getSuspense(state)
+    () => getValueForSuspense(state),
+    () => getValueForSuspense(state)
   );
   
   return value;

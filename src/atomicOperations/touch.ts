@@ -1,4 +1,4 @@
-import { AtomicContext, AtomicContextStore, StateCopy } from '../atomicContext/index';
+import { AtomicContext, StateCopy } from '../atomicContext/index';
 import { State } from '../state';
 import { markDirectDependentsAsValueDirty } from '../stateUtil';
 import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
@@ -24,7 +24,7 @@ export function touchForAtomicOperation<T>(state: State<T>, context: AtomicConte
 
 function propagateTouchedRecursivelyInternal(
   copy: StateCopy,
-  context: AtomicContextStore,
+  context: AtomicContext,
   visited: Set<StateCopy>
 ) {
   if (visited.has(copy)) return;
@@ -39,7 +39,7 @@ function propagateTouchedRecursivelyInternal(
 
 export function propagateTouchedRecursively(
   copy: StateCopy,
-  context: AtomicContextStore
+  context: AtomicContext
 ) {
   const visited = new Set<StateCopy>();
   propagateTouchedRecursivelyInternal(copy, context, visited);

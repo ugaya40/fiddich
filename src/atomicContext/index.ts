@@ -27,7 +27,7 @@ export function createAtomicContext(): AtomicContext {
     commit: null!,
     atomicUpdatePromise: undefined,
   };
-  
+
   partialContext.copyStore = createCopyStore(partialContext);
   partialContext.commit = () => commit(partialContext);
   

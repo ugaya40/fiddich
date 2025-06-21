@@ -1,10 +1,10 @@
-import { AtomicContextStore, ComputedCopy, StateCopy } from '../atomicContext/index';
+import { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/index';
 import { State } from '../state';
 import { markDirectDependentsAsValueDirty } from '../stateUtil';
 import { getForRecompute } from './get';
 import { propagateTouchedRecursively } from './touch';
 
-function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore) {
+function createDependencyTracker(copy: ComputedCopy, context: AtomicContext) {
   // Start with all existing dependencies in a "remaining" set
   // As we re-discover dependencies during recomputation, we'll remove them from this set
   // Any dependencies left in this set at the end are no longer needed
@@ -18,7 +18,7 @@ function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore) 
   }
   copy.dependencies.clear();
   
-  const trackDependency = (targetCopy: StateCopy<any>) => {
+  const dependencyTracker = (targetCopy: StateCopy) => {
     // Skip if already tracked in this computation
     if (copy.dependencies.has(targetCopy)) {
       return;
@@ -37,21 +37,19 @@ function createDependencyTracker(copy: ComputedCopy, store: AtomicContextStore) 
     targetCopy.dependents.add(copy);
   };
   
-  const getter = <T>(state: State<T>) => getForRecompute<T>(state, store, trackDependency);
-  
   // Dependencies changed if we have new ones or some old ones are no longer used
   const hasChanges = () => hasNewDependencies || remainingDependencies.size > 0;
   
-  return { getter, hasChanges };
+  return { dependencyTracker, hasChanges };
 }
 
-export function recompute(copy: ComputedCopy, store: AtomicContextStore) {
-  const { dependencyDirty, valueChangedDirty, notificationDirty, touchedStates } = store;
+export function recompute(copy: ComputedCopy, context: AtomicContext) {
+  const { dependencyDirty, valueChangedDirty, notificationDirty, touchedStates } = context;
 
-  const { getter, hasChanges } = createDependencyTracker(copy, store);
+  const { dependencyTracker, hasChanges } = createDependencyTracker(copy, context);
     
   const oldValue = copy.value;
-  const newValue = copy.original.compute(getter);
+  const newValue = copy.original.compute(<T>(state:State<T>) => getForRecompute(state, context, dependencyTracker));
   
   if (hasChanges()) {
     dependencyDirty.add(copy);
@@ -75,15 +73,15 @@ export function recompute(copy: ComputedCopy, store: AtomicContextStore) {
     copy.value = newValue;
     valueChangedDirty.add(copy);
     
-    markDirectDependentsAsValueDirty(copy, store);
+    markDirectDependentsAsValueDirty(copy, context);
   } 
   
   if (isTouched) {
     if(!hasValueChanged) {
       notificationDirty.add(copy);
-      markDirectDependentsAsValueDirty(copy, store);
+      markDirectDependentsAsValueDirty(copy, context);
     }
 
-    propagateTouchedRecursively(copy, store);
+    propagateTouchedRecursively(copy, context);
   }
 }
