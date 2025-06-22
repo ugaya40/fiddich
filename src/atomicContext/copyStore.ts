@@ -17,7 +17,6 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         original: state,
         value: state.stableValue,
         dependents: new Set(),
-        valueCheckpoint: state.valueCheckpoint,
         rank: 0, // Cells have rank 0
       };
 
@@ -29,8 +28,6 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         value: state.stableValue,
         dependents: new Set(),
         dependencies: new Set(),
-        valueCheckpoint: state.valueCheckpoint,
-        dependencyCheckpoint: state.dependencyCheckpoint,
         isInitialized: state.isInitialized,
         rank: 0, // Will be calculated later based on dependencies
       };

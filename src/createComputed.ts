@@ -1,5 +1,4 @@
 import { get } from './get';
-import { currentCheckpoint } from './globalCheckpoint';
 import type { Computed, NullableComputed, OptionalComputed, State } from './state';
 import { type Compare, defaultCompare, generateStateId } from './util';
 
@@ -45,10 +44,7 @@ export function createComputed<T>(
         get(current);
       }
       return current.stableValue;
-    },
-
-    valueCheckpoint: currentCheckpoint(),
-    dependencyCheckpoint: currentCheckpoint(),
+    }
   };
 
   return current;

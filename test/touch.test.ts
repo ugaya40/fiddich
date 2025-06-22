@@ -3,16 +3,6 @@ import { atomicUpdate, type Computed, createCell, createComputed, get, touch } f
 
 describe('Touch functionality', () => {
   describe('Basic touch behavior', () => {
-    it('should NOT increment version when cell is touched', () => {
-      const cell = createCell({ count: 0 });
-      const originalVersion = cell.valueCheckpoint;
-
-      touch(cell);
-
-      expect(get(cell)).toEqual({ count: 0 });
-      expect(cell.valueCheckpoint).toBe(originalVersion); // Version should NOT change
-    });
-
     it('should trigger recomputation when cell is touched', () => {
       let computeCount = 0;
       const cell = createCell({ items: [1, 2, 3] });
@@ -200,9 +190,6 @@ describe('Touch functionality', () => {
 
       // Should also be notified
       expect(onScheduledNotify).toHaveBeenCalledTimes(1);
-
-      // Version should increment (because value changed)
-      expect(cell.valueCheckpoint).toBe(1);
     });
   });
 

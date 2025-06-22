@@ -14,15 +14,12 @@ export interface StateBase<T = any> {
 export interface Cell<T = any> extends StateBase<T>, Disposable {
   kind: 'cell';
   dependents: Set<Computed>;
-  valueCheckpoint: number;
 }
 
 export interface Computed<T = any> extends StateBase<T>, Disposable {
   kind: 'computed';
   dependents: Set<Computed>;
   dependencies: Set<State>;
-  valueCheckpoint: number;
-  dependencyCheckpoint: number;
   isInitialized: boolean;
   compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
 }
