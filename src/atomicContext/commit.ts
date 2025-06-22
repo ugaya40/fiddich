@@ -1,4 +1,5 @@
 import { recompute } from '../atomicOperations/recompute';
+import { nextCheckpoint } from '../globalCheckpoint';
 import { scheduleNotifications } from '../stateUtil';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
 import { isCell, isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
@@ -41,10 +42,21 @@ function handleValueDirty(context: AtomicContext) {
 }
 
 function handleConcurrentModification(context: AtomicContext) {
+  // Check value modifications
   for (const copy of context.valueChangedDirty) {
     const original = copy.original;
-    if (isCellCopy(copy) && isCell(original) && original.valueVersion !== copy.valueVersion) {
+    if (original.valueCheckpoint > context.startCheckpoint) {
       throw new Error(`Concurrent value modification detected for ${original.id}`);
+    }
+  }
+  
+  // Check dependency modifications
+  for (const copy of context.dependencyDirty) {
+    if (isComputedCopy(copy)) {
+      const original = copy.original;
+      if (original.dependencyCheckpoint > context.startCheckpoint) {
+        throw new Error(`Concurrent dependency modification detected for ${original.id}`);
+      }
     }
   }
 }
@@ -54,10 +66,7 @@ function handleValueChanges(context: AtomicContext) {
     const original = copy.original;
     const prevValue = original.stableValue;
     original.stableValue = copy.value;
-
-    if (isCell(original)) {
-      original.valueVersion++;
-    }
+    original.valueCheckpoint = nextCheckpoint();
 
     if (original.changeCallback) {
       original.changeCallback(prevValue, original.stableValue);
@@ -70,10 +79,6 @@ function handleDependencyChanges(context: AtomicContext) {
     if (isComputedCopy(copy)) {
       const original = copy.original;
 
-      if (original.dependencyVersion !== copy.dependencyVersion) {
-        throw new Error(`Concurrent dependency modification detected for ${original.id}`);
-      }
-
       for (const oldDependency of original.dependencies) {
         oldDependency.dependents.delete(original);
       }
@@ -84,7 +89,7 @@ function handleDependencyChanges(context: AtomicContext) {
         newDependency.dependents.add(original);
       }
 
-      original.dependencyVersion++;
+      original.dependencyCheckpoint = nextCheckpoint();
     }
   }
 }

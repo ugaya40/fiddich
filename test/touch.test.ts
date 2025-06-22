@@ -5,12 +5,12 @@ describe('Touch functionality', () => {
   describe('Basic touch behavior', () => {
     it('should NOT increment version when cell is touched', () => {
       const cell = createCell({ count: 0 });
-      const originalVersion = cell.valueVersion;
+      const originalVersion = cell.valueCheckpoint;
 
       touch(cell);
 
       expect(get(cell)).toEqual({ count: 0 });
-      expect(cell.valueVersion).toBe(originalVersion); // Version should NOT change
+      expect(cell.valueCheckpoint).toBe(originalVersion); // Version should NOT change
     });
 
     it('should trigger recomputation when cell is touched', () => {
@@ -202,12 +202,12 @@ describe('Touch functionality', () => {
       expect(onScheduledNotify).toHaveBeenCalledTimes(1);
 
       // Version should increment (because value changed)
-      expect(cell.valueVersion).toBe(1);
+      expect(cell.valueCheckpoint).toBe(1);
     });
   });
 
   describe('Custom compare function', () => {
-    it('should respect custom compare when touched', async () => {
+    it('should not trigger onChange on touch regardless of custom compare', async () => {
       const onChange = vi.fn();
       const onScheduledNotify = vi.fn();
       const cell = createCell(

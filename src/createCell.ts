@@ -1,3 +1,4 @@
+import { currentCheckpoint } from './globalCheckpoint';
 import type { Cell, Computed, NullableCell, OptionalCell } from './state';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
 
@@ -33,7 +34,7 @@ export function createCell<T>(
       return current.stableValue;
     },
 
-    valueVersion: 0,
+    valueCheckpoint: currentCheckpoint(),
   };
 
   return current;

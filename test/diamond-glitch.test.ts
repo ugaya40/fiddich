@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { atomicUpdate, createCell, createComputed, get, set } from '../src';
 
 describe('Diamond Dependency Glitch Test', () => {
-  it('should demonstrate potential glitch in separate set operations', () => {
+  it('should ensure no glitch occurs with separate set operations', () => {
     const a = createCell(1);
     const b = createCell(1);
 
@@ -17,7 +17,7 @@ describe('Diamond Dependency Glitch Test', () => {
     // Initial
     expect(get(bottom)).toBe(3); // (1+1) + (1*1) = 2 + 1 = 3
 
-    // Two separate set operations
+    // Two separate set operations - no glitch should occur
     set(a, 2);
     get(bottom);
 
@@ -29,7 +29,7 @@ describe('Diamond Dependency Glitch Test', () => {
     set(b, 1);
     get(bottom);
 
-    // AtomicUpdate
+    // AtomicUpdate produces the same result
     atomicUpdate(({ set }) => {
       set(a, 2);
       set(b, 3);
@@ -37,11 +37,11 @@ describe('Diamond Dependency Glitch Test', () => {
     expect(get(bottom)).toBe(11); // (2+3) + (2*3) = 5 + 6 = 11
   });
 
-  it('should show intermediate inconsistent state', () => {
+  it('should ensure no intermediate inconsistent state is observable', () => {
     const x = createCell(1);
     const y = createCell(1);
 
-    // Invariant: sum should always equal product for our values
+    // Testing invariant: checking if sum equals product
     const sum = createComputed(({ get }) => {
       const result = get(x) + get(y);
       return result;
@@ -64,7 +64,7 @@ describe('Diamond Dependency Glitch Test', () => {
 
     // Try to maintain invariant: x=2, y=2 → 2+2=4, 2*2=4
     set(x, 2);
-    // Intermediate state might be inconsistent
+    // In Fiddich, no intermediate inconsistent state is observable
 
     set(y, 2);
     // Now should be consistent
@@ -74,7 +74,7 @@ describe('Diamond Dependency Glitch Test', () => {
     set(x, 1);
     set(y, 1);
 
-    // AtomicUpdate ensures consistency
+    // AtomicUpdate also maintains consistency
     atomicUpdate(({ set }) => {
       set(x, 2);
       set(y, 2);

@@ -1,4 +1,5 @@
 import { type AtomicContext, createAtomicContext, createAtomicOperations } from './atomicContext';
+import { currentCheckpoint } from './globalCheckpoint';
 import type { Cell, State } from './state';
 
 type AtomicUpdateOps = {
@@ -24,7 +25,7 @@ export function atomicUpdate<T>(
   options?: { context?: AtomicContext }
 ): T | Promise<T> {
   const shouldCommit = !options?.context;
-  const context = options?.context || createAtomicContext();
+  const context = options?.context || createAtomicContext(currentCheckpoint());
   const baseOps = createAtomicOperations(context);
   const ops: AtomicUpdateOps = {
     ...baseOps,

@@ -13,7 +13,7 @@ import type { AtomicContext, ComputedCopy, StateCopy } from './types';
 
 export * from './types';
 
-export function createAtomicContext(): AtomicContext {
+export function createAtomicContext(startCheckpoint: number): AtomicContext {
   const valueDirty = new Set<ComputedCopy>();
   const dependencyDirty = new Set<StateCopy>();
   const valueChangedDirty = new Set<StateCopy>();
@@ -31,6 +31,7 @@ export function createAtomicContext(): AtomicContext {
     toDispose,
     newlyInitialized,
     touchedStates,
+    startCheckpoint,
     commit: null!,
     atomicUpdatePromise: undefined,
   };

@@ -9,7 +9,7 @@ export type StateCopyBase<T = any> = {
 export interface CellCopy<T = any> extends StateCopyBase<T> {
   kind: 'cell';
   dependents: Set<ComputedCopy>;
-  valueVersion: number;
+  valueCheckpoint: number;
   original: Cell<T>;
 }
 
@@ -17,7 +17,8 @@ export interface ComputedCopy<T = any> extends StateCopyBase<T> {
   kind: 'computed';
   dependents: Set<ComputedCopy>;
   dependencies: Set<StateCopy>;
-  dependencyVersion: number;
+  valueCheckpoint: number;
+  dependencyCheckpoint: number;
   original: Computed<T>;
   isInitialized: boolean;
 }
@@ -40,5 +41,6 @@ export type AtomicContext = {
   newlyInitialized: Set<ComputedCopy>;
   touchedStates: Set<StateCopy>;
   atomicUpdatePromise: Promise<any> | undefined;
+  startCheckpoint: number;
   commit: () => void;
 };

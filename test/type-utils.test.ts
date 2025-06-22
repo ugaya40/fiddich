@@ -78,7 +78,7 @@ describe('Type utilities', () => {
         if (isCell(state)) {
           // TypeScript knows this is a Cell
           expect(state.kind).toBe('cell');
-          expect(state.valueVersion).toBeDefined();
+          expect(state.valueCheckpoint).toBeDefined();
         } else if (isComputed(state)) {
           // TypeScript knows this is a Computed
           expect(state.kind).toBe('computed');

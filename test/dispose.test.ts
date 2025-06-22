@@ -238,7 +238,7 @@ describe('Dispose functionality', () => {
       expect(disposed3).toHaveBeenCalledTimes(1);
     });
 
-    it('should dispose in correct order with dependencies', () => {
+    it('should preserve ops.dispose call order', () => {
       const disposeOrder: string[] = [];
 
       const cell1 = createCell(10);

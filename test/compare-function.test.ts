@@ -60,19 +60,19 @@ describe('Custom Compare Functions', () => {
         }
       );
 
-      const originalVersion = cell.valueVersion;
+      const originalVersion = cell.valueCheckpoint;
 
       // Same values - should not trigger update
       set(cell, { id: 1, name: 'Alice' });
-      expect(cell.valueVersion).toBe(originalVersion);
+      expect(cell.valueCheckpoint).toBe(originalVersion);
 
       // Different name - should trigger update
       set(cell, { id: 1, name: 'Bob' });
-      expect(cell.valueVersion).toBe(originalVersion + 1);
+      expect(cell.valueCheckpoint).toBe(originalVersion + 1);
 
       // Different id - should trigger update
       set(cell, { id: 2, name: 'Bob' });
-      expect(cell.valueVersion).toBe(originalVersion + 2);
+      expect(cell.valueCheckpoint).toBe(originalVersion + 2);
     });
 
     it('should use custom compare for array values', () => {
@@ -259,15 +259,15 @@ describe('Custom Compare Functions', () => {
         { compare: deepEquals }
       );
 
-      const originalVersion = cell.valueVersion;
+      const originalVersion = cell.valueCheckpoint;
 
       // Same deep structure
       set(cell, { user: { name: 'Alice', age: 30 }, scores: [10, 20, 30] });
-      expect(cell.valueVersion).toBe(originalVersion);
+      expect(cell.valueCheckpoint).toBe(originalVersion);
 
       // Different deep structure
       set(cell, { user: { name: 'Alice', age: 31 }, scores: [10, 20, 30] });
-      expect(cell.valueVersion).toBe(originalVersion + 1);
+      expect(cell.valueCheckpoint).toBe(originalVersion + 1);
     });
   });
 });
