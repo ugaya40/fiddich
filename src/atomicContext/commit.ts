@@ -1,7 +1,7 @@
 import { recompute } from '../atomicOperations/recompute';
 import { scheduleNotifications } from '../stateUtil';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
-import { isCell, isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
+import { isComputedCopy } from '../stateUtil/typeUtil';
 import type { AtomicContext, ComputedCopy, StateCopy } from './types';
 
 function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy>) {
@@ -40,9 +40,7 @@ function handleValueDirty(context: AtomicContext) {
   }
 }
 
-function handleConcurrentModification(context: AtomicContext) {
-
-}
+//function handleConcurrentModification(context: AtomicContext) {}
 
 function handleValueChanges(context: AtomicContext) {
   for (const copy of context.valueChangedDirty) {
@@ -106,7 +104,7 @@ export function commit(context: AtomicContext): void {
 
   handleValueDirty(context);
 
-  handleConcurrentModification(context);
+  //handleConcurrentModification(context);
 
   handleValueChanges(context);
 

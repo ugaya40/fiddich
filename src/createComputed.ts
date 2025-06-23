@@ -44,7 +44,7 @@ export function createComputed<T>(
         get(current);
       }
       return current.stableValue;
-    }
+    },
   };
 
   return current;

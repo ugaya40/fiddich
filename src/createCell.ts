@@ -31,7 +31,7 @@ export function createCell<T>(
 
     toJSON(): T {
       return current.stableValue;
-    }
+    },
   };
 
   return current;
