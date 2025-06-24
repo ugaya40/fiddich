@@ -31,9 +31,7 @@ describe('Type utilities', () => {
 
     it('should work with nullable and optional types', () => {
       const nullableCell = createNullableCell<string>(null);
-      const optionalComputed = createOptionalComputed<number>(({ get }) =>
-        get(nullableCell) ? 42 : undefined
-      );
+      const optionalComputed = createOptionalComputed<number>(({ get }) => (get(nullableCell) ? 42 : undefined));
 
       expect(get(nullableCell)).toBe(null);
       expect(get(optionalComputed)).toBe(undefined);

@@ -251,10 +251,7 @@ describe('Custom Compare Functions', () => {
         return keysA.every((key) => deepEquals(objA[key], objB[key]));
       };
 
-      const cell = createCell(
-        { user: { name: 'Alice', age: 30 }, scores: [10, 20, 30] },
-        { compare: deepEquals }
-      );
+      const cell = createCell({ user: { name: 'Alice', age: 30 }, scores: [10, 20, 30] }, { compare: deepEquals });
 
       //TODO: updateの確認にバージョンを使っていたので代替案検討
 

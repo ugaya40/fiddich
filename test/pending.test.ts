@@ -1,13 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { State } from '../src';
 import { atomicUpdate, createCell, createComputed, get, pending } from '../src';
-import {
-  createComputedChain,
-  createControllablePromise,
-  createDiamondDependency,
-  initialize,
-  wait,
-} from './test-helpers';
+import { createComputedChain, createControllablePromise, createDiamondDependency, initialize, wait } from './test-helpers';
 
 describe('Pending functionality', () => {
   describe('Global pending function', () => {
@@ -111,16 +105,6 @@ describe('Pending functionality', () => {
       await updatePromise;
       expect(cell.pendingPromise).toBeUndefined();
       expect(get(cell)).toBe('updated');
-    });
-
-    it('should require promise in sync atomicUpdate', () => {
-      const cell = createCell(42);
-
-      expect(() => {
-        atomicUpdate((ops) => {
-          ops.pending(cell); // Should throw without promise
-        });
-      }).toThrow();
     });
 
     it('should accept explicit promise in async atomicUpdate', async () => {

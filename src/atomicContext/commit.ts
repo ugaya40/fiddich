@@ -2,10 +2,10 @@ import { recompute } from '../atomicOperations/recompute';
 import { scheduleNotifications } from '../stateUtil';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
 import { isComputedCopy } from '../stateUtil/typeUtil';
-import type { AtomicContext, ComputedCopy, StateCopy } from './types';
+import type { AtomicContext, StateCopy } from './types';
 
-function handleNewlyInitialized(newlyInitialized: Set<ComputedCopy>) {
-  for (const copy of newlyInitialized) {
+function handleNewlyInitialized(context: AtomicContext) {
+  for (const copy of context.newlyInitialized) {
     const original = copy.original;
     if (!original.isInitialized) {
       original.stableValue = copy.value;
@@ -39,8 +39,6 @@ function handleValueDirty(context: AtomicContext) {
     context.valueDirty.delete(copy);
   }
 }
-
-//function handleConcurrentModification(context: AtomicContext) {}
 
 function handleValueChanges(context: AtomicContext) {
   for (const copy of context.valueChangedDirty) {
@@ -82,10 +80,7 @@ function handleNotifications(context: AtomicContext) {
   const scheduledNotifications: Array<() => void> = [];
 
   // Merge valueChangedDirty and notificationDirty
-  const allNotifications = new Set<StateCopy>([
-    ...context.valueChangedDirty,
-    ...context.notificationDirty,
-  ]);
+  const allNotifications = new Set<StateCopy>([...context.valueChangedDirty, ...context.notificationDirty]);
 
   for (const copy of allNotifications) {
     const original = copy.original;
@@ -100,11 +95,9 @@ function handleNotifications(context: AtomicContext) {
 }
 
 export function commit(context: AtomicContext): void {
-  handleNewlyInitialized(context.newlyInitialized);
+  handleNewlyInitialized(context);
 
   handleValueDirty(context);
-
-  //handleConcurrentModification(context);
 
   handleValueChanges(context);
 

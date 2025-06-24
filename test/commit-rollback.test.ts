@@ -72,9 +72,7 @@ describe('Commit and Rollback', () => {
     });
 
     it('should rollback state created inside atomicUpdate', () => {
-      const storeCell = createNullableCell<{ count: Cell<number>; doubled: Computed<number> }>(
-        null
-      );
+      const storeCell = createNullableCell<{ count: Cell<number>; doubled: Computed<number> }>(null);
 
       expect(() => {
         atomicUpdate((ops) => {

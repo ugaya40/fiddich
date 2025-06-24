@@ -247,10 +247,7 @@ describe('Minimal Computation', () => {
 
       // Each intermediate depends on multiple cells
       const intermediate1 = createTracked('int1', (get) => get(cells[0]) + get(cells[1]));
-      const intermediate2 = createTracked(
-        'int2',
-        (get) => get(cells[2]) + get(cells[3]) + get(cells[4])
-      );
+      const intermediate2 = createTracked('int2', (get) => get(cells[2]) + get(cells[3]) + get(cells[4]));
 
       // Final depends on both intermediates
       const final = createTracked('final', (get) => get(intermediate1) * get(intermediate2));
@@ -331,10 +328,7 @@ describe('Minimal Computation', () => {
     it('should use custom compare to determine minimal updates', () => {
       let computeCount = 0;
 
-      const cell = createCell(
-        { value: 10, metadata: 'v1' },
-        { compare: (a, b) => a.value === b.value }
-      );
+      const cell = createCell({ value: 10, metadata: 'v1' }, { compare: (a, b) => a.value === b.value });
 
       const computed = createComputed(({ get }) => {
         computeCount++;

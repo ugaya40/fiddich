@@ -74,9 +74,7 @@ describe('Helper functions', () => {
       ]);
 
       // Find first active item - can be undefined
-      const firstActiveItemComputed = createOptionalComputed(({ get }) =>
-        get(itemsCell).find((item) => item.active)
-      );
+      const firstActiveItemComputed = createOptionalComputed(({ get }) => get(itemsCell).find((item) => item.active));
 
       expect(get(firstActiveItemComputed)).toEqual({ id: 1, name: 'Item 1', active: true });
 
@@ -107,9 +105,7 @@ describe('Helper functions', () => {
       const currentUserCell = createNullableCell<User>(null);
 
       // Get user avatar - can be undefined (no user, no profile, or no avatar)
-      const userAvatarComputed = createOptionalComputed(
-        ({ get }) => get(currentUserCell)?.profile?.avatar
-      );
+      const userAvatarComputed = createOptionalComputed(({ get }) => get(currentUserCell)?.profile?.avatar);
 
       expect(get(userAvatarComputed)).toBe(undefined);
 

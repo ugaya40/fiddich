@@ -1,12 +1,7 @@
 import type { State } from './state';
 import { touch } from './touch';
 
-function collectDependentStatesInternal(
-  state: State,
-  promise: Promise<any>,
-  visited: Set<State>,
-  states: State[]
-): void {
+function collectDependentStatesInternal(state: State, promise: Promise<any>, visited: Set<State>, states: State[]): void {
   if (visited.has(state)) {
     return;
   }

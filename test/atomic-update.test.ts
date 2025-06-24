@@ -84,9 +84,7 @@ describe('atomicUpdate operations', () => {
     });
 
     it('should handle complex state creation pattern', () => {
-      const storeCell = createNullableCell<{ count: Cell<number>; doubled: Computed<number> }>(
-        null
-      );
+      const storeCell = createNullableCell<{ count: Cell<number>; doubled: Computed<number> }>(null);
 
       atomicUpdate((ops) => {
         const count = createCell(0);
@@ -179,9 +177,7 @@ describe('atomicUpdate operations', () => {
       });
 
       // One should succeed, one should fail due to optimistic concurrency control
-      await expect(Promise.all([update1, update2])).rejects.toThrow(
-        'Concurrent value modification'
-      );
+      await expect(Promise.all([update1, update2])).rejects.toThrow('Concurrent value modification');
 
       // Check that the cell value is either 20 or 30 (whichever committed first)
       const finalValue = get(cell);

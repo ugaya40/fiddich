@@ -2,7 +2,7 @@ import type { AtomicContext } from '../atomicContext/index';
 import type { Cell } from '../state';
 import { markDirectDependentsAsValueDirty } from '../stateUtil';
 import { isDisposable } from '../util';
-import { dispose } from './dispose';
+import { disposeForAtomicOperation } from './dispose';
 
 export function setForAtomicOperation<T>(cell: Cell<T>, newValue: T, context: AtomicContext) {
   const { copyStore, valueChangedDirty } = context;
@@ -14,7 +14,7 @@ export function setForAtomicOperation<T>(cell: Cell<T>, newValue: T, context: At
     valueChangedDirty.add(copy);
 
     if (isDisposable(oldValue)) {
-      dispose(oldValue, context);
+      disposeForAtomicOperation(oldValue, context);
     }
 
     markDirectDependentsAsValueDirty(copy, context);

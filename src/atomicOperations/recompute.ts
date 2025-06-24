@@ -49,16 +49,13 @@ export function recompute(copy: ComputedCopy, context: AtomicContext) {
   const { dependencyTracker, hasChanges } = createDependencyTracker(copy);
 
   const oldValue = copy.value;
-  const newValue = copy.original.compute(<T>(state: State<T>) =>
-    getForRecompute(state, context, dependencyTracker)
-  );
+  const newValue = copy.original.compute(<T>(state: State<T>) => getForRecompute(state, context, dependencyTracker));
 
   if (hasChanges()) {
     dependencyDirty.add(copy);
 
     // Update rank based on new dependencies
-    const newRank =
-      copy.dependencies.size > 0 ? Math.max(...[...copy.dependencies].map((d) => d.rank)) + 1 : 0;
+    const newRank = copy.dependencies.size > 0 ? Math.max(...[...copy.dependencies].map((d) => d.rank)) + 1 : 0;
 
     if (newRank > copy.rank) {
       copy.rank = newRank;

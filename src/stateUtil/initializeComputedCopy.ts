@@ -13,11 +13,7 @@ function getForCopy<V>(target: State<V>, dependencies: Set<StateCopy>, context: 
   return targetCopy.value;
 }
 
-export function initializeComputedCopy<T>(
-  copy: ComputedCopy<T>,
-  state: Computed,
-  context: AtomicContext
-): void {
+export function initializeComputedCopy<T>(copy: ComputedCopy<T>, state: Computed, context: AtomicContext): void {
   const detector = globalCircularDetector();
   const scope = {};
   detector.setScope(scope);

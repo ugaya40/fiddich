@@ -22,11 +22,7 @@ export function touchForAtomicOperation<T>(state: State<T>, context: AtomicConte
   propagateTouchedRecursively(copy, context);
 }
 
-function propagateTouchedRecursivelyInternal(
-  copy: StateCopy,
-  context: AtomicContext,
-  visited: Set<StateCopy>
-) {
+function propagateTouchedRecursivelyInternal(copy: StateCopy, context: AtomicContext, visited: Set<StateCopy>) {
   if (visited.has(copy)) return;
   visited.add(copy);
 

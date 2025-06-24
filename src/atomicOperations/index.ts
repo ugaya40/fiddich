@@ -1,4 +1,4 @@
-export { dispose } from './dispose';
+export { disposeForAtomicOperation } from './dispose';
 export { getForAtomicOperation } from './get';
 export { pendingForAtomicOperation } from './pending';
 export { rejectAllChanges } from './rejectAllChanges';

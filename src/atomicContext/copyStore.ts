@@ -70,10 +70,7 @@ function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<
       }
 
       // Calculate rank for already initialized computed
-      newCopy.rank =
-        newCopy.dependencies.size > 0
-          ? Math.max(...[...newCopy.dependencies].map((d) => d.rank)) + 1
-          : 0;
+      newCopy.rank = newCopy.dependencies.size > 0 ? Math.max(...[...newCopy.dependencies].map((d) => d.rank)) + 1 : 0;
     }
   }
 
