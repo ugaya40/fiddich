@@ -42,6 +42,31 @@ Computed: {
 }
 ```
 
+### 同時実行制御（オプトイン）
+
+デフォルトでは"Last writer wins"動作ですが、以下のトークンを使用して同時実行制御を追加できます：
+
+```typescript
+// Guard: 楽観的同時実行制御（競合時にロールバック）
+const guard = createGuardToken();
+const result = tryAtomicUpdate((ops) => {
+  ops.set(cell, value);
+}, { concurrent: guard });
+
+// Exclusive: 排他制御（実行中は即座に拒否）
+const exclusive = createExclusiveToken();
+const result = tryAtomicUpdate((ops) => {
+  ops.set(cell, value);
+}, { concurrent: exclusive });
+
+// Sequencer: 直列化（キューで順次実行）
+const sequencer = createSequencerToken();
+// Sequencerは非同期atomicUpdateでも使用可能
+await atomicUpdate(async (ops) => {
+  ops.set(cell, value);
+}, { concurrent: sequencer });
+```
+
 ### 通常時の依存関係登録
 
 1. **Computedの遅延初期化**
@@ -108,16 +133,16 @@ Computed: {
    }
    ```
 
-3. **再計算の仕組み（Push型評価）**
+3. **再計算の仕組み（Pull型評価）**
    ```typescript
    // ops.set(cell, value)が呼ばれると：
    // 1. cellのコピーの値を更新
-   // 2. cellの依存先（dependents）をvalueDirtyに追加
+   // 2. cellをvalueChangedDirtyに追加（再計算はまだ行わない）
    
-   // コミット時のhandleValueDirty：
-   // 1. valueDirtyをrank順にソート
-   // 2. 低いrankから順に処理（依存元から依存先へ）
-   // 3. 各Computedを再計算し、変更があれば依存先を追加
+   // コミット時：
+   // 1. collectNeedsRecomputationで再計算が必要なComputedを収集
+   // 2. rank順にソートして処理
+   // 3. 各Computedを必要に応じて再計算
    ```
 
 4. **再計算時の依存関係更新（createDependencyTracker）**
@@ -149,11 +174,10 @@ Computed: {
 
 5. **コミット時の処理**
    - Phase 1: newlyInitializedの処理（コピー世界で初期化されたComputedを元に反映）
-   - Phase 2: valueDirtyにあるComputedを再計算
-   - Phase 3: バージョンチェック（楽観的同時実行制御）
-   - Phase 4: valueChangedDirtyの変更を元のStateに反映
-   - Phase 5: dependencyDirtyの依存関係を更新
-   - Phase 6: toDisposeのオブジェクトをdispose
+   - Phase 2: collectNeedsRecomputationで再計算が必要なComputedを収集し処理
+   - Phase 3: valueChangedDirtyの変更を元のStateに反映
+   - Phase 4: dependencyDirtyの依存関係を更新
+   - Phase 5: toDisposeのオブジェクトをdispose
 
 ## 初期化のタイミング
 
@@ -210,27 +234,22 @@ const commit = () => {
   // → コピー世界で初期化されたComputedを元のStateに反映
   // → 値、依存関係、isInitializedフラグを設定
   
-  // Phase 2: 残っているvalueDirtyを処理
-  handleValueDirty(context);
-  // → まだ再計算されていないComputedを再計算
+  // Phase 2: 再計算が必要なComputedを収集して処理
+  const needsRecomputation = collectNeedsRecomputation(context);
+  handleValueDirty(context, needsRecomputation);
+  // → Pull型で必要なComputedのみを再計算
   
-  // Phase 3: バージョンチェック（楽観的同時実行制御）
-  handleConcurrentModification(context);
-  // → Cellのバージョンが変更されていないか確認
-  
-  // Phase 4: 値の反映とコールバック実行
+  // Phase 3: 値の反映とコールバック実行
   handleValueChanges(context);
   // → stableValueを更新
-  // → Cellのバージョンをインクリメント
   // → ComputedのchangeCallbackを実行
   
-  // Phase 5: 依存関係の更新
+  // Phase 4: 依存関係の更新
   handleDependencyChanges(context);
   // → 古い依存関係をクリア
   // → 新しい依存関係を設定
-  // → dependencyVersionを更新
   
-  // Phase 6: dispose処理
+  // Phase 5: dispose処理
   handleDisposables(context);
   // → 登録されたDisposableオブジェクトをdispose
 };
@@ -273,16 +292,31 @@ function createDependencyTracker(copy, store, recomputeDependent) {
 }
 ```
 
-### バージョン管理
-- `valueVersion`: Cellの値の変更を追跡（楽観的同時実行制御）
-- `dependencyVersion`: Computedの依存関係の変更を追跡
-- コミット時にバージョンチェックを行い、並行変更を検出
+### tryAtomicUpdate
 
-### 5つのdirtyセットとtoDispose
+エラーを投げる代わりに結果を返すAPI：
+
+```typescript
+type AtomicUpdateResult<T> = AtomicSuccess<T> | AtomicReject;
+
+const result = tryAtomicUpdate((ops) => {
+  ops.set(cell, value);
+  return value;
+});
+
+if (result.success) {
+  console.log(result.value); // 成功時の返り値
+} else {
+  console.log(result.reason); // 失敗理由
+}
+```
+
+### 6つのdirtyセットとtoDispose
 - `valueDirty: Set<DependentCopy>`: 再計算が必要なComputed
 - `valueChangedDirty: Set<StateCopy>`: 値が変更されたState（Cell/Computed）
 - `dependencyDirty: Set<StateCopy>`: 依存関係が変更されたState
 - `newlyInitialized: Set<ComputedCopy>`: atomicUpdate中に初期化されたComputed
+- `touchedStates: Set<StateCopy>`: touchされたState
 - `toDispose: Set<Disposable>`: コミット時にdisposeするオブジェクト
 
 ### Rankベースの実行順序管理
@@ -311,13 +345,14 @@ valueDirty = {left(1), right(1), bottom(2)}
 // leftとrightが先に処理され、bottomは一度だけ計算される
 ```
 
-### 再計算の流れ（Push型）
-1. Cell Aが変更される → AのdependentsがvalueDirtyに追加
-2. handleValueDirtyでrank順に処理
+### 再計算の流れ（Pull型）
+1. Cell Aが変更される → AをvalueChangedDirtyに追加
+2. コミット時にcollectNeedsRecomputationを実行
+   - valueChangedDirtyから開始してdependentsを辿る
+   - 再計算が必要なComputedを収集
+3. handleValueDirtyでrank順に処理
    - 低いrank（依存元）から順に処理
    - 各Computedを再計算
-   - 値が変わればそのdependentsをvalueDirtyに追加
-3. whileループで新たに追加されたノードも処理
 4. すべての影響を受けるComputedが正しい順序で1回だけ更新される
 
 ### メモリ管理とリソース解放
@@ -391,11 +426,18 @@ function createCircularDetector(): CircularDetector {
 React Suspenseとの統合のため、非同期処理中の状態を伝播：
 
 ```typescript
-// 使用例
+// 非同期atomicUpdate（自動的にpromiseが作成される）
 atomicUpdate(async (ops) => {
   const data = await fetchData();
   ops.set(cell, data);
-  ops.pending(cell); // 自動的にatomicUpdateのPromiseが使用される
+  ops.pending(cell); // atomicUpdateのPromiseが使用される
+});
+
+// 同期atomicUpdate（明示的にpromiseを作成）
+atomicUpdate((ops) => {
+  const promise = fetchData();
+  promise.then(data => ops.set(cell, data));
+  ops.pending(cell, promise); // 明示的にpromiseを指定
 });
 
 // または明示的にPromiseを指定
@@ -527,10 +569,10 @@ export function lazyFunction<T extends (...args: any[]) => any>(
 - atomicUpdate時：コピー世界でのみ初期化し、コミット時に元に反映
 - これによりロールバック時も元のStateは不変
 
-### 3. バージョン管理
-- 楽観的同時実行制御により並行変更を検出
-- valueVersion（Cell）とdependencyVersion（Computed）を別管理
-- 競合時は明確なエラーで失敗
+### 3. 同時実行制御
+- デフォルトは"Last writer wins"（同時実行制御なし）
+- オプトインで3種類の同時実行制御トークンを使用可能
+- 競合時の動作はトークンに依存（ロールバック、拒否、または順次実行）
 
 ### 4. 型安全性
 - 関数オーバーロードで型推論を最大化

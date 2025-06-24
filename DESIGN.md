@@ -46,7 +46,7 @@
 
 * **atomicUpdate (アトミックアップデート)**: 複数の状態変更や副作用を伴う一連の操作を、一つの不可分な単位として実行するための仕組み。後述の**アプリケーションアクション**を定義する際に中心的な役割を果たします。
 
-* **AtomicContext (アトミックコンテキスト)**: 状態変更のバッファリング、一貫性維持、および関連する操作のコンテキスト情報を管理するatomicUpdateの内部的なエンティティです。楽観的同時実行制御のためのバージョン管理機構を持ち、並行して実行される操作間での一貫性を保証します。atomicUpdate内では、すべてのStateのコピーを保持し、変更はコピーに対して行われます。コミット時にコピーの内容が元のStateに反映され、ロールバック時はコピーが破棄されます。
+* **AtomicContext (アトミックコンテキスト)**: 状態変更のバッファリング、一貫性維持、および関連する操作のコンテキスト情報を管理するatomicUpdateの内部的なエンティティです。atomicUpdate内では、すべてのStateのコピーを保持し、変更はコピーに対して行われます。コミット時にコピーの内容が元のStateに反映され、ロールバック時はコピーが破棄されます。
 
 * **ReactiveCollection (リアクティブコレクション)**: (例: ReactiveMap, ReactiveArray) コレクション（配列やマップなど）のリアクティブな管理を目的とした専用のエンティティです。内部でCellを利用しつつ、要素の追加・削除に伴う関連リソース（CellやComputedなど）の自動的なSymbol.disposeや、要素自体の変更（ミュータブルなオブジェクトの内部変更も含む）の効率的な検知・通知を行います。atomicUpdateスコープ内での操作時には、オプションでAtomicContextを明示的に引き渡すことで、トランザクショナルな挙動（ロールバック時の状態復元を含む）を保証します。これにより、Cell<Map/Array>とops.touchを直接利用する場合に比べて、より宣言的で安全なコレクション操作を実現します。
 
@@ -240,7 +240,7 @@ splice(start: number, deleteCount: number, ...items: T[], options?: {context: At
 
 **作成**: `createReactiveMap()`, `createReactiveArray()` トップレベル関数を使用します。
 
-### 4.3. トランザクション制御 (atomicUpdate)
+### 4.3. トランザクション制御 (atomicUpdate, tryAtomicUpdate)
 
 複数の状態変更や副作用をアトミックに実行するためのスコープを提供します。
 
@@ -261,10 +261,14 @@ interface AtomicUpdateOptions {
   context?: AtomicContext;
 }
 
-function atomicUpdate(
-  fn: (ops: AtomicOperations) => Promise<void> | void,
+function atomicUpdate<T>(
+  fn: (ops: AtomicOperations) => T,
   options?: AtomicUpdateOptions
-): Promise<void> | void;
+): T;
+function atomicUpdate<T>(
+  fn: (ops: AtomicOperations) => Promise<T>,
+  options?: AtomicUpdateOptions
+): Promise<T>;
 ```
 
 #### コールバック関数 fn(ops)
@@ -276,7 +280,7 @@ function atomicUpdate(
 * **ops.set(cell, value)**: Cellへの変更を AtomicContext の内部バッファに記録します。値の比較は Cell 自身の compare 関数に従います。
 
 * **ops.pending(target, promise?)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。
-  * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise と関連付けられます。非同期の atomicUpdate 内（コールバック関数が Promise を返す場合）では promise 引数を省略でき、その場合は atomicUpdate のコールバック関数が返す Promise が自動的に使用されます。同期的な atomicUpdate 内では promise 引数は必須です。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
+  * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise と関連付けられます。非同期の atomicUpdate 内（コールバック関数が Promise を返す場合）では promise 引数を省略でき、その場合は atomicUpdate のコールバック関数が返す Promise が自動的に使用されます。同期的な atomicUpdate 内でも promise 引数を省略できます（内部的に即座に解決される Promise が使用されます）。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
   * **ペンディング状態の解除**: target の値が非同期的に解決され、（target が Cell の場合は ops.set によって）更新された後に AtomicContext がコミットされると、target のペンディング状態は解除されます。
   * このメソッド自体は値を返しません。
 
@@ -296,7 +300,95 @@ function atomicUpdate(
 
 ReactiveCollectionへの操作も、ops.contextを通じてAtomicContextが適切に連携されていれば、トランザクションのコミット/ロールバックと同期します。
 
-### 4.4. 高度なリソース管理ユーティリティ (createManagedObject)
+#### tryAtomicUpdate
+
+同時実行制御の競合が発生する可能性がある操作を、エラーを投げずに結果型で返すAPIです。
+
+```typescript
+interface AtomicUpdateResult<T> {
+  ok: true;
+  value: T;
+} | {
+  ok: false;
+  reason: string;
+}
+
+function tryAtomicUpdate<T>(
+  fn: (ops: AtomicOperations) => T,
+  options?: TryAtomicUpdateOptions
+): AtomicUpdateResult<T>;
+function tryAtomicUpdate<T>(
+  fn: (ops: AtomicOperations) => Promise<T>,
+  options?: TryAtomicUpdateOptions
+): Promise<AtomicUpdateResult<T>>;
+
+interface TryAtomicUpdateOptions {
+  context?: AtomicContext;
+  concurrent?: GuardToken | ExclusiveToken;
+}
+```
+
+GuardTokenまたはExclusiveTokenを使用した際の競合を、例外ではなく結果オブジェクトとして返します。これにより、競合時の処理を柔軟に記述できます。
+
+### 4.4. 同時実行制御
+
+本ライブラリは、並行して実行される操作間の一貫性を保証するため、3種類の同時実行制御メカニズムを提供します。
+
+#### 同時実行制御トークン
+
+##### GuardToken（楽観的同時実行制御）
+
+```typescript
+function createGuardToken(): GuardToken;
+```
+
+楽観的同時実行制御を実現します。複数の操作が並行して実行されることを許可しますが、コミット時に競合が検出された場合は操作がロールバックされます。
+
+##### ExclusiveToken（排他制御）
+
+```typescript
+function createExclusiveToken(): ExclusiveToken;
+```
+
+即時排他制御を実現します。既に実行中の操作がある場合、新しい操作は即座に棄却されます。
+
+##### SequencerToken（直列化）
+
+```typescript
+function createSequencerToken(): SequencerToken;
+```
+
+操作の直列化を実現します。複数の操作が同時に要求された場合、キューに入れて順番に実行します。**注意：SequencerTokenは非同期のatomicUpdateでのみ使用可能です。**
+
+#### 使用方法
+
+同時実行制御は、atomicUpdateまたはtryAtomicUpdateのオプションで指定します：
+
+```typescript
+// Guard（楽観的同時実行制御）
+const guardToken = createGuardToken();
+tryAtomicUpdate(ops => {
+  // 操作
+}, { concurrent: guardToken });
+
+// Exclusive（即時排他）
+const exclusiveToken = createExclusiveToken();
+tryAtomicUpdate(ops => {
+  // 操作
+}, { concurrent: exclusiveToken });
+
+// Sequencer（直列化） - 非同期のみ
+const sequencerToken = createSequencerToken();
+await atomicUpdate(async ops => {
+  // 非同期操作
+}, { concurrent: sequencerToken });
+```
+
+#### デフォルトの動作
+
+同時実行制御トークンを指定しない場合、操作は「last writer wins」のセマンティクスで実行されます。つまり、競合検出や排他制御は行われず、最後に実行された操作の結果が反映されます。
+
+### 4.5. 高度なリソース管理ユーティリティ (createManagedObject)
 
 `createManagedObject(factory: () => T): T & { [Symbol.dispose](): void }` は、リソース管理が強化されたオブジェクト（ManagedObject）を生成するためのトップレベル関数です。
 
