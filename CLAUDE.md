@@ -121,9 +121,9 @@ npm run type-check
 - atomicContextではすべてのStateのコピーを依存関係(Stateが依存しているもの、Stateに依存しているもの)・値を含め保持する
   - Stateのコピーのみを編集する
   - コミット時はStateのコピーをそのまま反映すれば良いし、ロールバック時はコピーを破棄すれば良い
-- Stateのバージョンは楽観的同時実行制御のために使用されます
-  - dependencyVersionは依存関係のバージョン(dependencies方向のみ)を管理します
-  - valueVersionは値のバージョンを管理します
+- バージョン管理は完全に撤廃されました（2025年6月）
+  - デフォルトは"Last writer wins"動作
+  - 同時実行制御が必要な場合はオプトインでトークンを使用
 - Stateの更新やコミットは常に最小の単位で行います
 
 ### 現在の実装状況（2025年6月）
@@ -131,13 +131,15 @@ npm run type-check
 #### ✅ 実装済み
 - 基本的な型定義（Cell, Computed）in `src/state.ts`
 - StateCopyStoreの実装 in `src/atomicContext/`
-- AtomicContextの実装（楽観的同時実行制御、Pull型評価）
+- AtomicContextの実装（Pull型評価）
 - AtomicUpdateの実装（トランザクション管理）
+- tryAtomicUpdateの実装（エラーを投げずに結果を返すAPI）
+- 同時実行制御トークン（Guard, Exclusive, Sequencer）in `src/concurrent/`
 - Cell/Computedの作成関数（createCell, createComputed）
 - get/set/touch/pending/disposeなどのトップレベル関数
 - ops.rejectAllChanges（atomicUpdate内での全変更破棄・リセット機能）
 - 循環依存検出（スコープベースのCircularDetectorによる静的・動的循環依存の検出）
-- pending機能（非同期状態管理、React Suspense連携）
+- pending機能（非同期状態管理、React Suspense連携、同期atomicUpdateでも使用可能）
 - React連携（useValueフック - useCallbackで最適化済み）
 - 包括的なテストファイル（basic, atomic-update, dependency-tracking, commit-rollback, diamond-dependency, circular-detection等）
 - TypeScript/tsup/Vitest設定
@@ -148,10 +150,21 @@ npm run type-check
 
 ### 最近の主要な改善
 
+#### バージョン管理の完全撤廃（2025年6月）
+- valueVersion、dependencyVersion、checkpointの概念を完全削除
+- デフォルトを"Last writer wins"に変更（楽観的同時実行制御の削除）
+- 同時実行制御はオプトインでトークンを使用する方式に移行
+
 #### Pull型評価への移行（2025年6月）
 - 従来のPush型（依存グラフ全体をvalueDirtyにマーク）からPull型（必要時に収集）へ変更
 - `collectNeedsRecomputation`で再計算が必要なComputedを収集
 - 値が変わらない場合の伝播停止機能を維持しつつ、循環依存検出との両立を実現
+
+#### 同時実行制御のオプトイン化（2025年6月）
+- GuardToken: 楽観的同時実行制御（競合時にロールバック）
+- ExclusiveToken: 排他制御（実行中は即座に拒否）
+- SequencerToken: 直列化（キューで順次実行）
+- tryAtomicUpdateでGuard/Exclusiveを使用、非同期atomicUpdateでSequencerを使用可能
 
 #### スコープベースの循環依存検出
 - グローバルな`CircularDetector`を使用し、各操作の起点ごとに検出
