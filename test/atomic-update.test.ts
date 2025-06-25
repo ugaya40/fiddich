@@ -84,7 +84,7 @@ describe('atomicUpdate operations', () => {
     });
 
     it('should handle complex state creation pattern', () => {
-      const storeCell = createNullableCell<{ count: Cell<number>; doubled: Computed<number> }>(null);
+      const storeCell = createCell<{ count: Cell<number>; doubled: Computed<number> } | null>(null);
 
       atomicUpdate((ops) => {
         const count = createCell(0);

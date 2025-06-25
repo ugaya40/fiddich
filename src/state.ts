@@ -55,20 +55,4 @@ export type ComputedValue<T> = T extends Computed<infer V> ? V : never;
  */
 export type StateGetter = <T>(state: State<T>) => T;
 
-/**
- * Helper for creating nullable state patterns
- * @example
- * const userCell = createCell<User | null>(null);
- * type UserCell = NullableCell<User>; // Cell<User | null>
- */
-export type NullableCell<T> = Cell<T | null>;
-export type NullableComputed<T> = Computed<T | null>;
 
-/**
- * Helper for creating optional state patterns
- * @example
- * const configCell = createCell<Config | undefined>(undefined);
- * type ConfigCell = OptionalCell<Config>; // Cell<Config | undefined>
- */
-export type OptionalCell<T> = Cell<T | undefined>;
-export type OptionalComputed<T> = Computed<T | undefined>;

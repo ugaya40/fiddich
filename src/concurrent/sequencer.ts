@@ -1,3 +1,4 @@
+import { AtomicOperations } from '../atomicUpdate';
 import type { ConcurrentActions, ConcurrentToken } from './types';
 
 const maps = new WeakMap<SequencerToken, SequencerInfo>();
@@ -24,7 +25,7 @@ export function createSequencerToken(): SequencerToken {
 export function createSequencerActions(token: SequencerToken): ConcurrentActions {
   const info = maps.get(token)!;
 
-  const wrapFunction = <T>(fn: (ops: any) => T | Promise<T>) => {
+  const wrapFunction = <T>(fn: (ops: AtomicOperations) => T | Promise<T>) => {
     return async (ops: any) => {
       await new Promise<void>((resolve) => {
         if (!info.isRunning) {

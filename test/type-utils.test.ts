@@ -5,8 +5,6 @@ import {
   type ComputedValue,
   createCell,
   createComputed,
-  createNullableCell,
-  createOptionalComputed,
   get,
   isCell,
   isComputed,
@@ -27,14 +25,6 @@ describe('Type utilities', () => {
       expectTypeOf<CellValue<typeof numberCell>>().toEqualTypeOf<number>();
       expectTypeOf<StateValue<typeof stringComputed>>().toEqualTypeOf<string>();
       expectTypeOf<ComputedValue<typeof stringComputed>>().toEqualTypeOf<string>();
-    });
-
-    it('should work with nullable and optional types', () => {
-      const nullableCell = createNullableCell<string>(null);
-      const optionalComputed = createOptionalComputed<number>(({ get }) => (get(nullableCell) ? 42 : undefined));
-
-      expect(get(nullableCell)).toBe(null);
-      expect(get(optionalComputed)).toBe(undefined);
     });
   });
 
@@ -92,7 +82,7 @@ describe('Type utilities', () => {
         name: string;
       }
 
-      const userCell = createNullableCell<User>(null);
+      const userCell = createCell<User | null>(null);
       const userNameComputed = createComputed(({ get }) => {
         const user = get(userCell);
         return user?.name ?? 'Anonymous';

@@ -6,7 +6,7 @@ import type { GuardToken } from './concurrent/guard';
 import type { SequencerToken } from './concurrent/sequencer';
 import type { Cell, State } from './state';
 
-type AtomicOperations = {
+export type AtomicOperations = {
   get: <T>(state: State<T>) => T;
   set: <T>(cell: Cell<T>, value: T) => void;
   touch: <T>(state: State<T>) => void;

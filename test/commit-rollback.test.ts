@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Cell, Computed } from '../src';
-import { atomicUpdate, createCell, createComputed, createNullableCell, get } from '../src';
+import { atomicUpdate, createCell, createComputed, get } from '../src';
 
 describe('Commit and Rollback', () => {
   describe('Successful commits', () => {
@@ -72,7 +72,7 @@ describe('Commit and Rollback', () => {
     });
 
     it('should rollback state created inside atomicUpdate', () => {
-      const storeCell = createNullableCell<{ count: Cell<number>; doubled: Computed<number> }>(null);
+      const storeCell = createCell<{ count: Cell<number>; doubled: Computed<number> } | null>(null);
 
       expect(() => {
         atomicUpdate((ops) => {
