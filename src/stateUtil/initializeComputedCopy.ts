@@ -1,10 +1,16 @@
 import type { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/types';
 import type { Computed, State } from '../state';
 import { globalCircularDetector } from './circularDetector';
+import { checkDisposedCopy } from './stateUtil';
 import { isComputedCopy } from './typeUtil';
 
 function getForCopy<V>(target: State<V>, dependencies: Set<StateCopy>, context: AtomicContext) {
   const targetCopy = context.copyStore.getCopy(target);
+
+  if(!context.isCommitting) {
+    checkDisposedCopy(targetCopy);
+  }
+
   // Check for circular dependency if target is a computed being initialized
   if (isComputedCopy(targetCopy) && !targetCopy.isInitialized) {
     globalCircularDetector().add('copy-initialize', targetCopy);

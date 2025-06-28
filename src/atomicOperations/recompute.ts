@@ -1,6 +1,6 @@
 import type { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/index';
 import type { State } from '../state';
-import { markDirectDependentsAsValueDirty } from '../stateUtil';
+import { markDirectDependentsAsValueDirty } from '../stateUtil/stateUtil';
 import { getForRecompute } from './get';
 import { propagateTouchedRecursively } from './touch';
 

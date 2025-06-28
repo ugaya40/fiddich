@@ -1,5 +1,18 @@
-import type { AtomicContext, StateCopy } from './atomicContext/types';
-import { isComputedCopy } from './stateUtil/typeUtil';
+import type { AtomicContext, StateCopy } from '../atomicContext/types';
+import { isComputedCopy } from './typeUtil';
+import type { State } from '../state';
+
+export function checkDisposed(state: State): void {
+  if (state.isDisposed) {
+    throw new Error('Cannot access disposed state');
+  }
+}
+
+export function checkDisposedCopy(copy: StateCopy): void {
+  if (copy.isDisposed) {
+    throw new Error('Cannot access disposed state');
+  }
+}
 
 let scheduled = false;
 const pendingNotifications = new Set<() => void>();

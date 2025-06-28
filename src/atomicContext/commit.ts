@@ -1,11 +1,12 @@
 import { recompute } from '../atomicOperations/recompute';
-import { scheduleNotifications } from '../stateUtil';
+import { scheduleNotifications } from '../stateUtil/stateUtil';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
-import { isComputedCopy } from '../stateUtil/typeUtil';
+import { isComputedCopy, isState } from '../stateUtil/typeUtil';
 import type { AtomicContext, StateCopy } from './types';
 
 function handleNewlyInitialized(context: AtomicContext) {
   for (const copy of context.newlyInitialized) {
+
     const original = copy.original;
     if (!original.isInitialized) {
       original.stableValue = copy.value;
@@ -26,6 +27,7 @@ function handleValueDirty(context: AtomicContext) {
 
     // Process the first node (lowest rank)
     const copy = sorted[0];
+
     if (isComputedCopy(copy)) {
       const detector = globalCircularDetector();
       const scope = {};
@@ -42,6 +44,7 @@ function handleValueDirty(context: AtomicContext) {
 
 function handleValueChanges(context: AtomicContext) {
   for (const copy of context.valueChangedDirty) {
+
     const original = copy.original;
     const prevValue = original.stableValue;
     original.stableValue = copy.value;
@@ -54,6 +57,7 @@ function handleValueChanges(context: AtomicContext) {
 
 function handleDependencyChanges(context: AtomicContext) {
   for (const copy of context.dependencyDirty) {
+    
     if (isComputedCopy(copy)) {
       const original = copy.original;
 
@@ -72,7 +76,13 @@ function handleDependencyChanges(context: AtomicContext) {
 
 function handleDisposables(context: AtomicContext) {
   for (const disposable of context.toDispose) {
-    disposable[Symbol.dispose]();
+    if(isState(disposable)) {
+      if(!disposable.isDisposed) {
+        disposable[Symbol.dispose]();
+      }
+    } else {
+      disposable[Symbol.dispose]();
+    }
   }
 }
 
@@ -83,6 +93,7 @@ function handleNotifications(context: AtomicContext) {
   const allNotifications = new Set<StateCopy>([...context.valueChangedDirty, ...context.notificationDirty]);
 
   for (const copy of allNotifications) {
+
     const original = copy.original;
     if (original.onScheduledNotify) {
       scheduledNotifications.push(original.onScheduledNotify);
@@ -95,6 +106,8 @@ function handleNotifications(context: AtomicContext) {
 }
 
 export function commit(context: AtomicContext): void {
+  context.isCommitting = true;
+  
   handleNewlyInitialized(context);
 
   handleValueDirty(context);

@@ -1,3 +1,4 @@
+import type { AtomicContext } from "../atomicContext";
 import { AtomicOperations } from "../atomicUpdate";
 
 export type ConcurrentToken = {
@@ -7,8 +8,8 @@ export type ConcurrentToken = {
 export type ConcurrentActions = {
   beforeRun?: () => true | string;
   wrapFunction?: <T>(fn: (ops: AtomicOperations) => T | Promise<T>) => (ops: any) => T | Promise<T>;
-  afterRun?: () => true | string;
-  beforeCommit?: () => void;
-  afterCommit?: () => void;
-  afterFailure?: () => void;
+  afterRun?: (context: AtomicContext) => true | string;
+  beforeCommit?: (context: AtomicContext) => void;
+  afterCommit?: (context: AtomicContext) => void;
+  afterFailure?: (context: AtomicContext) => void;
 };

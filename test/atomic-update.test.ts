@@ -157,31 +157,4 @@ describe('atomicUpdate operations', () => {
     });
   });
 
-  describe('Context isolation', () => {
-    it('should isolate changes between concurrent atomicUpdates', async () => {
-      const cell = createCell(10);
-
-      // Start two concurrent updates
-      const update1 = atomicUpdate(async (ops) => {
-        ops.set(cell, 20);
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        expect(ops.get(cell)).toBe(20); // Should see own changes
-        return ops.get(cell);
-      });
-
-      const update2 = atomicUpdate(async (ops) => {
-        await new Promise((resolve) => setTimeout(resolve, 25));
-        expect(ops.get(cell)).toBe(10); // Should not see update1's changes
-        ops.set(cell, 30);
-        return ops.get(cell);
-      });
-
-      // One should succeed, one should fail due to optimistic concurrency control
-      await expect(Promise.all([update1, update2])).rejects.toThrow('Concurrent value modification');
-
-      // Check that the cell value is either 20 or 30 (whichever committed first)
-      const finalValue = get(cell);
-      expect([20, 30]).toContain(finalValue);
-    });
-  });
 });

@@ -236,13 +236,9 @@ describe('Pending functionality', () => {
 
       const computed = createComputed(({ get }) => get(cell) * 2);
 
-      // Computed does not automatically inherit pending state on initialization
+      // Computed should automatically inherit pending state on initialization
       expect(get(computed)).toBe(20);
-      expect(computed.pendingPromise).toBeUndefined();
-
-      // Need to explicitly set pending on computed
-      pending(computed, promise);
-      expect(computed.pendingPromise).toBe(promise);
+      expect(computed.pendingPromise).toBe(promise); // Should inherit from dependency
 
       await promise;
       expect(computed.pendingPromise).toBeUndefined();

@@ -66,7 +66,7 @@ function atomicUpdateInternal<T>(
     result = newFunction(ops);
   } catch (error) {
     //afterFailure
-    concurrentAction?.afterFailure?.();
+    concurrentAction?.afterFailure?.(atomicContext);
     clearPendingIfOwner();
 
     throw error;
@@ -76,7 +76,7 @@ function atomicUpdateInternal<T>(
     return result
       .then((value) => {
         //afterRun
-        const afterRunResult = concurrentAction?.afterRun?.();
+        const afterRunResult = concurrentAction?.afterRun?.(atomicContext);
         if (afterRunResult != null && typeof afterRunResult === 'string') {
           return { ok: false, reason: afterRunResult } as AtomicReject;
         }
@@ -84,21 +84,21 @@ function atomicUpdateInternal<T>(
         if (isContextOwner) {
           commit(atomicContext);
           //afterCommit
-          concurrentAction?.afterCommit?.();
+          concurrentAction?.afterCommit?.(atomicContext);
         }
         clearPendingIfOwner();
         return { ok: true, value } as AtomicSuccess<T>;
       })
       .catch((error) => {
         //afterFailure
-        concurrentAction?.afterFailure?.();
+        concurrentAction?.afterFailure?.(atomicContext);
 
         clearPendingIfOwner();
         throw error;
       });
   } else {
     //afterRun
-    const afterRunResult = concurrentAction?.afterRun?.();
+    const afterRunResult = concurrentAction?.afterRun?.(atomicContext);
     if (afterRunResult != null && typeof afterRunResult === 'string') {
       return { ok: false, reason: afterRunResult };
     }
@@ -107,7 +107,7 @@ function atomicUpdateInternal<T>(
       commit(atomicContext);
 
       //afterCommit
-      concurrentAction?.afterCommit?.();
+      concurrentAction?.afterCommit?.(atomicContext);
     }
     clearPendingIfOwner();
     return { ok: true, value: result } as AtomicSuccess<T>;

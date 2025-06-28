@@ -1,6 +1,8 @@
 import { get } from './get';
-import type { Computed, NullableComputed, OptionalComputed, State } from './state';
+import type { Computed, State } from './state';
 import { type Compare, defaultCompare, generateStateId } from './util';
+import { checkDisposed } from './stateUtil/stateUtil';
+import { initializeComputed } from './stateUtil/initializeComputed';
 
 export function createComputed<T>(
   fn: (arg: { get: <V>(target: State<V>) => V }) => T,
@@ -11,11 +13,20 @@ export function createComputed<T>(
   }
 ): Computed<T> {
   const compare = options?.compare ?? defaultCompare;
+  let disposed = false;
+  let value: T = undefined as any;
 
   const current: Computed<T> = {
     id: generateStateId(),
     kind: 'computed',
-    stableValue: undefined as any,
+    get stableValue(): T {
+      checkDisposed(current);
+      return value;
+    },
+    set stableValue(newValue: T) {
+      checkDisposed(current);
+      value = newValue;
+    },
     dependents: new Set<Computed>(),
     dependencies: new Set<State>(),
     isInitialized: false,
@@ -29,21 +40,34 @@ export function createComputed<T>(
 
     changeCallback: options?.onChange,
     onScheduledNotify: options?.onScheduledNotify,
+    
+    get isDisposed() {
+      return disposed;
+    },
 
     [Symbol.dispose](): void {
+      if(disposed) return;
+      disposed = true;
+      
       for (const dependency of current.dependencies) {
         dependency.dependents.delete(current);
       }
       current.dependencies.clear();
 
+      for (const dependent of current.dependents) {
+        dependent.dependencies.delete(current);
+        dependent[Symbol.dispose]();
+      }
+
       current.dependents.clear();
     },
 
     toJSON(): T {
+      checkDisposed(current);
       if (!current.isInitialized) {
-        get(current);
+        initializeComputed(current);
       }
-      return current.stableValue;
+      return value;
     },
   };
 

@@ -4,6 +4,7 @@ export type StateCopyBase<T = any> = {
   id: string;
   value: T;
   rank: number;
+  isDisposed: boolean;
 };
 
 export interface CellCopy<T = any> extends StateCopyBase<T> {
@@ -38,4 +39,5 @@ export type AtomicContext = {
   newlyInitialized: Set<ComputedCopy>;
   touchedStates: Set<StateCopy>;
   atomicUpdatePromise: Promise<any> | undefined;
+  isCommitting: boolean;
 };

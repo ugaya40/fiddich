@@ -1,6 +1,7 @@
 import { get } from '../get';
 import type { Computed, State } from '../state';
 import { globalCircularDetector } from './circularDetector';
+import { checkDisposed } from './stateUtil';
 
 export function initializeComputed<T>(state: Computed<T>): void {
   if (state.isInitialized) return;
@@ -12,6 +13,7 @@ export function initializeComputed<T>(state: Computed<T>): void {
   const dependencies = new Set<State>();
 
   const getter = <V>(target: State<V>): V => {
+    checkDisposed(target);
     dependencies.add(target);
     return get(target);
   };

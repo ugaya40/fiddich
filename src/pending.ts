@@ -25,9 +25,7 @@ function collectDependentStates(state: State, promise: Promise<any>): State[] {
 export function pending<T>(state: State<T>, promise: Promise<any>): void {
   const states = collectDependentStates(state, promise);
 
-  for (const s of states) {
-    touch(s);
-  }
+  touch(state);
 
   promise.finally(() => {
     for (const s of states) {

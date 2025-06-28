@@ -15,12 +15,36 @@
 - コードを理解せずに修正を試み、ユーザーの生産性を著しく損なった
 - デバッグコードを無計画に追加し、問題を複雑化させた
 
+**テスト実装での失敗（2025年6月）:**
+- テストの期待値を実装に合わせて変更した
+- あるべき仕様を確認せずに勝手に判断した
+- テスト失敗時の報告が不適切だった
+
 **厳守すべき作業手順:**
 1. **必ずコードリーディングから始める** - 問題を理解せずにコードを書かない
 2. **コード編集前に必ず説明して承認を得る** - 「こう修正します」ではなく「こう修正したいが良いか」と確認
 3. **デバッグコードの追加も計画的に** - むやみにログを追加しない
 4. **何度も失敗した問題では特に慎重に** - 同じ間違いを繰り返さない
 5. **場当たり的な対応は絶対に避ける** - 全体を理解してから行動する
+
+### テスト実装の絶対原則
+
+1. **テストはあるべき仕様に基づいて実装する**
+   - 期待値を実装に合わせて変更してはいけない
+   - 実装をテストに合わせて変更してはいけない
+   - あるべき仕様が不明確な場合は、必ず先にユーザーに確認する
+
+2. **テスト失敗時の報告手順**
+   必ず以下をリスト形式で報告する：
+   - どのテストが失敗したか
+   - 何を期待していたか
+   - 実際の動作は何だったか
+   - 仕様が不明確な点は何か
+
+3. **仕様が不明確な場合**
+   - 勝手に判断しない
+   - 実装に合わせない
+   - 必ずユーザーに確認する
 
 ### 既存の開発時の重要な注意事項
 
@@ -198,3 +222,9 @@ npm run type-check
 - 関数名と同じファイル名（例: createCell.ts）
 - 型定義は集約（state.ts）
 - ユーティリティはutil.tsに集約
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

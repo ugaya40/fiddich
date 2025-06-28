@@ -53,6 +53,7 @@ describe('Custom Compare Functions', () => {
 
   describe('Cell with custom compare', () => {
     it('should use custom compare for object values', () => {
+      let computeCount = 0;
       const cell = createCell(
         { id: 1, name: 'Alice' },
         {
@@ -60,16 +61,29 @@ describe('Custom Compare Functions', () => {
         }
       );
 
-      //TODO: updateの確認にバージョンを使っていたので代替案検討
+      const computed = createComputed(({ get }) => {
+        computeCount++;
+        return get(cell);
+      });
+
+      // Initialize
+      expect(get(computed)).toEqual({ id: 1, name: 'Alice' });
+      expect(computeCount).toBe(1);
 
       // Same values - should not trigger update
       set(cell, { id: 1, name: 'Alice' });
+      expect(get(computed)).toEqual({ id: 1, name: 'Alice' });
+      expect(computeCount).toBe(1); // No recomputation
 
       // Different name - should trigger update
       set(cell, { id: 1, name: 'Bob' });
+      expect(get(computed)).toEqual({ id: 1, name: 'Bob' });
+      expect(computeCount).toBe(2); // Recomputed
 
       // Different id - should trigger update
       set(cell, { id: 2, name: 'Bob' });
+      expect(get(computed)).toEqual({ id: 2, name: 'Bob' });
+      expect(computeCount).toBe(3); // Recomputed
     });
 
     it('should use custom compare for array values', () => {
@@ -251,15 +265,27 @@ describe('Custom Compare Functions', () => {
         return keysA.every((key) => deepEquals(objA[key], objB[key]));
       };
 
+      let computeCount = 0;
       const cell = createCell({ user: { name: 'Alice', age: 30 }, scores: [10, 20, 30] }, { compare: deepEquals });
 
-      //TODO: updateの確認にバージョンを使っていたので代替案検討
+      const computed = createComputed(({ get }) => {
+        computeCount++;
+        return get(cell);
+      });
 
-      // Same deep structure
+      // Initialize
+      expect(get(computed)).toEqual({ user: { name: 'Alice', age: 30 }, scores: [10, 20, 30] });
+      expect(computeCount).toBe(1);
+
+      // Same deep structure - should not trigger update
       set(cell, { user: { name: 'Alice', age: 30 }, scores: [10, 20, 30] });
+      expect(get(computed)).toEqual({ user: { name: 'Alice', age: 30 }, scores: [10, 20, 30] });
+      expect(computeCount).toBe(1); // No recomputation
 
-      // Different deep structure
+      // Different deep structure - should trigger update
       set(cell, { user: { name: 'Alice', age: 31 }, scores: [10, 20, 30] });
+      expect(get(computed)).toEqual({ user: { name: 'Alice', age: 31 }, scores: [10, 20, 30] });
+      expect(computeCount).toBe(2); // Recomputed
     });
   });
 });
