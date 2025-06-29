@@ -202,6 +202,134 @@ describe('createComputed', () => {
   });
 
 
+  describe('dependency updates without value change', () => {
+    it('should update dependencies even when computed value remains the same', () => {
+      const condition = createCell(true);
+      const cellA = createCell(10);
+      const cellB = createCell(10); // Same value as cellA
+      let computeCount = 0;
+      const onChange = vi.fn();
+
+      const computed = createComputed(
+        ({ get }) => {
+          computeCount++;
+          return get(condition) ? get(cellA) : get(cellB);
+        },
+        { onChange }
+      );
+
+      // Initial value from cellA
+      expect(get(computed)).toBe(10);
+      expect(computeCount).toBe(1);
+      expect(onChange).not.toHaveBeenCalled();
+
+      // Switch dependency from cellA to cellB, but value stays 10
+      set(condition, false);
+      expect(computeCount).toBe(2); // Recomputed
+      expect(get(computed)).toBe(10);
+      expect(onChange).not.toHaveBeenCalled(); // Value didn't change
+
+      // Verify that dependency actually changed by modifying cellA
+      set(cellA, 20);
+      expect(computeCount).toBe(2); // Not recomputed because no longer depends on cellA
+      expect(get(computed)).toBe(10); // Still 10, not affected by cellA
+      expect(onChange).not.toHaveBeenCalled();
+
+      // Verify that cellB is now the dependency
+      set(cellB, 30);
+      expect(computeCount).toBe(3); // Recomputed
+      expect(get(computed)).toBe(30); // Now affected by cellB
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(10, 30);
+    });
+
+    it('should handle complex dependency switches with same values', () => {
+      const selector = createCell(0);
+      const cells = [
+        createCell(100),
+        createCell(100),
+        createCell(100),
+      ];
+      let accessedIndices: number[] = [];
+      const onChange = vi.fn();
+
+      const computed = createComputed(
+        ({ get }) => {
+          accessedIndices = [];
+          const index = get(selector);
+          // Track which cell is accessed
+          accessedIndices.push(index);
+          return get(cells[index]);
+        },
+        { onChange }
+      );
+
+      // Initial value from cells[0]
+      expect(get(computed)).toBe(100);
+      expect(accessedIndices).toEqual([0]);
+
+      // Switch to cells[1] - value stays same
+      set(selector, 1);
+      expect(get(computed)).toBe(100);
+      expect(accessedIndices).toEqual([1]);
+      expect(onChange).not.toHaveBeenCalled();
+
+      // Switch to cells[2] - value stays same
+      set(selector, 2);
+      expect(get(computed)).toBe(100);
+      expect(accessedIndices).toEqual([2]);
+      expect(onChange).not.toHaveBeenCalled();
+
+      // Verify dependencies by changing old ones - should not trigger recomputation
+      const prevAccessCount = accessedIndices.length;
+      set(cells[0], 200);
+      set(cells[1], 300);
+      expect(accessedIndices.length).toBe(prevAccessCount); // No new access
+      expect(get(computed)).toBe(100); // Not affected by cells[0] or cells[1]
+
+      // Verify cells[2] is the current dependency
+      set(cells[2], 400);
+      expect(get(computed)).toBe(400);
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(100, 400);
+    });
+
+    it('should properly clean up old dependencies in diamond pattern', () => {
+      const condition = createCell(true);
+      const base = createCell(5);
+      const branchA = createComputed(({ get }) => get(base) * 2); // 10
+      const branchB = createComputed(({ get }) => get(base) + 5); // 10
+      let computeCount = 0;
+
+      const final = createComputed(({ get }) => {
+        computeCount++;
+        // Both branches have same value (10) when base is 5
+        return get(condition) ? get(branchA) : get(branchB);
+      });
+
+      // Initial: depends on base through branchA
+      expect(get(final)).toBe(10);
+      expect(computeCount).toBe(1);
+
+      // Switch to branchB - value stays same
+      set(condition, false);
+      expect(get(final)).toBe(10);
+      expect(computeCount).toBe(2);
+
+      // Change base - should still affect final through branchB
+      set(base, 10);
+      expect(get(branchA)).toBe(20);
+      expect(get(branchB)).toBe(15);
+      expect(get(final)).toBe(15); // base(10) + 5
+      expect(computeCount).toBe(3);
+
+      // Switch back to branchA
+      set(condition, true);
+      expect(get(final)).toBe(20); // base(10) * 2
+      expect(computeCount).toBe(4);
+    });
+  });
+
   describe('error handling', () => {
     it('should propagate errors from computation', () => {
       const computed = createComputed(() => {

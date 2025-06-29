@@ -39,5 +39,4 @@ export type AtomicContext = {
   newlyInitialized: Set<ComputedCopy>;
   touchedStates: Set<StateCopy>;
   atomicUpdatePromise: Promise<any> | undefined;
-  isCommitting: boolean;
 };

@@ -30,8 +30,7 @@ export function createAtomicContext(): AtomicContext {
     toDispose,
     newlyInitialized,
     touchedStates,
-    atomicUpdatePromise: undefined,
-    isCommitting: false
+    atomicUpdatePromise: undefined
   };
 
   partialContext.copyStore = createCopyStore(partialContext);

@@ -1,6 +1,6 @@
 import type { AtomicContext } from '../atomicContext/index';
 import type { Cell } from '../state';
-import { checkDisposedCopy, markDirectDependentsAsValueDirty } from '../stateUtil/stateUtil';
+import { markDirectDependentsAsValueDirty, throwDisposedStateError } from '../stateUtil/stateUtil';
 import { isDisposable } from '../util';
 import { disposeForAtomicOperation } from './dispose';
 
@@ -8,8 +8,8 @@ export function setForAtomicOperation<T>(cell: Cell<T>, newValue: T, context: At
   const { copyStore, valueChangedDirty } = context;
   const copy = copyStore.getCopy(cell);
 
-  if(!context.isCommitting) {
-    checkDisposedCopy(copy);
+  if(copy.isDisposed) {
+    throwDisposedStateError();
   }
 
   if (!cell.compare(copy.value, newValue)) {

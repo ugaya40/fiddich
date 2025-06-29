@@ -1,4 +1,5 @@
 import type { State } from './state';
+import { throwDisposedStateError } from './stateUtil/stateUtil';
 import { touch } from './touch';
 
 function collectDependentStatesInternal(state: State, promise: Promise<any>, visited: Set<State>, states: State[]): void {
@@ -24,6 +25,10 @@ function collectDependentStates(state: State, promise: Promise<any>): State[] {
 
 export function pending<T>(state: State<T>, promise: Promise<any>): void {
   const states = collectDependentStates(state, promise);
+
+  if(state.isDisposed) {
+    throwDisposedStateError();
+  }
 
   touch(state);
 

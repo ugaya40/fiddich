@@ -38,20 +38,20 @@ function createDependencyTracker(copy: ComputedCopy) {
   };
 
   // Dependencies changed if we have new ones or some old ones are no longer used
-  const hasChanges = () => hasNewDependencies || remainingDependencies.size > 0;
+  const dependencyChanges = () => hasNewDependencies || remainingDependencies.size > 0;
 
-  return { dependencyTracker, hasChanges };
+  return { dependencyTracker, dependencyChanges };
 }
 
 export function recompute(copy: ComputedCopy, context: AtomicContext) {
   const { dependencyDirty, valueChangedDirty, notificationDirty, touchedStates } = context;
 
-  const { dependencyTracker, hasChanges } = createDependencyTracker(copy);
+  const { dependencyTracker, dependencyChanges } = createDependencyTracker(copy);
 
   const oldValue = copy.value;
   const newValue = copy.original.compute(<T>(state: State<T>) => getForRecompute(state, context, dependencyTracker));
 
-  if (hasChanges()) {
+  if (dependencyChanges()) {
     dependencyDirty.add(copy);
 
     // Update rank based on new dependencies

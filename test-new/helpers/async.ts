@@ -20,5 +20,5 @@ export function createControllablePromise<T = void>() {
 }
 
 export async function waitForMicrotasks() {
-  await new Promise((resolve) => queueMicrotask(resolve));
+  await new Promise((resolve) => queueMicrotask(() => resolve(true)));
 }

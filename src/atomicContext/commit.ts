@@ -106,15 +106,17 @@ function handleNotifications(context: AtomicContext) {
 }
 
 export function commit(context: AtomicContext): void {
-  context.isCommitting = true;
-  
-  handleNewlyInitialized(context);
 
   handleValueDirty(context);
 
   handleValueChanges(context);
 
   handleDependencyChanges(context);
+
+  // Must be called after handleValueDirty to ensure that any computeds
+  // newly initialized during recomputation have their dependencies
+  // reflected in the original state before the next atomicUpdate
+  handleNewlyInitialized(context);
 
   handleNotifications(context);
 

@@ -1,7 +1,6 @@
 import type { Cell, Computed, State } from '../state';
 import { initializeComputedCopy } from '../stateUtil/initializeComputedCopy';
 import { isCell, isCellCopy, isComputed, isComputedCopy } from '../stateUtil/typeUtil';
-import { checkDisposedCopy } from '../stateUtil/stateUtil';
 import { assertUnreachable } from '../util';
 import type { AtomicContext } from './index';
 import type { CellCopy, ComputedCopy, StateCopy } from './types';
@@ -74,7 +73,7 @@ function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<
     }
   } else if (isComputed(state) && isComputedCopy(newCopy)) {
     if (!newCopy.isInitialized) {
-      initializeComputedCopy(newCopy, state, context);
+      initializeComputedCopy(newCopy, context);
     } else {
       for (const dependent of state.dependents) {
         newCopy.dependents.add(getCopyInternal(dependent, context));

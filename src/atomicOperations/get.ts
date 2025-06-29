@@ -1,7 +1,7 @@
 import type { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/index';
 import type { State } from '../state';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
-import { checkDisposedCopy } from '../stateUtil/stateUtil';
+import { throwDisposedStateError } from '../stateUtil/stateUtil';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 import { recompute } from './recompute';
 
@@ -70,10 +70,6 @@ function recomputeCollected(collected: Set<ComputedCopy>, context: AtomicContext
 export function getForRecompute<T>(target: State<T>, context: AtomicContext, dependencyTracker: (targetCopy: StateCopy) => void) {
   const targetCopy = context.copyStore.getCopy(target);
 
-  if(!context.isCommitting) {
-    checkDisposedCopy(targetCopy);
-  }
-
   // For computed, traverse dependencies and recompute what's needed
   if (isComputedCopy(targetCopy)) {
     const needsRecompute = collectNeedsRecomputation(targetCopy, context);
@@ -89,9 +85,9 @@ export function getForRecompute<T>(target: State<T>, context: AtomicContext, dep
 
 export function getForAtomicOperation<T>(state: State<T>, context: AtomicContext) {
   const targetCopy = context.copyStore.getCopy(state);
-  
-  if(!context.isCommitting) {
-    checkDisposedCopy(targetCopy);
+
+  if(targetCopy.isDisposed) {
+    throwDisposedStateError();
   }
 
   if (isComputedCopy(targetCopy)) {

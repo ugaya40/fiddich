@@ -157,9 +157,6 @@ describe('atomicUpdate - ops.dispose', () => {
       originalDispose?.call(computed);
     };
     
-    // Initialize to establish dependencies
-    get(computed);
-    
     atomicUpdate(({ dispose }) => {
       dispose(cellA);
       dispose(computed);
@@ -396,6 +393,31 @@ describe('atomicUpdate - ops.dispose', () => {
           touch(cell);
         });
       }).toThrow();
+    });
+
+    it('should handle computed depending on multiple cells when one is disposed', () => {
+      const cellA = createCell(10);
+      const cellB = createCell(20);
+      const computed = createComputed(({ get }) => get(cellA) + get(cellB));
+      
+      // Initialize computed
+      expect(get(computed)).toBe(30);
+      
+      atomicUpdate(({ set, dispose }) => {
+        dispose(cellA);
+        // Should be able to set cellB
+        set(cellB, 25);
+      });
+      
+      // After atomicUpdate:
+      // cellA should be disposed
+      expect(() => get(cellA)).toThrow('Cannot access disposed state');
+      
+      // cellB should be accessible with new value
+      expect(get(cellB)).toBe(25);
+      
+      // computed should throw because one of its dependencies is disposed
+      expect(() => get(computed)).toThrow('Cannot access disposed state');
     });
   });
 

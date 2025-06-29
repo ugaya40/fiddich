@@ -1,7 +1,22 @@
 import { get } from '../get';
 import type { Computed, State } from '../state';
 import { globalCircularDetector } from './circularDetector';
-import { checkDisposed } from './stateUtil';
+
+import { isComputed } from './typeUtil';
+
+export function getForInitializeComputed<T,V>(target: State<V>, owner: Computed<T>) {
+  if(isComputed(target) && !target.isInitialized) {
+    initializeComputed(target);
+  }
+
+  if(target.isDisposed && !owner.isDisposed) {
+    owner.isDisposed = true;
+  }
+
+  owner.dependencies.add(target);
+  target.dependents.add(owner);
+  return target.stableValue;
+}
 
 export function initializeComputed<T>(state: Computed<T>): void {
   if (state.isInitialized) return;
@@ -10,24 +25,19 @@ export function initializeComputed<T>(state: Computed<T>): void {
   const scope = {};
   detector.setScope(scope);
 
-  const dependencies = new Set<State>();
-
-  const getter = <V>(target: State<V>): V => {
-    checkDisposed(target);
-    dependencies.add(target);
-    return get(target);
-  };
+  detector.add('initialize', state);
 
   try {
-    detector.add('initialize', state);
-    state.stableValue = state.compute(getter);
-  } finally {
-    detector.exitScope(scope);
+    state.stableValue = state.compute((target) => getForInitializeComputed(target, state));
+  } catch(error) {
+    for(const dep of state.dependencies) {
+      dep.dependents.delete(state);
+    }
+    state.dependencies.clear();
+    throw error;
   }
-
-  state.dependencies = dependencies;
-  for (const dep of dependencies) {
-    dep.dependents.add(state);
+  finally {
+    detector.exitScope(scope);
   }
 
   state.isInitialized = true;

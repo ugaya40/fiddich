@@ -1,15 +1,16 @@
 import type { AtomicContext, StateCopy } from '../atomicContext/index';
 import type { State } from '../state';
-import { checkDisposedCopy, markDirectDependentsAsValueDirty } from '../stateUtil/stateUtil';
+import { markDirectDependentsAsValueDirty, throwDisposedStateError } from '../stateUtil/stateUtil';
 import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
 
 export function touchForAtomicOperation<T>(state: State<T>, context: AtomicContext) {
   const { copyStore, valueDirty, notificationDirty, touchedStates } = context;
   const copy = copyStore.getCopy(state);
-  
-  if(!context.isCommitting) {
-    checkDisposedCopy(copy);
+
+  if(copy.isDisposed) {
+    throwDisposedStateError();
   }
+  
 
   // Mark self as touched
   touchedStates.add(copy);

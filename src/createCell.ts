@@ -1,6 +1,6 @@
 import type { Cell, Computed } from './state';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
-import { checkDisposed } from './stateUtil/stateUtil';
+import { throwDisposedStateError } from './stateUtil/stateUtil';
 
 export function createCell<T>(
   initialValue: T,
@@ -11,20 +11,13 @@ export function createCell<T>(
   }
 ): Cell<T> {
   const compare = options?.compare ?? defaultCompare;
-  let disposed = false;
-  let value = initialValue;
+  let isDisposed = false;
+  const stableValue = initialValue;
 
   const current: Cell<T> = {
     id: generateStateId(),
     kind: 'cell',
-    get stableValue(): T {
-      checkDisposed(current);
-      return value;
-    },
-    set stableValue(newValue: T) {
-      checkDisposed(current);
-      value = newValue;
-    },
+    stableValue,
     dependents: new Set<Computed>(),
 
     compare,
@@ -32,16 +25,13 @@ export function createCell<T>(
     changeCallback: options?.onChange,
     onScheduledNotify: options?.onScheduledNotify,
     
-    get isDisposed() {
-      return disposed;
-    },
+    isDisposed,
 
     [Symbol.dispose](): void {
-      if(disposed) return;
-      disposed = true;
+      if(isDisposed) return;
 
-      if (isDisposable(value)) {
-        value[Symbol.dispose]();
+      if (isDisposable(current.stableValue)) {
+        current.stableValue[Symbol.dispose]();
       }
       
       for (const dependent of current.dependents) {
@@ -49,11 +39,15 @@ export function createCell<T>(
         dependent[Symbol.dispose]();
       }
       current.dependents.clear();
+
+      current.isDisposed = true;
     },
 
     toJSON(): T {
-      checkDisposed(current);
-      return value;
+      if(current.isDisposed) {
+        throwDisposedStateError();
+      }
+      return current.stableValue;
     },
   };
 

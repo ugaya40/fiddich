@@ -27,8 +27,8 @@ describe('basic operations', () => {
       const computation = vi.fn(({ get }) => get(cell));
       const computed = createComputed(computation);
 
-      // First get establishes dependency
       get(computed);
+      // First get establishes dependency
       expect(computation).toHaveBeenCalledTimes(1);
 
       // Changing cell should trigger recomputation
@@ -138,7 +138,6 @@ describe('basic operations', () => {
 
       // Touch should propagate
       touch(cell);
-      get(computed3);
       expect(comp1).toHaveBeenCalledTimes(2);
       expect(comp2).toHaveBeenCalledTimes(2);
       expect(comp3).toHaveBeenCalledTimes(2);
@@ -165,13 +164,11 @@ describe('basic operations', () => {
     it('should not trigger onChange if value unchanged', () => {
       const onChange = vi.fn();
       const cell = createCell(42);
-      const computed = createComputed(({ get }) => get(cell), { onChange });
+      createComputed(({ get }) => get(cell), { onChange });
 
-      get(computed);
       expect(onChange).not.toHaveBeenCalled();
 
       touch(cell);
-      get(computed);
       expect(onChange).not.toHaveBeenCalled(); // Value still 42
     });
   });
@@ -201,11 +198,9 @@ describe('basic operations', () => {
       expect(computation).toHaveBeenCalledTimes(1);
 
       set(cell, 20);
-      get(computed);
       expect(computation).toHaveBeenCalledTimes(2);
 
       touch(cell);
-      get(computed);
       expect(computation).toHaveBeenCalledTimes(3);
     });
   });
