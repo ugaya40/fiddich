@@ -219,7 +219,7 @@ describe('uninitialized computed behavior', () => {
 
     it('should handle touch on uninitialized computed', () => {
       const cell = createCell(1);
-      const computation = vi.fn(({ get }) => get(cell) * 2);
+      const computation = vi.fn(({ get }) =>  get(cell) * 2);
       const computed = createComputed(computation);
       const onChange = vi.fn();
       
@@ -229,11 +229,11 @@ describe('uninitialized computed behavior', () => {
       // Touch before initialization
       touch(computed);
       
-      // Should not compute yet
-      expect(computation).not.toHaveBeenCalled();
+      // Touch triggers initialization and computation once
+      expect(computation).toHaveBeenCalledTimes(1);
       
-      // But should notify
-      expect(onChange).toHaveBeenCalledTimes(1);
+      // No notification because no one is observing this uninitialized computed
+      expect(onChange).toHaveBeenCalledTimes(0);
       
       // First access should compute
       expect(get(computed)).toBe(2);

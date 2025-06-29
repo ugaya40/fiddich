@@ -36,7 +36,7 @@ function collectNeedsRecomputationInternal(
   }
 }
 
-function collectNeedsRecomputation(target: ComputedCopy, context: AtomicContext): Set<ComputedCopy> {
+export function collectNeedsRecomputation(target: ComputedCopy, context: AtomicContext): Set<ComputedCopy> {
   const collected = new Set<ComputedCopy>();
   const visited = new Set<ComputedCopy>();
 
@@ -45,7 +45,7 @@ function collectNeedsRecomputation(target: ComputedCopy, context: AtomicContext)
   return collected;
 }
 
-function recomputeCollected(collected: Set<ComputedCopy>, context: AtomicContext) {
+export function recomputeCollected(collected: Set<ComputedCopy>, context: AtomicContext) {
   // Sort by rank ascending
   const sorted = [...collected].sort((a, b) => a.rank - b.rank);
 
@@ -65,22 +65,6 @@ function recomputeCollected(collected: Set<ComputedCopy>, context: AtomicContext
   } finally {
     detector.exitScope(scope);
   }
-}
-
-export function getForRecompute<T>(target: State<T>, context: AtomicContext, dependencyTracker: (targetCopy: StateCopy) => void) {
-  const targetCopy = context.copyStore.getCopy(target);
-
-  // For computed, traverse dependencies and recompute what's needed
-  if (isComputedCopy(targetCopy)) {
-    const needsRecompute = collectNeedsRecomputation(targetCopy, context);
-    if (needsRecompute.size > 0) {
-      recomputeCollected(needsRecompute, context);
-    }
-  }
-
-  // Track this as an active dependency
-  dependencyTracker(targetCopy);
-  return targetCopy.value;
 }
 
 export function getForAtomicOperation<T>(state: State<T>, context: AtomicContext) {

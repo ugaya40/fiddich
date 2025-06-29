@@ -1,6 +1,7 @@
 import type { AtomicContext } from '../atomicContext/index';
 import type { Cell } from '../state';
-import { markDirectDependentsAsValueDirty, throwDisposedStateError } from '../stateUtil/stateUtil';
+import { throwDisposedStateError } from '../stateUtil/stateUtil';
+import { isComputedCopy } from '../stateUtil/typeUtil';
 import { isDisposable } from '../util';
 import { disposeForAtomicOperation } from './dispose';
 
@@ -21,6 +22,10 @@ export function setForAtomicOperation<T>(cell: Cell<T>, newValue: T, context: At
       disposeForAtomicOperation(oldValue, context);
     }
 
-    markDirectDependentsAsValueDirty(copy, context);
+    for (const dependent of copy.dependents) {
+      if (isComputedCopy(dependent)) {
+        context.valueDirty.add(dependent);
+      }
+    }
   }
 }

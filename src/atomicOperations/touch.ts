@@ -1,6 +1,6 @@
 import type { AtomicContext, StateCopy } from '../atomicContext/index';
 import type { State } from '../state';
-import { markDirectDependentsAsValueDirty, throwDisposedStateError } from '../stateUtil/stateUtil';
+import { throwDisposedStateError } from '../stateUtil/stateUtil';
 import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
 
 export function touchForAtomicOperation<T>(state: State<T>, context: AtomicContext) {
@@ -11,19 +11,23 @@ export function touchForAtomicOperation<T>(state: State<T>, context: AtomicConte
     throwDisposedStateError();
   }
   
-
-  // Mark self as touched
   touchedStates.add(copy);
 
-  // Mark self appropriately
   if (isCellCopy(copy)) {
     notificationDirty.add(copy);
   } else if (isComputedCopy(copy)) {
-    valueDirty.add(copy);
+    // If initialized in this atomicContext, there's no need to add to valueDirty
+    if(copy.original.isInitialized) {
+      valueDirty.add(copy);
+    }
   }
 
-  // Mark all dependents
-  markDirectDependentsAsValueDirty(copy, context);
+  for (const dependent of copy.dependents) {
+    if (isComputedCopy(dependent)) {
+      context.valueDirty.add(dependent);
+    }
+  }
+
   propagateTouchedRecursively(copy, context);
 }
 
@@ -33,7 +37,6 @@ function propagateTouchedRecursivelyInternal(copy: StateCopy, context: AtomicCon
 
   for (const dependent of copy.dependents) {
     context.touchedStates.add(dependent);
-    // Recursively process
     propagateTouchedRecursivelyInternal(dependent, context, visited);
   }
 }

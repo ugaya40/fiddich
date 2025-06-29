@@ -21,11 +21,3 @@ export function scheduleNotifications(notifications: Array<() => void>): void {
     });
   }
 }
-
-export function markDirectDependentsAsValueDirty(copy: StateCopy, context: AtomicContext) {
-  for (const dependent of copy.dependents) {
-    if (isComputedCopy(dependent)) {
-      context.valueDirty.add(dependent);
-    }
-  }
-}

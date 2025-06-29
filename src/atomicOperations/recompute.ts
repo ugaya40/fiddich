@@ -1,8 +1,24 @@
 import type { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/index';
 import type { State } from '../state';
-import { markDirectDependentsAsValueDirty } from '../stateUtil/stateUtil';
-import { getForRecompute } from './get';
+import { isComputedCopy } from '../stateUtil/typeUtil';
+import { collectNeedsRecomputation, recomputeCollected } from './get';
 import { propagateTouchedRecursively } from './touch';
+
+export function getForRecompute<T>(target: State<T>, context: AtomicContext, dependencyTracker: (targetCopy: StateCopy) => void) {
+  const targetCopy = context.copyStore.getCopy(target);
+
+  // For computed, traverse dependencies and recompute what's needed
+  if (isComputedCopy(targetCopy)) {
+    const needsRecompute = collectNeedsRecomputation(targetCopy, context);
+    if (needsRecompute.size > 0) {
+      recomputeCollected(needsRecompute, context);
+    }
+  }
+
+  // Track this as an active dependency
+  dependencyTracker(targetCopy);
+  return targetCopy.value;
+}
 
 function createDependencyTracker(copy: ComputedCopy) {
   // Start with all existing dependencies in a "remaining" set
@@ -71,13 +87,22 @@ export function recompute(copy: ComputedCopy, context: AtomicContext) {
     copy.value = newValue;
     valueChangedDirty.add(copy);
 
-    markDirectDependentsAsValueDirty(copy, context);
+    for (const dependent of copy.dependents) {
+      if (isComputedCopy(dependent)) {
+        context.valueDirty.add(dependent);
+      }
+    }
+    
   }
 
   if (isTouched) {
     if (!hasValueChanged) {
       notificationDirty.add(copy);
-      markDirectDependentsAsValueDirty(copy, context);
+      for (const dependent of copy.dependents) {
+        if (isComputedCopy(dependent)) {
+          context.valueDirty.add(dependent);
+        }
+      }
     }
 
     propagateTouchedRecursively(copy, context);
