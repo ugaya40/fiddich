@@ -3,7 +3,7 @@ import type { State } from '../state';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
 import { globalDependencyTracker } from '../stateUtil/dependencyTracker';
 import { isComputedCopy } from '../stateUtil/typeUtil';
-import { collectNeedsRecomputation, recomputeCollected } from './get';
+import { recomputeIfNeed } from './recomputeIfNeed';
 import { propagateTouchedRecursively } from './touch';
 
 export function getForRecompute<T>(target: State<T>, context: AtomicContext, owner: ComputedCopy) {
@@ -11,10 +11,7 @@ export function getForRecompute<T>(target: State<T>, context: AtomicContext, own
 
   // For computed, traverse dependencies and recompute what's needed
   if (isComputedCopy(targetCopy)) {
-    const needsRecompute = collectNeedsRecomputation(targetCopy, context);
-    if (needsRecompute.size > 0) {
-      recomputeCollected(needsRecompute, context);
-    }
+    recomputeIfNeed(targetCopy, context);
   }
 
   // Track this as an active dependency

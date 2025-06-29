@@ -7,8 +7,6 @@ type DependencyTracker = {
   track: (computed: ComputedCopy, dependency: StateCopy) => void;
 };
 
-
-
 function createDependencyTracker(): DependencyTracker {
   const collector: ScopedCollector<ComputedCopy, StateCopy, DependencyChanges> = createScopedCollector({
     createStoreForUnit: (computed) => {
@@ -20,18 +18,18 @@ function createDependencyTracker(): DependencyTracker {
         added: [] as StateCopy[]
       };
     },
-    processItem: (computed, store, dependency) => {
+    processItem: (computedCopy, store, dependencyCopy) => {
       
       // Check if this is a new dependency
-      if (!store.remainingOldDependencies.has(dependency)) {
-        if(!computed.dependencies.has(dependency)) {
-          computed.dependencies.add(dependency);
-          dependency.dependents.add(computed);
-          store.added.push(dependency);
+      if (!store.remainingOldDependencies.has(dependencyCopy)) {
+        if(!computedCopy.dependencies.has(dependencyCopy)) {
+          computedCopy.dependencies.add(dependencyCopy);
+          dependencyCopy.dependents.add(computedCopy);
+          store.added.push(dependencyCopy);
         }
       } else {
         // This dependency still exists, remove it from remaining
-        store.remainingOldDependencies.delete(dependency);
+        store.remainingOldDependencies.delete(dependencyCopy);
       }
       
     },
@@ -41,9 +39,9 @@ function createDependencyTracker(): DependencyTracker {
 
         const deleted = [...store.remainingOldDependencies];
 
-        for(const oldDependency of deleted) {
-          computed.dependencies.delete(oldDependency);
-          oldDependency.dependents.delete(computed);
+        for(const oldDependencyCopy of deleted) {
+          computed.dependencies.delete(oldDependencyCopy);
+          oldDependencyCopy.dependents.delete(computed);
         }
 
         return { 

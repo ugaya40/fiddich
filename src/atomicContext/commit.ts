@@ -53,14 +53,14 @@ function handleDependencyChanges(context: AtomicContext) {
     const {changes, computedCopy} = dependencyChanges;
     const original = computedCopy.original;
 
-    for(const oldDependency of changes.deleted.map(c => c.original)) {
-      oldDependency.dependents.delete(computedCopy.original);
-      original.dependencies.delete(oldDependency);
+    for(const oldOriginal of changes.deleted.map(c => c.original)) {
+      oldOriginal.dependents.delete(computedCopy.original);
+      original.dependencies.delete(oldOriginal);
     }
 
-    for(const newDependency of changes.added.map(c => c.original)) {
-      newDependency.dependents.add(original);
-      original.dependencies.add(newDependency);
+    for(const newOriginal of changes.added.map(c => c.original)) {
+      newOriginal.dependents.add(original);
+      original.dependencies.add(newOriginal);
     }
   }
 }
