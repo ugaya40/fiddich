@@ -25,7 +25,7 @@ export function initializeComputed<T>(state: Computed<T>): void {
   const scope = {};
   detector.setScope(scope);
 
-  detector.add('initialize', state);
+  detector.collect('initialize', state);
 
   try {
     state.stableValue = state.compute((target) => getForInitializeComputed(target, state));

@@ -1,6 +1,6 @@
 import type { AtomicContext, StateCopy } from '../atomicContext/index';
 import type { State } from '../state';
-import { throwDisposedStateError } from '../stateUtil/stateUtil';
+import { throwDisposedStateError } from '../stateUtil/throwDisposedStateError';
 import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
 
 export function touchForAtomicOperation<T>(state: State<T>, context: AtomicContext) {

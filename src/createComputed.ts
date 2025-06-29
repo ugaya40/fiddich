@@ -1,7 +1,7 @@
 import { get } from './get';
 import type { Computed, State } from './state';
 import { type Compare, defaultCompare, generateStateId } from './util';
-import { throwDisposedStateError } from './stateUtil/stateUtil';
+import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
 import { initializeComputed } from './stateUtil/initializeComputed';
 
 export function createComputed<T>(

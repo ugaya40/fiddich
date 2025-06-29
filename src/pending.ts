@@ -1,5 +1,5 @@
 import type { State } from './state';
-import { throwDisposedStateError } from './stateUtil/stateUtil';
+import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
 import { touch } from './touch';
 
 function collectDependentStatesInternal(state: State, promise: Promise<any>, visited: Set<State>, states: State[]): void {

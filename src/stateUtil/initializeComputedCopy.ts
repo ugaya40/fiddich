@@ -7,7 +7,7 @@ function getForInitializeComputedCopy<T, V>(target: State<V>, owner: ComputedCop
   const targetCopy = context.copyStore.getCopy(target);
 
   if (isComputedCopy(targetCopy) && !targetCopy.isInitialized) {
-    globalCircularDetector().add('copy-initialize', targetCopy);
+    globalCircularDetector().collect('copy-initialize', targetCopy);
   }
 
   if(targetCopy.isDisposed && !owner.isDisposed) {
@@ -24,7 +24,7 @@ export function initializeComputedCopy<T>(copy: ComputedCopy<T>, context: Atomic
   const detector = globalCircularDetector();
   const scope = {};
   detector.setScope(scope);
-  detector.add('copy-initialize', copy);
+  detector.collect('copy-initialize', copy);
 
   try {
     copy.value = copy.original.compute((target) => getForInitializeComputedCopy(target, copy, context));

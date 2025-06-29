@@ -1,6 +1,5 @@
 import { recompute } from '../atomicOperations/recompute';
-import { scheduleNotifications } from '../stateUtil/stateUtil';
-import { globalCircularDetector } from '../stateUtil/circularDetector';
+import { scheduleNotifications } from '../stateUtil/scheduleNotifications';
 import { isComputedCopy, isState } from '../stateUtil/typeUtil';
 import type { AtomicContext, StateCopy } from './types';
 
@@ -29,14 +28,7 @@ function handleValueDirty(context: AtomicContext) {
     const copy = sorted[0];
 
     if (isComputedCopy(copy)) {
-      const detector = globalCircularDetector();
-      const scope = {};
-      detector.setScope(scope);
-      try {
-        recompute(copy, context);
-      } finally {
-        detector.exitScope(scope);
-      }
+      recompute(copy, context);
     }
     context.valueDirty.delete(copy);
   }

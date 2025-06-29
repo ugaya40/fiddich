@@ -1,6 +1,6 @@
 import type { AtomicContext } from '../atomicContext/index';
 import type { Cell } from '../state';
-import { throwDisposedStateError } from '../stateUtil/stateUtil';
+import { throwDisposedStateError } from '../stateUtil/throwDisposedStateError';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 import { isDisposable } from '../util';
 import { disposeForAtomicOperation } from './dispose';

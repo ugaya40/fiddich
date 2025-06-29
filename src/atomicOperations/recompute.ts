@@ -1,10 +1,12 @@
-import type { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/index';
+import type { AtomicContext, ComputedCopy } from '../atomicContext/index';
 import type { State } from '../state';
+import { globalCircularDetector } from '../stateUtil/circularDetector';
+import { DependencyChanges, globalDependencyTracker } from '../stateUtil/dependencyTracker';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 import { collectNeedsRecomputation, recomputeCollected } from './get';
 import { propagateTouchedRecursively } from './touch';
 
-export function getForRecompute<T>(target: State<T>, context: AtomicContext, dependencyTracker: (targetCopy: StateCopy) => void) {
+export function getForRecompute<T>(target: State<T>, context: AtomicContext, owner: ComputedCopy) {
   const targetCopy = context.copyStore.getCopy(target);
 
   // For computed, traverse dependencies and recompute what's needed
@@ -16,58 +18,32 @@ export function getForRecompute<T>(target: State<T>, context: AtomicContext, dep
   }
 
   // Track this as an active dependency
-  dependencyTracker(targetCopy);
+  globalDependencyTracker().track(owner, targetCopy);
   return targetCopy.value;
-}
-
-function createDependencyTracker(copy: ComputedCopy) {
-  // Start with all existing dependencies in a "remaining" set
-  // As we re-discover dependencies during recomputation, we'll remove them from this set
-  // Any dependencies left in this set at the end are no longer needed
-  const remainingDependencies = new Set(copy.dependencies);
-  let hasNewDependencies = false;
-
-  // Remove this computed from all its current dependencies' dependents sets
-  // We'll re-add only the dependencies that are still active during recomputation
-  for (const dep of copy.dependencies) {
-    dep.dependents.delete(copy);
-  }
-  copy.dependencies.clear();
-
-  const dependencyTracker = (targetCopy: StateCopy) => {
-    // Skip if already tracked in this computation
-    if (copy.dependencies.has(targetCopy)) {
-      return;
-    }
-
-    // Check if this is a new dependency (not in the previous dependency set)
-    if (!remainingDependencies.has(targetCopy)) {
-      hasNewDependencies = true;
-    } else {
-      // This dependency still exists, remove it from the "remaining" set
-      remainingDependencies.delete(targetCopy);
-    }
-
-    // Add the active dependency relationship
-    copy.dependencies.add(targetCopy);
-    targetCopy.dependents.add(copy);
-  };
-
-  // Dependencies changed if we have new ones or some old ones are no longer used
-  const dependencyChanges = () => hasNewDependencies || remainingDependencies.size > 0;
-
-  return { dependencyTracker, dependencyChanges };
 }
 
 export function recompute(copy: ComputedCopy, context: AtomicContext) {
   const { dependencyDirty, valueChangedDirty, notificationDirty, touchedStates } = context;
 
-  const { dependencyTracker, dependencyChanges } = createDependencyTracker(copy);
+  const detector = globalCircularDetector();
+  const tracker = globalDependencyTracker();
+  const scope = {};
+  tracker.setScope(scope);
+  detector.setScope(scope);
+
+  detector.collect('recompute', copy);
 
   const oldValue = copy.value;
-  const newValue = copy.original.compute(<T>(state: State<T>) => getForRecompute(state, context, dependencyTracker));
-
-  if (dependencyChanges()) {
+  let newValue: any;
+  let changes: DependencyChanges | null;
+  try {
+    newValue = copy.original.compute(<T>(state: State<T>) => getForRecompute(state, context, copy));
+  } finally {
+    detector.exitScope(scope);
+    changes = tracker.exitScope(scope);
+  }
+  
+  if (changes && changes.hasChanges) {
     dependencyDirty.add(copy);
 
     // Update rank based on new dependencies

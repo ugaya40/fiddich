@@ -1,6 +1,6 @@
 import type { Cell, Computed } from './state';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
-import { throwDisposedStateError } from './stateUtil/stateUtil';
+import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
 
 export function createCell<T>(
   initialValue: T,

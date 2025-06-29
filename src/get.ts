@@ -1,6 +1,6 @@
 import type { State } from './state';
 import { initializeComputed } from './stateUtil/initializeComputed';
-import { throwDisposedStateError } from './stateUtil/stateUtil';
+import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
 import { isComputed } from './stateUtil/typeUtil';
 
 export function get<T>(state: State<T>): T {

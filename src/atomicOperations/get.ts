@@ -1,7 +1,6 @@
-import type { AtomicContext, ComputedCopy, StateCopy } from '../atomicContext/index';
+import type { AtomicContext, ComputedCopy } from '../atomicContext/index';
 import type { State } from '../state';
-import { globalCircularDetector } from '../stateUtil/circularDetector';
-import { throwDisposedStateError } from '../stateUtil/stateUtil';
+import { throwDisposedStateError } from '../stateUtil/throwDisposedStateError';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 import { recompute } from './recompute';
 
@@ -49,21 +48,12 @@ export function recomputeCollected(collected: Set<ComputedCopy>, context: Atomic
   // Sort by rank ascending
   const sorted = [...collected].sort((a, b) => a.rank - b.rank);
 
-  const detector = globalCircularDetector();
-  const scope = {};
-  detector.setScope(scope);
-
-  try {
-    for (const copy of sorted) {
-      // Recompute if still valueDirty
-      if (context.valueDirty.has(copy)) {
-        detector.add('recompute', copy);
-        recompute(copy, context);
-        context.valueDirty.delete(copy);
-      }
+  for (const copy of sorted) {
+    // Recompute if still valueDirty
+    if (context.valueDirty.has(copy)) {
+      recompute(copy, context);
+      context.valueDirty.delete(copy);
     }
-  } finally {
-    detector.exitScope(scope);
   }
 }
 
