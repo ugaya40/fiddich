@@ -1,7 +1,7 @@
-import type { AtomicContext, ComputedCopy } from '../atomicContext/index';
+import type { AtomicContext, ComputedCopy, DependencyChanges } from '../atomicContext/index';
 import type { State } from '../state';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
-import { DependencyChanges, globalDependencyTracker } from '../stateUtil/dependencyTracker';
+import { globalDependencyTracker } from '../stateUtil/dependencyTracker';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 import { collectNeedsRecomputation, recomputeCollected } from './get';
 import { propagateTouchedRecursively } from './touch';
@@ -35,16 +35,18 @@ export function recompute(copy: ComputedCopy, context: AtomicContext) {
 
   const oldValue = copy.value;
   let newValue: any;
-  let changes: DependencyChanges | null;
+  let dependencyChanges: DependencyChanges;
   try {
     newValue = copy.original.compute(<T>(state: State<T>) => getForRecompute(state, context, copy));
   } finally {
     detector.exitScope(scope);
-    changes = tracker.exitScope(scope);
+    dependencyChanges = tracker.exitScope(scope)!;
   }
   
-  if (changes && changes.hasChanges) {
-    dependencyDirty.add(copy);
+  const {changes} = dependencyChanges;
+
+  if (changes && (changes.added.length + changes.deleted.length) > 0) {
+    dependencyDirty.add(dependencyChanges);
 
     // Update rank based on new dependencies
     const newRank = copy.dependencies.size > 0 ? Math.max(...[...copy.dependencies].map((d) => d.rank)) + 1 : 0;

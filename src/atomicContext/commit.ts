@@ -48,20 +48,19 @@ function handleValueChanges(context: AtomicContext) {
 }
 
 function handleDependencyChanges(context: AtomicContext) {
-  for (const copy of context.dependencyDirty) {
+  for (const dependencyChanges of context.dependencyDirty) {
     
-    if (isComputedCopy(copy)) {
-      const original = copy.original;
+    const {changes, computedCopy} = dependencyChanges;
+    const original = computedCopy.original;
 
-      for (const oldDependency of original.dependencies) {
-        oldDependency.dependents.delete(original);
-      }
+    for(const oldDependency of changes.deleted.map(c => c.original)) {
+      oldDependency.dependents.delete(computedCopy.original);
+      original.dependencies.delete(oldDependency);
+    }
 
-      original.dependencies = new Set([...copy.dependencies].map((one) => one.original));
-
-      for (const newDependency of original.dependencies) {
-        newDependency.dependents.add(original);
-      }
+    for(const newDependency of changes.added.map(c => c.original)) {
+      newDependency.dependents.add(original);
+      original.dependencies.add(newDependency);
     }
   }
 }

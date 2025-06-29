@@ -1,10 +1,5 @@
-import { ComputedCopy, StateCopy } from "../atomicContext";
+import { ComputedCopy, DependencyChanges, StateCopy } from "../atomicContext";
 import { createScopedCollector, ScopedCollector } from "../util";
-
-export type DependencyChanges = {
-  hasChanges: boolean;
-  computed: ComputedCopy;
-};
 
 type DependencyTracker = {
   setScope: (scope: Record<string, never>) => void;
@@ -12,46 +7,52 @@ type DependencyTracker = {
   track: (computed: ComputedCopy, dependency: StateCopy) => void;
 };
 
+
+
 function createDependencyTracker(): DependencyTracker {
   const collector: ScopedCollector<ComputedCopy, StateCopy, DependencyChanges> = createScopedCollector({
     createStoreForUnit: (computed) => {
       // Start with all existing dependencies as "remaining"
       const remainingOldDependencies = new Set(computed.dependencies);
       
-      // Clear current dependencies to rebuild them
-      for (const dep of computed.dependencies) {
-        dep.dependents.delete(computed);
-      }
-      computed.dependencies.clear();
-      
       return {
         remainingOldDependencies,
-        hasNewDependencies: false
+        added: [] as StateCopy[]
       };
     },
     processItem: (computed, store, dependency) => {
-      // Skip if already tracked in this computation
-      if (computed.dependencies.has(dependency)) {
-        return;
-      }
       
       // Check if this is a new dependency
       if (!store.remainingOldDependencies.has(dependency)) {
-        store.hasNewDependencies = true;
+        if(!computed.dependencies.has(dependency)) {
+          computed.dependencies.add(dependency);
+          dependency.dependents.add(computed);
+          store.added.push(dependency);
+        }
       } else {
         // This dependency still exists, remove it from remaining
         store.remainingOldDependencies.delete(dependency);
       }
       
-      // Add the active dependency relationship
-      computed.dependencies.add(dependency);
-      dependency.dependents.add(computed);
     },
     createResult: (map) => {
       // For now, just return the first entry (should only be one)
       for (const [computed, store] of map) {
-        const hasChanges = store.hasNewDependencies || store.remainingOldDependencies.size > 0;
-        return { hasChanges, computed };
+
+        const deleted = [...store.remainingOldDependencies];
+
+        for(const oldDependency of deleted) {
+          computed.dependencies.delete(oldDependency);
+          oldDependency.dependents.delete(computed);
+        }
+
+        return { 
+          computedCopy: computed,
+          changes: {
+            added: store.added,
+            deleted
+          }
+        };
       }
       throw new Error('No computed in dependency tracker');
     }

@@ -29,9 +29,17 @@ export type CopyStore = {
   clear: () => void;
 };
 
+export type DependencyChanges = {
+  changes: {
+    added: StateCopy[],
+    deleted: StateCopy[]
+  };
+  computedCopy: ComputedCopy;
+};
+
 export type AtomicContext = {
   valueDirty: Set<ComputedCopy>;
-  dependencyDirty: Set<StateCopy>;
+  dependencyDirty: Set<DependencyChanges>;
   valueChangedDirty: Set<StateCopy>;
   notificationDirty: Set<StateCopy>;
   copyStore: CopyStore;
