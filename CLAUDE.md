@@ -214,6 +214,7 @@ npm run type-check
 #### スコープベースの循環依存検出
 - グローバルな`CircularDetector`を使用し、各操作の起点ごとに検出
 - 入れ子のスコープでも正確に動作（ルートスコープの管理）
+- 循環依存検出の起点：compute（トップレベルget経由）、computeForCopy（ops.get経由）
 
 ## 開発の進め方
 
