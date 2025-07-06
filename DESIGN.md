@@ -58,7 +58,7 @@
 
 ## 3. 設計原則
 
-* **手続き的な一貫性の最優先**: set 操作の完了直後には、どの同期スコープからであっても、関連する get 操作で必ず更新された最新の値が読み取れることを保証します。
+* **手続き的な一貫性の最優先**: set 操作の完了直後には、同じatomicUpdateスコープ内で get 操作を行うと必ず更新された最新の値が読み取れることを保証します。
 
 * **効率的なUI更新**: 状態変更の通知を最適化し、UIの再レンダリング回数を最小限に抑え、グリッチフリーな体験を提供します。
 
@@ -85,7 +85,10 @@
 ```typescript
 createCell<T>(
   initialValue: T, 
-  options?: { compare?: (oldValue: T, newValue: T) => boolean }
+  options?: { 
+    compare?: (oldValue: T, newValue: T) => boolean,
+    onNotify?: () => void
+  }
 ): Cell<T>
 ```
 
@@ -98,12 +101,12 @@ createComputed<T>(
   fn: (arg: { get: <V>(target: Cell<V> | Computed<V>) => V }) => T,
   options?: { 
     compare?: (oldValue: T, newValue: T) => boolean,
-    onChange?: (newValue: T, oldValue: T) => void
+    onNotify?: () => void
   }
 ): Computed<T>
 ```
 
-新しい Computed を作成します。compare オプションで値の比較関数を指定でき、onChange オプションで値が変更された際のコールバックを指定できます。Computedは初回アクセス時まで計算が遅延されるため、atomicUpdate内で作成された場合、そのトランザクション内の最新の値を使用して初期化されます。また、循環依存が検出された場合はエラーがスローされます。
+新しい Computed を作成します。compare オプションで値の比較関数を指定でき、onNotify オプションで変更通知時のコールバックを指定できます。循環依存が検出された場合はエラーがスローされます。
 
 #### get
 
@@ -132,11 +135,11 @@ touch(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>): void
 
 Cell、Computed、またはReactiveCollectionに手動で変更通知を促します。**これはエスケープハッチであり、基本的なシナリオでは使用しません。**
 
-* **Cell に対して**: Cell が保持するミュータブルなオブジェクトやコレクションの参照自体は変わらずに、その内部状態が変更されたことをシステムに通知します。この通知後、Cell の値は compare 関数（またはデフォルト）によって再評価され、変更があれば購読者に通知されます。
+* **Cell に対して**: Cellの保持する値や参照は変わらずとも、変更通知を強制的に発行します。
 
-* **Computed に対して**: Computed をダーティとしてマークし、次の更新伝播時に計算関数を強制的に再実行させます。計算結果が前回と異なれば（compare 関数による比較）、購読者に通知されます。これは、Computed がリアクティブシステム管理外の要因に依存する場合の「エスケープハッチ」として利用できますが、依存関係は可能な限り明示的な Cell/Computed で表現することが推奨されます。
+* **Computed に対して**: Computed をダーティとしてマークし、再計算をトリガーします。これは、Computed がリアクティブシステム管理外の要因に依存する場合の「エスケープハッチ」として利用できますが、依存関係は可能な限り明示的な Cell/Computed で表現することが推奨されます。
 
-* **ReactiveCollection に対して**: コレクションの内部状態がミュータブルに変更されたが、コレクションの操作メソッド（set, push等）を経由しなかった場合に、変更をシステムに通知します。
+* **ReactiveCollection に対して**: コレクションの操作メソッド（set, push等）を経由しなかった場合などに変更をシステムに通知するのに使用します。
 
 * atomicUpdate のスコープ外で呼び出された場合、この操作のために内部的に短命な AtomicContext が発行され、即座にコミットされます。
 
@@ -190,7 +193,7 @@ createManagedObject<T>(factory: () => T): T & { [Symbol.dispose](): void }
 
 リアクティブな状態の基本単位。Cell インスタンスは、不要になった際にそのリソースを解放するための `[Symbol.dispose](): void` メソッドを実装します。値の変更検知には、作成時に指定された compare 関数（デフォルトは ===）が使用されます。 (TC39 Signalとの関連についてはセクション2を参照)
 
-* `[Symbol.dispose](): void`: Cell に関連付けられた内部リソース（例: 購読者リストのクリアなど）を解放します。Cellが保持する値がSymbol.disposeメソッドを持つ場合、それも呼び出されます。一度 Symbol.dispose された Cell は再利用できません。
+* `[Symbol.dispose](): void`: Cellが保持する値がSymbol.disposeメソッドを持つ場合、それを呼び出します。依存先への通知を発行します。一度 Symbol.dispose された Cell は再利用できません。
 
 (その他の詳細は「4.1 トップレベル関数」の createCell, get, set, touch および後述の ops 内の同名操作を参照)
 
@@ -198,7 +201,7 @@ createManagedObject<T>(factory: () => T): T & { [Symbol.dispose](): void }
 
 一つ以上のリアクティブな値から派生する状態。Computed インスタンスも、不要になった際にリソースを解放するための `[Symbol.dispose](): void` メソッドを実装します。計算結果の変更検知には、作成時に指定された compare 関数（デフォルトは ===）が使用されます。Computedは遅延初期化され、初回アクセス時に計算が実行されます。この仕組みにより、atomicUpdate内で作成されたComputedは、そのトランザクションコンテキスト内の最新の値を参照して初期化されることが保証されます。初期化時に循環依存が検出された場合はエラーがスローされます。(副作用に関する注意点はセクション2を参照)
 
-* `[Symbol.dispose](): void`: Computed が依存している他の Cell や Computed からの購読を解除し、内部のキャッシュや購読者リストをクリアします。一度 Symbol.dispose された Computed は再利用できません。
+* `[Symbol.dispose](): void`: Computed が依存している他の Cell や Computed から自身を削除し、依存先への通知を発行します。一度 Symbol.dispose された Computed は再利用できません。
 
 (その他の詳細は「4.1 トップレベル関数」の createComputed, get, touch および後述の ops 内の同名操作を参照)
 
@@ -279,9 +282,9 @@ function atomicUpdate<T>(
 
 * **ops.set(cell, value)**: Cellへの変更を AtomicContext の内部バッファに記録します。値の比較は Cell 自身の compare 関数に従います。
 
-* **ops.pending(target, promise?)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。
+* **ops.pending(target, promise?)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。**重要：この操作はatomicUpdateのコミットを待たずに即座にtargetにPromiseを関連付けます。**
   * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise と関連付けられます。非同期の atomicUpdate 内（コールバック関数が Promise を返す場合）では promise 引数を省略でき、その場合は atomicUpdate のコールバック関数が返す Promise が自動的に使用されます。同期的な atomicUpdate 内でも promise 引数を省略できます（内部的に即座に解決される Promise が使用されます）。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
-  * **ペンディング状態の解除**: target の値が非同期的に解決され、（target が Cell の場合は ops.set によって）更新された後に AtomicContext がコミットされると、target のペンディング状態は解除されます。
+  * **ペンディング状態の解除**: 関連付けられたPromiseが解決（成功または失敗）した時に、自動的にペンディング状態が解除されます。
   * このメソッド自体は値を返しません。
 
 * **ops.rejectAllChanges()**: バッファされた全ての状態変更（ReactiveCollectionへの変更も含む）を破棄します。
@@ -294,7 +297,13 @@ function atomicUpdate<T>(
 
 #### 振る舞い
 
-(ネスト、バッファリング、コミット/ロールバック、一括通知、Suspense連携の基本原則は変更なし)
+atomicUpdateは以下の特性を持ちます：
+
+* **ネスト可能**: atomicUpdate内で別のatomicUpdateを呼び出すことができます。明示的にops.contextを通じてAtomicContextを引き渡すことで、子のatomicUpdateが親のトランザクションに参加できます。
+* **バッファリング**: すべての変更はAtomicContext内でバッファリングされます。
+* **コミット/ロールバック**: 成功時にはすべての変更がコミットされ、エラー時にはロールバックされます。
+* **一括通知**: 変更通知はコミット後に一括して発行されます。
+* **Suspense連携**: pending操作によりReact Suspenseと連携します。
 
 特に、atomicUpdateのスコープ内でops.dispose(target)を介してSymbol.disposeメソッドが呼び出された場合、その実行もトランザクションのコミットと同期され、トランザクションがロールバックされた場合にはSymbol.dispose処理は実行されません。これにより、リソース管理の一貫性と安全性が保証されます。target[Symbol.dispose]() を直接呼び出した場合は即時実行され、トランザクションのロールバック対象とはなりません。
 
@@ -305,11 +314,11 @@ ReactiveCollectionへの操作も、ops.contextを通じてAtomicContextが適�
 同時実行制御の競合が発生する可能性がある操作を、エラーを投げずに結果型で返すAPIです。
 
 ```typescript
-interface AtomicUpdateResult<T> {
-  ok: true;
+type AtomicUpdateResult<T> = {
+  executed: true;
   value: T;
 } | {
-  ok: false;
+  executed: false;
   reason: string;
 }
 
@@ -342,7 +351,7 @@ GuardTokenまたはExclusiveTokenを使用した際の競合を、例外では�
 function createGuardToken(): GuardToken;
 ```
 
-楽観的同時実行制御を実現します。複数の操作が並行して実行されることを許可しますが、コミット時に競合が検出された場合は操作がロールバックされます。
+トークン単位で楽観的同時実行制御を実現します。同じトークンを使用する複数の操作が並行して実行されることを許可しますが、コミット時に同じトークンを使用する別のトランザクションが先にコミットしている場合、コミットが棄却されロールバックされます。
 
 ##### ExclusiveToken（排他制御）
 
@@ -350,7 +359,7 @@ function createGuardToken(): GuardToken;
 function createExclusiveToken(): ExclusiveToken;
 ```
 
-即時排他制御を実現します。既に実行中の操作がある場合、新しい操作は即座に棄却されます。
+トークン単位で即時排他制御を実現します。同じトークンを使用して既に実行中の操作がある場合、新しい操作は即座に棄却されます。
 
 ##### SequencerToken（直列化）
 
@@ -358,7 +367,7 @@ function createExclusiveToken(): ExclusiveToken;
 function createSequencerToken(): SequencerToken;
 ```
 
-操作の直列化を実現します。複数の操作が同時に要求された場合、キューに入れて順番に実行します。**注意：SequencerTokenは非同期のatomicUpdateでのみ使用可能です。**
+トークン単位で操作の直列化を実現します。同じトークンを使用する複数の操作が同時に要求された場合、キューに入れて順番に実行します。**注意：SequencerTokenは非同期のatomicUpdateでのみ使用可能です。**
 
 #### 使用方法
 
@@ -774,7 +783,7 @@ atomicUpdate(ops => {
 });
 ```
 
-将来的に、TC39でプロポーザルとして議論されている AsyncContext が標準的な機能として利用可能になった場合、このトランザクションのコンテキストを非同期処理にまたがって暗黙的に伝播させることが可能になります。これにより、opsオブジェクトを介さずに、トップレベルのgetやsetを直接呼び出す、より直感的で自然な記述が実現できる可能性があります。
+将来的に、TC39でプロポーザルとして議論されている AsyncContext が標準的な機能として利用可能になった場合、このトランザクションのコンテキストを非同期処理にまたがって暗黙的に伝播させることが可能になります。これにより、opsオブジェクトを介さずに、トップレベルのgetやsetを直接呼び出す、より直感的で自然な記述が実現できます。
 
 ```typescript
 // AsyncContextを利用した未来のAPIイメージ

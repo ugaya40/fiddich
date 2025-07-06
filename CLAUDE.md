@@ -151,6 +151,13 @@ npm run type-check
 - atomicContextではすべてのStateのコピーを依存関係(Stateが依存しているもの、Stateに依存しているもの)・値を含め保持する
   - Stateのコピーのみを編集する
   - コミット時はStateのコピーをそのまま反映すれば良いし、ロールバック時はコピーを破棄すれば良い
+- Pull型評価では：
+  - Cell: stableValue変更時/dispose時/pending時/touch時にdependentsをisDirtyにマーク（Push）
+  - Computed: get時にisDirtyならcompute実行（Pull）
+  - 依存関係の収集・更新はcompute時のみ発生
+- dependentsをisDirtyにマークする条件：
+  - Cell: set（値変更時）、dispose、pending、touch時
+  - Computed: dispose、pending設定時
 - バージョン管理は完全に撤廃されました（2025年6月）
   - デフォルトは"Last writer wins"動作
   - 同時実行制御が必要な場合はオプトインでトークンを使用
@@ -180,15 +187,23 @@ npm run type-check
 
 ### 最近の主要な改善
 
+#### 完全なPull型評価への移行（2025年7月）
+- Push/Pull混在型から完全なPull型へ移行
+- ComputedはisDirtyフラグベースの遅延評価
+- CellはPush型通知でdependentsをisDirtyにマーク
+- compute時にのみ依存関係を収集・更新
+- バージョン管理システムを完全に削除
+
 #### バージョン管理の完全撤廃（2025年6月）
 - valueVersion、dependencyVersion、checkpointの概念を完全削除
 - デフォルトを"Last writer wins"に変更（楽観的同時実行制御の削除）
 - 同時実行制御はオプトインでトークンを使用する方式に移行
 
-#### Pull型評価への移行（2025年6月）
-- 従来のPush型（依存グラフ全体をvalueDirtyにマーク）からPull型（必要時に収集）へ変更
-- `collectNeedsRecomputation`で再計算が必要なComputedを収集
-- 値が変わらない場合の伝播停止機能を維持しつつ、循環依存検出との両立を実現
+#### Pull型でのダイヤモンド依存解決
+- 完全なPull型評価により自然に解決
+- 各Computedはget時に必要に応じて再計算
+- 依存関係は計算時に動的に収集
+- Rankベースの管理は不要に（Pull型の利点）
 
 #### 同時実行制御のオプトイン化（2025年6月）
 - GuardToken: 楽観的同時実行制御（競合時にロールバック）
@@ -199,13 +214,6 @@ npm run type-check
 #### スコープベースの循環依存検出
 - グローバルな`CircularDetector`を使用し、各操作の起点ごとに検出
 - 入れ子のスコープでも正確に動作（ルートスコープの管理）
-- 4つの起点：トップレベルget、ops.get、getCopy、handleValueDirty
-
-#### Rankベースの実行順序管理
-- ダイヤモンド依存の問題を解決
-- 各StateCopyに`rank`フィールドを追加（依存グラフの深さを表す）
-- `handleValueDirty`でrank順にソートして処理
-- 各Computedが正しい順序で1回だけ計算される
 
 ## 開発の進め方
 
@@ -231,6 +239,3 @@ npm run type-check
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
