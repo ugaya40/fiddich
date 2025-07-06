@@ -1,42 +1,42 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createCell, createComputed, get, set, atomicUpdate, touch, pending } from '../src';
+import { cell, computed, get, set, atomicUpdate, touch, pending } from '../src';
 
 describe('Cell basic operations', () => {
   it('should create cell with initial value', () => {
-    const cell = createCell(10);
-    expect(get(cell)).toBe(10);
+    const cellA = cell(10);
+    expect(get(cellA)).toBe(10);
   });
 
   it('should update cell value with set', () => {
-    const cell = createCell(10);
-    set(cell, 20);
-    expect(get(cell)).toBe(20);
+    const cellA = cell(10);
+    set(cellA, 20);
+    expect(get(cellA)).toBe(20);
   });
 
   it('should handle multiple set operations', () => {
-    const cell = createCell(0);
-    set(cell, 1);
-    set(cell, 2);
-    set(cell, 3);
-    expect(get(cell)).toBe(3);
+    const cellA = cell(0);
+    set(cellA, 1);
+    set(cellA, 2);
+    set(cellA, 3);
+    expect(get(cellA)).toBe(3);
   });
 
   it('should create cell with object value', () => {
-    const cell = createCell({ name: 'test', value: 100 });
-    expect(get(cell)).toEqual({ name: 'test', value: 100 });
+    const cellA = cell({ name: 'test', value: 100 });
+    expect(get(cellA)).toEqual({ name: 'test', value: 100 });
   });
 
   it('should create cell with array value', () => {
-    const cell = createCell([1, 2, 3]);
-    expect(get(cell)).toEqual([1, 2, 3]);
+    const cellA = cell([1, 2, 3]);
+    expect(get(cellA)).toEqual([1, 2, 3]);
   });
 
 
   it('should support null and undefined values', () => {
-    const nullCell = createCell<null | undefined>(null);
+    const nullCell = cell<null | undefined>(null);
     expect(get(nullCell)).toBe(null);
 
-    const undefinedCell = createCell<undefined>(undefined);
+    const undefinedCell = cell<undefined>(undefined);
     expect(get(undefinedCell)).toBe(undefined);
 
     set(nullCell, undefined);
@@ -44,45 +44,45 @@ describe('Cell basic operations', () => {
   });
 
   it('should handle boolean values', () => {
-    const cell = createCell(true);
-    expect(get(cell)).toBe(true);
-    set(cell, false);
-    expect(get(cell)).toBe(false);
+    const cellA = cell(true);
+    expect(get(cellA)).toBe(true);
+    set(cellA, false);
+    expect(get(cellA)).toBe(false);
   });
 
   it('should handle string values', () => {
-    const cell = createCell('hello');
-    expect(get(cell)).toBe('hello');
-    set(cell, 'world');
-    expect(get(cell)).toBe('world');
+    const cellA = cell('hello');
+    expect(get(cellA)).toBe('hello');
+    set(cellA, 'world');
+    expect(get(cellA)).toBe('world');
   });
 });
 
 describe('Cell touch', () => {
   it('should trigger onNotify for cell', async () => {
     const onNotify = vi.fn();
-    const cell = createCell(10, { onNotify });
+    const cellA = cell(10, { onNotify });
     
-    expect(get(cell)).toBe(10);
+    expect(get(cellA)).toBe(10);
     expect(onNotify).not.toHaveBeenCalled();
     
     // Touch should trigger notification
-    touch(cell);
+    touch(cellA);
     
     // Wait for microtask
     await Promise.resolve();
     
     expect(onNotify).toHaveBeenCalledTimes(1);
-    expect(get(cell)).toBe(10); // Value unchanged
+    expect(get(cellA)).toBe(10); // Value unchanged
   });
   
   it('should handle touch in atomicUpdate', async () => {
     const onNotify = vi.fn();
-    const cell = createCell(10, { onNotify });
+    const cellA = cell(10, { onNotify });
     
     atomicUpdate((ops) => {
-      ops.set(cell, 20);
-      ops.touch(cell);
+      ops.set(cellA, 20);
+      ops.touch(cellA);
     });
     
     // Wait for microtask
@@ -90,27 +90,27 @@ describe('Cell touch', () => {
     
     // Should be notified once (deduplication)
     expect(onNotify).toHaveBeenCalledTimes(1);
-    expect(get(cell)).toBe(20);
+    expect(get(cellA)).toBe(20);
   });
 });
 
 describe('Cell dispose', () => {
   it('should mark cell as disposed', () => {
-    const cell = createCell(10);
+    const cellA = cell(10);
     
-    expect(get(cell)).toBe(10);
+    expect(get(cellA)).toBe(10);
     
-    cell[Symbol.dispose]();
+    cellA[Symbol.dispose]();
     
-    expect(() => get(cell)).toThrow('Cannot access disposed state');
-    expect(() => set(cell, 20)).toThrow('Cannot access disposed state');
+    expect(() => get(cellA)).toThrow('Cannot access disposed state');
+    expect(() => set(cellA, 20)).toThrow('Cannot access disposed state');
   });
   
   it('should trigger onNotify when disposed', async () => {
     const onNotify = vi.fn();
-    const cell = createCell(10, { onNotify });
+    const cellA = cell(10, { onNotify });
     
-    cell[Symbol.dispose]();
+    cellA[Symbol.dispose]();
     
     // Wait for microtask
     await Promise.resolve();
@@ -125,13 +125,13 @@ describe('Cell dispose', () => {
       [Symbol.dispose]: disposeFn
     };
     
-    const cell = createCell(disposableValue);
-    expect(get(cell)).toBe(disposableValue);
+    const cellA = cell(disposableValue);
+    expect(get(cellA)).toBe(disposableValue);
     
-    cell[Symbol.dispose]();
+    cellA[Symbol.dispose]();
     
     expect(disposeFn).toHaveBeenCalledTimes(1);
-    expect(() => get(cell)).toThrow('Cannot access disposed state');
+    expect(() => get(cellA)).toThrow('Cannot access disposed state');
   });
   
   it('should handle dispose in atomicUpdate', async () => {
@@ -142,17 +142,17 @@ describe('Cell dispose', () => {
       [Symbol.dispose]: disposeFn
     };
     
-    const cell = createCell(disposableValue, { onNotify });
+    const cellA = cell(disposableValue, { onNotify });
     
     atomicUpdate((ops) => {
-      ops.dispose(cell);
+      ops.dispose(cellA);
     });
     
     // Wait for microtask
     await Promise.resolve();
     
     // Cell should be disposed
-    expect(() => get(cell)).toThrow('Cannot access disposed state');
+    expect(() => get(cellA)).toThrow('Cannot access disposed state');
     expect(onNotify).toHaveBeenCalledTimes(1);
     expect(disposeFn).toHaveBeenCalledTimes(1);
   });
@@ -164,43 +164,43 @@ describe('Cell dispose', () => {
     const value1 = { value: 1, [Symbol.dispose]: disposeFn1 };
     const value2 = { value: 2, [Symbol.dispose]: disposeFn2 };
     
-    const cell = createCell(value1);
+    const cellA = cell(value1);
     
     // Set new value should dispose old value
-    set(cell, value2);
+    set(cellA, value2);
     expect(disposeFn1).toHaveBeenCalledTimes(1);
     expect(disposeFn2).not.toHaveBeenCalled();
     
     // Dispose cell should dispose current value
-    cell[Symbol.dispose]();
+    cellA[Symbol.dispose]();
     expect(disposeFn2).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('Cell pending', () => {
   it('should set and clear pending promise', async () => {
-    const cell = createCell(10);
+    const cellA = cell(10);
     
-    expect(cell.pendingPromise).toBeUndefined();
+    expect(cellA.pendingPromise).toBeUndefined();
     
     const promise = Promise.resolve(20);
-    pending(cell, promise);
+    pending(cellA, promise);
     
-    expect(cell.pendingPromise).toBe(promise);
+    expect(cellA.pendingPromise).toBe(promise);
     
     await promise;
     // Wait for promise.finally
     await Promise.resolve();
     
-    expect(cell.pendingPromise).toBeUndefined();
+    expect(cellA.pendingPromise).toBeUndefined();
   });
   
   it('should trigger notification when pending is set', async () => {
     const onNotify = vi.fn();
-    const cell = createCell(10, { onNotify });
+    const cellA = cell(10, { onNotify });
     
     const promise = Promise.resolve(20);
-    pending(cell, promise);
+    pending(cellA, promise);
     
     // Wait for microtask
     await Promise.resolve();
@@ -209,27 +209,27 @@ describe('Cell pending', () => {
   });
   
   it('should mark dependents as dirty when pending is set', () => {
-    const cell = createCell(10);
-    const computed = createComputed(({ get }) => get(cell) * 2);
+    const cellA = cell(10);
+    const computedA = computed(({ get }) => get(cellA) * 2);
     
     // Establish dependency
-    expect(get(computed)).toBe(20);
-    expect(computed.isDirty).toBe(false);
+    expect(get(computedA)).toBe(20);
+    expect(computedA.isDirty).toBe(false);
     
     const promise = Promise.resolve(30);
-    pending(cell, promise);
+    pending(cellA, promise);
     
     // Dependents should be marked dirty
-    expect(computed.isDirty).toBe(true);
+    expect(computedA.isDirty).toBe(true);
   });
   
   it('should handle pending in atomicUpdate', async () => {
     const onNotify = vi.fn();
-    const cell = createCell(10, { onNotify });
+    const cellA = cell(10, { onNotify });
     
     const updatePromise = atomicUpdate(async (ops) => {
-      ops.set(cell, 20);
-      ops.pending(cell);
+      ops.set(cellA, 20);
+      ops.pending(cellA);
       await new Promise(resolve => setTimeout(resolve, 10));
     });
     
@@ -237,40 +237,40 @@ describe('Cell pending', () => {
     await Promise.resolve();
     
     // Cell should have a pending promise (not checking identity)
-    expect(cell.pendingPromise).toBeDefined();
-    expect(cell.pendingPromise).toBeInstanceOf(Promise);
+    expect(cellA.pendingPromise).toBeDefined();
+    expect(cellA.pendingPromise).toBeInstanceOf(Promise);
     expect(onNotify).toHaveBeenCalledTimes(1);
     
     await updatePromise;
     await Promise.resolve();
     
-    expect(cell.pendingPromise).toBeUndefined();
+    expect(cellA.pendingPromise).toBeUndefined();
   });
   
   it('should only clear pending if it matches current promise', async () => {
-    const cell = createCell(10);
+    const cellA = cell(10);
     
     const promise1 = new Promise(resolve => setTimeout(() => resolve(1), 10));
     const promise2 = new Promise(resolve => setTimeout(() => resolve(2), 20));
     
-    pending(cell, promise1);
-    expect(cell.pendingPromise).toBe(promise1);
+    pending(cellA, promise1);
+    expect(cellA.pendingPromise).toBe(promise1);
     
-    pending(cell, promise2);
-    expect(cell.pendingPromise).toBe(promise2);
+    pending(cellA, promise2);
+    expect(cellA.pendingPromise).toBe(promise2);
     
     // Wait for promise1 to complete
     await promise1;
     await Promise.resolve();
     
     // Should still have promise2 because it was overwritten
-    expect(cell.pendingPromise).toBe(promise2);
+    expect(cellA.pendingPromise).toBe(promise2);
     
     // Wait for promise2 to complete
     await promise2;
     await Promise.resolve();
     
     // Now should be cleared
-    expect(cell.pendingPromise).toBeUndefined();
+    expect(cellA.pendingPromise).toBeUndefined();
   });
 });

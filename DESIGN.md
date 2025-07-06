@@ -80,10 +80,10 @@
 
 ### 4.1. トップレベル関数
 
-#### createCell
+#### cell
 
 ```typescript
-createCell<T>(
+cell<T>(
   initialValue: T, 
   options?: { 
     compare?: (oldValue: T, newValue: T) => boolean,
@@ -94,10 +94,10 @@ createCell<T>(
 
 新しい Cell を作成します。compare オプションで値の比較関数を指定できます（デフォルトは厳密等価 ===）。
 
-#### createComputed
+#### computed
 
 ```typescript
-createComputed<T>(
+computed<T>(
   fn: (arg: { get: <V>(target: Cell<V> | Computed<V>) => V }) => T,
   options?: { 
     compare?: (oldValue: T, newValue: T) => boolean,
@@ -195,7 +195,7 @@ createManagedObject<T>(factory: () => T): T & { [Symbol.dispose](): void }
 
 * `[Symbol.dispose](): void`: Cellが保持する値がSymbol.disposeメソッドを持つ場合、それを呼び出します。依存先への通知を発行します。一度 Symbol.dispose された Cell は再利用できません。
 
-(その他の詳細は「4.1 トップレベル関数」の createCell, get, set, touch および後述の ops 内の同名操作を参照)
+(その他の詳細は「4.1 トップレベル関数」の cell, get, set, touch および後述の ops 内の同名操作を参照)
 
 #### 4.2.2. Computed
 
@@ -203,7 +203,7 @@ createManagedObject<T>(factory: () => T): T & { [Symbol.dispose](): void }
 
 * `[Symbol.dispose](): void`: Computed が依存している他の Cell や Computed から自身を削除し、依存先への通知を発行します。一度 Symbol.dispose された Computed は再利用できません。
 
-(その他の詳細は「4.1 トップレベル関数」の createComputed, get, touch および後述の ops 内の同名操作を参照)
+(その他の詳細は「4.1 トップレベル関数」の computed, get, touch および後述の ops 内の同名操作を参照)
 
 #### 4.2.3. ReactiveCollection (例: ReactiveMap, ReactiveArray)
 
@@ -417,7 +417,7 @@ await atomicUpdate(async ops => {
 
 #### リアクティビティとの関係
 
-ManagedObjectの主な責務はリソース管理の自動化であり、リアクティブな状態（値）そのものは、引き続きファクトリ関数内で明示的にcreateCellやcreateComputedで作成されたインスタンスによって管理されます。これにより、MobXのような暗黙的なリアクティビティとは異なり、状態の明示性とライブラリの一貫性を保ちます。
+ManagedObjectの主な責務はリソース管理の自動化であり、リアクティブな状態（値）そのものは、引き続きファクトリ関数内で明示的にcellやcomputedで作成されたインスタンスによって管理されます。これにより、MobXのような暗黙的なリアクティビティとは異なり、状態の明示性とライブラリの一貫性を保ちます。
 
 #### ReactiveCollectionとの連携
 
@@ -434,13 +434,13 @@ createManagedObject は、状態のカプセル化とリソース管理の自動
 #### 基本的な構造
 
 * ファクトリ関数 `() => T` を createManagedObject に渡して、**アプリケーションロジック**を内包するオブジェクトを生成します。
-* ファクトリ関数内で、createCell や createComputed を用いてリアクティブな状態を定義し、それらを操作するメソッド（**アプリケーションアクション**）も同じクロージャスコープ内に定義します。これにより、状態とロジックがカプセル化されます。
+* ファクトリ関数内で、cell や computed を用いてリアクティブな状態を定義し、それらを操作するメソッド（**アプリケーションアクション**）も同じクロージャスコープ内に定義します。これにより、状態とロジックがカプセル化されます。
 * 必要に応じて、ReactiveCollection を内部に持ち、より複雑なコレクションの状態を管理します。
 
 ```typescript
 // 例: カウンターのアプリケーションロジック
 const createCounter = () => createManagedObject(() => {
-  const count = createCell(0);
+  const count = cell(0);
 
   // アプリケーションアクション
   const increment = () => atomicUpdate(ops => ops.set(count, ops.get(count) + 1));
@@ -480,15 +480,15 @@ createManagedObject を使用せず、プレーンなJavaScriptオブジェク�
 #### 基本的な構造
 
 * 開発者自身が、**アプリケーションロジック**を保持するオブジェクトを生成するファクトリ関数を定義します。
-* ファクトリ関数内で createCell、createComputed、createReactiveMap/Array を呼び出してリアクティブな状態を生成し、返すオブジェクトのプロパティとして公開します。
+* ファクトリ関数内で cell、computed、createReactiveMap/Array を呼び出してリアクティブな状態を生成し、返すオブジェクトのプロパティとして公開します。
 * 状態を操作するメソッド（**アプリケーションアクション**）も、ファクトリ関数内で定義し、返すオブジェクトのメソッドとして公開します。
 * **リソース管理のため、返すオブジェクトには必ず Symbol.dispose メソッドを実装し、その中で内部的に生成した全てのdisposableなリソース（Cell、Computed、ReactiveCollectionなど）のSymbol.disposeを呼び出す必要があります。**
 
 ```typescript
 // 例: 手動管理のカウンターオブジェクト (ファクトリ関数スタイル)
 const createManualCounter = (initialValue: number = 0) => {
-  const count = createCell(initialValue);
-  const _someOtherResource = createCell("internal data"); // 例: 内部で利用するCell
+  const count = cell(initialValue);
+  const _someOtherResource = cell("internal data"); // 例: 内部で利用するCell
 
   // アプリケーションアクション
   const increment = () => {
@@ -587,8 +587,8 @@ export const globalStore = createManagedObject(() => {
     initialData.forEach(data => {
       const todoItem = createManagedObject(() => ({
         id: data.id,
-        text: createCell(data.text),
-        completed: createCell(data.completed)
+        text: cell(data.text),
+        completed: cell(data.completed)
       }));
       todos.push(todoItem, { atomicContext: ops.context });
     });
@@ -630,8 +630,8 @@ export const todoItemActions = {
     return atomicUpdate(ops => {
       const newItem = createManagedObject(() => ({
         id: newId,
-        text: createCell(text),
-        completed: createCell(false)
+        text: cell(text),
+        completed: cell(false)
       }));
       globalStore.todos.push(newItem, ops.context);
     });

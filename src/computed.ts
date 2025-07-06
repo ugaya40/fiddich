@@ -5,7 +5,7 @@ import { markDirtyRecursive } from './markDirtyRecursive';
 import { DisposedStateError } from './errors';
 import { scheduleNotifications } from './stateUtil/scheduleNotifications';
 
-export function createComputed<T>(
+export function computed<T>(
   fn: (arg: { get: <V>(target: State<V>) => V }) => T,
   options?: {
     compare?: Compare<T>;

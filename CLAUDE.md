@@ -172,7 +172,7 @@ npm run type-check
 - AtomicUpdateの実装（トランザクション管理）
 - tryAtomicUpdateの実装（エラーを投げずに結果を返すAPI）
 - 同時実行制御トークン（Guard, Exclusive, Sequencer）in `src/concurrent/`
-- Cell/Computedの作成関数（createCell, createComputed）
+- Cell/Computedの作成関数（cell, computed）
 - get/set/touch/pending/disposeなどのトップレベル関数
 - ops.rejectAllChanges（atomicUpdate内での全変更破棄・リセット機能）
 - 循環依存検出（スコープベースのCircularDetectorによる静的・動的循環依存の検出）
@@ -234,7 +234,7 @@ npm run type-check
 - StateCopyの管理では、originalプロパティで元のStateへの参照を保持
 
 ### ファイル命名規則
-- 関数名と同じファイル名（例: createCell.ts）
+- 関数名と同じファイル名（例: cell.ts）
 - 型定義は集約（state.ts）
 - ユーティリティはutil.tsに集約
 

@@ -1,12 +1,12 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { createComputed } from '../../createComputed';
+import { computed } from '../../computed';
 import type { State } from '../../state';
 import { getValueForSuspense } from '../getValueForSuspense';
 
 export function useValue<T>(state: State<T>): T {
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      const watcher = createComputed(({ get }) => get(state),{
+      const watcher = computed(({ get }) => get(state),{
         onNotify: () => onStoreChange()
       });
 
