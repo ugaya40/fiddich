@@ -1,9 +1,9 @@
 import type { Cell, Computed, State } from '../state';
+import { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 
 export type StateCopyBase<T = any> = {
   id: string;
   value: T;
-  rank: number;
   isDisposed: boolean;
 };
 
@@ -18,7 +18,7 @@ export interface ComputedCopy<T = any> extends StateCopyBase<T> {
   dependents: Set<ComputedCopy>;
   dependencies: Set<StateCopy>;
   original: Computed<T>;
-  isInitialized: boolean;
+  isDirty: boolean;
 }
 
 export type StateCopy<T = any> = CellCopy<T> | ComputedCopy<T>;
@@ -29,22 +29,12 @@ export type CopyStore = {
   clear: () => void;
 };
 
-export type DependencyChanges = {
-  changes: {
-    added: StateCopy[],
-    deleted: StateCopy[]
-  };
-  computedCopy: ComputedCopy;
-};
-
 export type AtomicContext = {
-  valueDirty: Set<ComputedCopy>;
-  dependencyDirty: Set<DependencyChanges>;
-  valueChangedDirty: Set<StateCopy>;
-  notificationDirty: Set<StateCopy>;
   copyStore: CopyStore;
+  valueDirty: Set<ComputedCopy>;
+  dependencyDirty: Set<DependencyChangeSet<CopyState>>;
+  valueChanged: Set<StateCopy>;
   toDispose: Set<Disposable>;
-  newlyInitialized: Set<ComputedCopy>;
-  touchedStates: Set<StateCopy>;
+  toNotify: Set<StateCopy>;
   atomicUpdatePromise: Promise<any> | undefined;
 };

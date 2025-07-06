@@ -1,20 +1,20 @@
 import { get } from './get';
 import type { Computed, State } from './state';
 import { type Compare, defaultCompare, generateStateId } from './util';
-import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
-import { initializeComputed } from './stateUtil/initializeComputed';
+import { markDirtyRecursive } from './markDirtyRecursive';
+import { DisposedStateError } from './errors';
+import { scheduleNotifications } from './stateUtil/scheduleNotifications';
 
 export function createComputed<T>(
   fn: (arg: { get: <V>(target: State<V>) => V }) => T,
   options?: {
     compare?: Compare<T>;
-    onChange?: (prev: T, next: T) => void;
-    onScheduledNotify?: () => void;
+    onNotify: () => void;
   }
 ): Computed<T> {
   const compare = options?.compare ?? defaultCompare;
-  let isDisposed = false;
-  const stableValue: T = undefined as any;
+  let isDirtyInternal = true;
+  let stableValue: T = undefined as any;
 
   const current: Computed<T> = {
     id: generateStateId(),
@@ -22,45 +22,49 @@ export function createComputed<T>(
     stableValue,
     dependents: new Set<Computed>(),
     dependencies: new Set<State>(),
-    isInitialized: false,
 
     compute(getter: <V>(target: State<V>) => V): T {
-      const result = fn({ get: getter });
-      return result;
+      return fn({ get: getter });
     },
 
     compare,
-
-    changeCallback: options?.onChange,
-    onScheduledNotify: options?.onScheduledNotify,
     
-    isDisposed,
+    isDisposed: false,
+
+    get isDirty() {
+      return isDirtyInternal;
+    },
+
+    set isDirty(value: boolean) {
+      isDirtyInternal = value;
+      if(isDirtyInternal) {
+        scheduleNotifications([current]);
+      }
+    },
+
+    onNotify: options?.onNotify,
 
     [Symbol.dispose](): void {
-      if(isDisposed) return;
-      
-      for (const dependency of current.dependencies) {
+      if(current.isDisposed) return;
+      current.isDisposed = true;
+
+      for(const dependency of current.dependencies) {
         dependency.dependents.delete(current);
       }
       current.dependencies.clear();
 
-      for (const dependent of current.dependents) {
-        dependent.dependencies.delete(current);
-        dependent[Symbol.dispose]();
-      }
-
-      current.dependents.clear();
-
-      current.isDisposed = true;
+      markDirtyRecursive(current);
     },
 
     toJSON(): T {
       if(current.isDisposed) {
-        throwDisposedStateError();
+        throw new DisposedStateError();
       }
-      if (!current.isInitialized) {
-        initializeComputed(current);
+
+      if(current.isDirty) {
+        current.compute(get);
       }
+
       return current.stableValue;
     },
   };

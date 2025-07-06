@@ -1,31 +1,29 @@
 import type { AtomicContext } from '../atomicContext/index';
+import { DisposedStateError } from '../errors';
 import type { Cell } from '../state';
-import { throwDisposedStateError } from '../stateUtil/throwDisposedStateError';
-import { isComputedCopy } from '../stateUtil/typeUtil';
 import { isDisposable } from '../util';
 import { disposeForAtomicOperation } from './dispose';
+import { markDirtyRecursiveForCopy } from './markDirtyRecursiveForCopy';
 
 export function setForAtomicOperation<T>(cell: Cell<T>, newValue: T, context: AtomicContext) {
-  const { copyStore, valueChangedDirty } = context;
+  const { copyStore, valueChanged: valueChangedDirty } = context;
   const copy = copyStore.getCopy(cell);
 
   if(copy.isDisposed) {
-    throwDisposedStateError();
+    throw new DisposedStateError();
   }
 
-  if (!cell.compare(copy.value, newValue)) {
-    const oldValue = copy.value;
-    copy.value = newValue;
-    valueChangedDirty.add(copy);
+  if(cell.compare(copy.value, newValue)) return;
 
-    if (isDisposable(oldValue)) {
-      disposeForAtomicOperation(oldValue, context);
-    }
+  const oldValue = copy.value;
+  copy.value = newValue;
+  valueChangedDirty.add(copy);
 
-    for (const dependent of copy.dependents) {
-      if (isComputedCopy(dependent)) {
-        context.valueDirty.add(dependent);
-      }
-    }
+  if (isDisposable(oldValue)) {
+    disposeForAtomicOperation(oldValue, context);
+  }
+
+  for (const dependent of copy.dependents) {
+    markDirtyRecursiveForCopy(dependent, context);
   }
 }

@@ -7,9 +7,8 @@ export interface StateBase<T = any> {
   compare: Compare<T>;
   toJSON(): T;
   pendingPromise?: Promise<any>;
-  changeCallback?: (prev: T, next: T) => void;
-  onScheduledNotify?: () => void;
   isDisposed: boolean;
+  onNotify?: () => void;
 }
 
 export interface Cell<T = any> extends StateBase<T>, Disposable {
@@ -21,7 +20,7 @@ export interface Computed<T = any> extends StateBase<T>, Disposable {
   kind: 'computed';
   dependents: Set<Computed>;
   dependencies: Set<State>;
-  isInitialized: boolean;
+  isDirty: boolean;
   compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
 }
 

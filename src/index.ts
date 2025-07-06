@@ -1,4 +1,4 @@
-export type { AtomicReject, AtomicSuccess, AtomicUpdateResult } from './atomicUpdate';
+export type { AtomicReject, AtomicExecuted, AtomicUpdateResult } from './atomicUpdate';
 export { atomicUpdate, tryAtomicUpdate } from './atomicUpdate';
 export type { ExclusiveToken } from './concurrent/exclusive';
 export { createExclusiveToken } from './concurrent/exclusive';

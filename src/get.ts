@@ -1,16 +1,15 @@
 import type { State } from './state';
-import { initializeComputed } from './stateUtil/initializeComputed';
-import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
+import { compute } from './compute';
 import { isComputed } from './stateUtil/typeUtil';
+import { DisposedStateError } from './errors';
 
 export function get<T>(state: State<T>): T {
-
-  if(isComputed(state) && !state.isInitialized) {
-    initializeComputed(state);
+  if(state.isDisposed) {
+    throw new DisposedStateError();
   }
 
-  if(state.isDisposed) {
-    throwDisposedStateError();
+  if(isComputed(state) && state.isDirty) {
+    compute(state);
   }
 
   return state.stableValue;

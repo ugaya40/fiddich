@@ -1,71 +1,39 @@
-import { recompute } from '../atomicOperations/recompute';
 import { scheduleNotifications } from '../stateUtil/scheduleNotifications';
-import { isComputedCopy, isState } from '../stateUtil/typeUtil';
-import type { AtomicContext, StateCopy } from './types';
+import { isState } from '../stateUtil/typeUtil';
+import type { AtomicContext } from './types';
 
-function handleNewlyInitialized(context: AtomicContext) {
-  for (const copy of context.newlyInitialized) {
-
-    const original = copy.original;
-    if (!original.isInitialized) {
-      original.stableValue = copy.value;
-      original.isInitialized = true;
-
-      for (const depCopy of copy.dependencies) {
-        original.dependencies.add(depCopy.original);
-        depCopy.original.dependents.add(original);
-      }
-    }
+function applyDirtyFlags(context: AtomicContext) {
+  for(const computedCopy of context.valueDirty) {
+    computedCopy.original.isDirty = true;
   }
 }
 
-function handleValueDirty(context: AtomicContext) {
-  while (context.valueDirty.size > 0) {
-    // Sort by rank
-    const sorted = [...context.valueDirty].sort((a, b) => a.rank - b.rank);
-
-    // Process the first node (lowest rank)
-    const copy = sorted[0];
-
-    if (isComputedCopy(copy)) {
-      recompute(copy, context);
-    }
-    context.valueDirty.delete(copy);
-  }
-}
-
-function handleValueChanges(context: AtomicContext) {
-  for (const copy of context.valueChangedDirty) {
-
-    const original = copy.original;
-    const prevValue = original.stableValue;
-    original.stableValue = copy.value;
-
-    if (original.changeCallback) {
-      original.changeCallback(prevValue, original.stableValue);
-    }
-  }
-}
-
-function handleDependencyChanges(context: AtomicContext) {
+function applyDependencyChanges(context: AtomicContext) {
   for (const dependencyChanges of context.dependencyDirty) {
     
-    const {changes, computedCopy} = dependencyChanges;
-    const original = computedCopy.original;
+    const {added, deleted, computed} = dependencyChanges;
+    const original = computed.original;
 
-    for(const oldOriginal of changes.deleted.map(c => c.original)) {
-      oldOriginal.dependents.delete(computedCopy.original);
+    for(const oldOriginal of deleted.map(c => c.original)) {
+      oldOriginal.dependents.delete(original);
       original.dependencies.delete(oldOriginal);
     }
 
-    for(const newOriginal of changes.added.map(c => c.original)) {
+    for(const newOriginal of added.map(c => c.original)) {
       newOriginal.dependents.add(original);
       original.dependencies.add(newOriginal);
     }
   }
 }
 
-function handleDisposables(context: AtomicContext) {
+
+function applyValueChanges(context: AtomicContext) {
+  for (const copy of context.valueChanged) {
+    copy.original.stableValue = copy.value;
+  }
+}
+
+function executeDisposals(context: AtomicContext) {
   for (const disposable of context.toDispose) {
     if(isState(disposable)) {
       if(!disposable.isDisposed) {
@@ -77,39 +45,18 @@ function handleDisposables(context: AtomicContext) {
   }
 }
 
-function handleNotifications(context: AtomicContext) {
-  const scheduledNotifications: Array<() => void> = [];
-
-  // Merge valueChangedDirty and notificationDirty
-  const allNotifications = new Set<StateCopy>([...context.valueChangedDirty, ...context.notificationDirty]);
-
-  for (const copy of allNotifications) {
-
-    const original = copy.original;
-    if (original.onScheduledNotify) {
-      scheduledNotifications.push(original.onScheduledNotify);
-    }
-  }
-
-  if (scheduledNotifications.length > 0) {
-    scheduleNotifications(scheduledNotifications);
-  }
+function sendNotifications(context: AtomicContext) {
+  // Note: We should only notify states that are not included in valueDirty/valueChanged/toDispose,
+  // but checking each Set's values up to their originals for accurate filtering would be costly.
+  // Instead, we delegate deduplication to the Set inside scheduleNotifications.
+  scheduleNotifications(context.toNotify.values().map(c => c.original).toArray());
 }
 
+
 export function commit(context: AtomicContext): void {
-
-  handleValueDirty(context);
-
-  handleValueChanges(context);
-
-  handleDependencyChanges(context);
-
-  // Must be called after handleValueDirty to ensure that any computeds
-  // newly initialized during recomputation have their dependencies
-  // reflected in the original state before the next atomicUpdate
-  handleNewlyInitialized(context);
-
-  handleNotifications(context);
-
-  handleDisposables(context);
+  applyDirtyFlags(context);
+  applyDependencyChanges(context);
+  applyValueChanges(context);
+  executeDisposals(context);
+  sendNotifications(context);
 }

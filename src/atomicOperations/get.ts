@@ -1,18 +1,18 @@
 import type { AtomicContext } from '../atomicContext/index';
+import { DisposedStateError } from '../errors';
 import type { State } from '../state';
-import { throwDisposedStateError } from '../stateUtil/throwDisposedStateError';
 import { isComputedCopy } from '../stateUtil/typeUtil';
-import { recomputeIfNeed } from './recomputeIfNeed';
+import { computeForCopy } from './computeForCopy';
 
 export function getForAtomicOperation<T>(state: State<T>, context: AtomicContext) {
   const targetCopy = context.copyStore.getCopy(state);
 
   if(targetCopy.isDisposed) {
-    throwDisposedStateError();
+    throw new DisposedStateError();
   }
 
-  if (isComputedCopy(targetCopy)) {
-    recomputeIfNeed(targetCopy, context);
+  if (isComputedCopy(targetCopy) && targetCopy.isDirty) {
+    computeForCopy(targetCopy, context);
   }
 
   return targetCopy.value;

@@ -1,69 +1,94 @@
-import { ComputedCopy, DependencyChanges, StateCopy } from "../atomicContext";
+import { ComputedCopy, StateCopy } from "../atomicContext";
+import { Computed, State } from "../state";
 import { createScopedCollector, ScopedCollector } from "../util";
 
-type DependencyTracker = {
-  setScope: (scope: Record<string, never>) => void;
-  exitScope: (scope: Record<string, never>) => DependencyChanges | null;
-  track: (computed: ComputedCopy, dependency: StateCopy) => void;
+export type OriginalState = {
+  computed: Computed,
+  state: State
+}
+
+export type CopyState = {
+  computed: ComputedCopy,
+  state: StateCopy
+}
+
+type ContextComputed<T extends OriginalState | CopyState> = T['computed'];
+type ContextState<T extends OriginalState | CopyState> = T['state'];
+
+export type DependencyChanges<T extends OriginalState | CopyState> = {
+  remainingOldDependencies: Set<ContextState<T>>,
+  added: ContextState<T>[]
 };
 
-function createDependencyTracker(): DependencyTracker {
-  const collector: ScopedCollector<ComputedCopy, StateCopy, DependencyChanges> = createScopedCollector({
+export type DependencyChangeSet<T extends OriginalState | CopyState> = {
+  computed: ContextComputed<T>,
+  added: ContextState<T>[], 
+  deleted: ContextState<T>[]
+}
+
+type DependencyTracker<T extends OriginalState | CopyState> = {
+  setScope: (scope: Record<string, never>) => void;
+  exitScope: (scope: Record<string, never>, ) => void;
+  getChanges: (computed: ContextComputed<T>) => DependencyChangeSet<T>
+  track: (computed: ContextComputed<T>, dependency: ContextState<T>) => void;
+};
+
+function createDependencyTracker<T extends OriginalState | CopyState>(): DependencyTracker<T> {
+  const collector: ScopedCollector<ContextComputed<T>, ContextState<T>, DependencyChanges<T>> = createScopedCollector({
     createStoreForUnit: (computed) => {
       // Start with all existing dependencies as "remaining"
-      const remainingOldDependencies = new Set(computed.dependencies);
+      const remainingOldDependencies = new Set<ContextState<T>>(computed.dependencies);
       
       return {
         remainingOldDependencies,
-        added: [] as StateCopy[]
+        added: [] as ContextState<T>[]
       };
     },
-    processItem: (computedCopy, store, dependencyCopy) => {
+    processItem: (computed, store, dependency) => {
+      // Don't directly modify state dependencies to allow rollback on error
       
       // Check if this is a new dependency
-      if (!store.remainingOldDependencies.has(dependencyCopy)) {
-        if(!computedCopy.dependencies.has(dependencyCopy)) {
-          computedCopy.dependencies.add(dependencyCopy);
-          dependencyCopy.dependents.add(computedCopy);
-          store.added.push(dependencyCopy);
+      if (!store.remainingOldDependencies.has(dependency)) {
+
+        const mainDependencies: Set<ContextState<T>> = computed.dependencies;
+        if(!mainDependencies.has(dependency)) {
+          store.added.push(dependency);
         }
       } else {
         // This dependency still exists, remove it from remaining
-        store.remainingOldDependencies.delete(dependencyCopy);
+        store.remainingOldDependencies.delete(dependency);
       }
-      
     },
-    createResult: (map) => {
-      // For now, just return the first entry (should only be one)
-      for (const [computed, store] of map) {
 
-        const deleted = [...store.remainingOldDependencies];
-
-        for(const oldDependencyCopy of deleted) {
-          computed.dependencies.delete(oldDependencyCopy);
-          oldDependencyCopy.dependents.delete(computed);
-        }
-
-        return { 
-          computedCopy: computed,
-          changes: {
-            added: store.added,
-            deleted
-          }
-        };
-      }
-      throw new Error('No computed in dependency tracker');
-    }
   });
+
+  const getChanges = (computed: ContextComputed<T>): DependencyChangeSet<T> => {
+    const store = collector.getStore(computed);
+    return toChangeSet(computed, store);
+  };
   
   return {
     setScope: collector.setScope,
     exitScope: collector.exitScope,
-    track: collector.collect
+    track: collector.collect,
+    getChanges
   };
 }
 
-const dependencyTracker = createDependencyTracker();
+function toChangeSet<T extends OriginalState | CopyState>(computed: ContextComputed<T>, changes: DependencyChanges<T>): DependencyChangeSet<T> {
+  return {
+    computed,
+    added: changes.added,
+    deleted: changes.remainingOldDependencies.values().toArray()
+  }
+}
+
+const dependencyTracker = createDependencyTracker<OriginalState>();
 export function globalDependencyTracker() {
   return dependencyTracker;
+}
+
+const copyDependencyTracker = createDependencyTracker<CopyState>();
+export function globalCopyDependencyTracker() {
+  return copyDependencyTracker;
 }

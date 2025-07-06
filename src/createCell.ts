@@ -1,51 +1,68 @@
 import type { Cell, Computed } from './state';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
-import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
+import { markDirtyRecursive } from './markDirtyRecursive';
+import { DisposedStateError } from './errors';
+import { scheduleNotifications } from './stateUtil/scheduleNotifications';
 
 export function createCell<T>(
   initialValue: T,
   options?: {
     compare?: Compare<T>;
-    onChange?: (prev: T, next: T) => void;
-    onScheduledNotify?: () => void;
+    onNotify: () => void;
   }
 ): Cell<T> {
   const compare = options?.compare ?? defaultCompare;
-  let isDisposed = false;
-  const stableValue = initialValue;
+  let stableValueInternal = initialValue;
+  let pendingPromiseInternal: Promise<any> | undefined = undefined;
 
   const current: Cell<T> = {
     id: generateStateId(),
     kind: 'cell',
-    stableValue,
+
+    get stableValue() {
+      return stableValueInternal;
+    },
+
+    set stableValue(value: T) {
+      stableValueInternal = value;
+      scheduleNotifications([current]);
+    },
+
     dependents: new Set<Computed>(),
 
     compare,
-
-    changeCallback: options?.onChange,
-    onScheduledNotify: options?.onScheduledNotify,
     
-    isDisposed,
+    isDisposed: false,
+
+    onNotify: options?.onNotify,
+
+    get pendingPromise() {
+      return pendingPromiseInternal;
+    },
+
+    set pendingPromise(value: Promise<any> | undefined) {
+      pendingPromiseInternal = value;
+      scheduleNotifications([current]);
+    },
 
     [Symbol.dispose](): void {
-      if(isDisposed) return;
+      if(current.isDisposed) return;
+
+      current.isDisposed = true;
 
       if (isDisposable(current.stableValue)) {
         current.stableValue[Symbol.dispose]();
       }
-      
-      for (const dependent of current.dependents) {
-        dependent.dependencies.delete(current);
-        dependent[Symbol.dispose]();
+      for(const computed of current.dependents) {
+        markDirtyRecursive(computed);
       }
-      current.dependents.clear();
 
-      current.isDisposed = true;
+      scheduleNotifications([current]);
     },
 
     toJSON(): T {
       if(current.isDisposed) {
-        throwDisposedStateError();
+        throw new DisposedStateError();
       }
       return current.stableValue;
     },

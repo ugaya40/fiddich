@@ -7,6 +7,7 @@ import {
   touchForAtomicOperation,
 } from '../atomicOperations';
 import type { Cell, State } from '../state';
+import { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 import { createCopyStore } from './copyStore';
 import type { AtomicContext, ComputedCopy, StateCopy } from './types';
 
@@ -14,22 +15,18 @@ export * from './types';
 
 export function createAtomicContext(): AtomicContext {
   const valueDirty = new Set<ComputedCopy>();
-  const dependencyDirty = new Set<StateCopy>();
-  const valueChangedDirty = new Set<StateCopy>();
-  const notificationDirty = new Set<StateCopy>();
+  const dependencyDirty = new Set<DependencyChangeSet<CopyState>>();
+  const valueChanged = new Set<StateCopy>();
   const toDispose = new Set<Disposable>();
-  const newlyInitialized = new Set<ComputedCopy>();
-  const touchedStates = new Set<StateCopy>();
+  const toNotify = new Set<StateCopy>();
 
   const partialContext: AtomicContext = {
     valueDirty,
     dependencyDirty,
-    valueChangedDirty,
-    notificationDirty,
-    copyStore: null!,
+    valueChanged,
     toDispose,
-    newlyInitialized,
-    touchedStates,
+    toNotify,
+    copyStore: null!,
     atomicUpdatePromise: undefined
   };
 

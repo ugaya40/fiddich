@@ -1,6 +1,5 @@
 import type { Cell, Computed, State } from '../state';
-import { initializeComputedCopy } from '../stateUtil/initializeComputedCopy';
-import { isCell, isCellCopy, isComputed, isComputedCopy } from '../stateUtil/typeUtil';
+import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
 import { assertUnreachable } from '../util';
 import type { AtomicContext } from './index';
 import type { CellCopy, ComputedCopy, StateCopy } from './types';
@@ -9,8 +8,6 @@ function createCopy<T>(state: Cell<T>): CellCopy<T>;
 function createCopy<T>(state: Computed<T>): ComputedCopy<T>;
 function createCopy<T>(state: State<T>): StateCopy<T>;
 function createCopy<T>(state: State<T>): StateCopy<T> {
-  let disposed = state.isDisposed;
-
   switch (state.kind) {
     case 'cell':
       return {
@@ -19,15 +16,8 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         original: state,
         value: state.stableValue,
         dependents: new Set(),
-        rank: 0, // Cells have rank 0
-        get isDisposed() {
-          return disposed;
-        },
-        set isDisposed(val: boolean) {
-          disposed = val;
-        },
+        isDisposed: state.isDisposed,
       };
-
     case 'computed':
       return {
         id: state.id,
@@ -36,16 +26,9 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
         value: state.stableValue,
         dependents: new Set(),
         dependencies: new Set(),
-        isInitialized: state.isInitialized,
-        rank: 0, // Will be calculated later based on dependencies
-        get isDisposed() {
-          return disposed;
-        },
-        set isDisposed(val: boolean) {
-          disposed = val;
-        },
+        isDirty: state.isDirty,
+        isDisposed: state.isDisposed,
       };
-
     default:
       assertUnreachable(state);
   }
@@ -61,30 +44,22 @@ function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<
     return existing;
   }
 
-  const newCopy = createCopy<T>(state);
+  const newCopy = createCopy(state);
 
   // Must add to map immediately to handle recursive dependencies correctly.
   // If we delay this, dependent copies might create duplicate copies of this state.
   copyStoreMap.set(state, newCopy);
 
-  if (isCell(state) && isCellCopy(newCopy)) {
-    for (const dependent of state.dependents) {
+  if (isCellCopy(newCopy)) {
+    for (const dependent of newCopy.original.dependents) {
       newCopy.dependents.add(getCopyInternal(dependent, context));
     }
-  } else if (isComputed(state) && isComputedCopy(newCopy)) {
-    if (!newCopy.isInitialized) {
-      initializeComputedCopy(newCopy, context);
-    } else {
-      for (const dependent of state.dependents) {
-        newCopy.dependents.add(getCopyInternal(dependent, context));
-      }
-      for (const dependency of state.dependencies) {
-        const depCopy = getCopyInternal(dependency, context);
-        newCopy.dependencies.add(depCopy);
-      }
-
-      // Calculate rank for already initialized computed
-      newCopy.rank = newCopy.dependencies.size > 0 ? Math.max(...[...newCopy.dependencies].map((d) => d.rank)) + 1 : 0;
+  } else if (isComputedCopy(newCopy)) {
+    for (const dependent of newCopy.original.dependents) {
+      newCopy.dependents.add(getCopyInternal(dependent, context));
+    }
+    for (const dependency of newCopy.original.dependencies) {
+      newCopy.dependencies.add(getCopyInternal(dependency, context));
     }
   }
 

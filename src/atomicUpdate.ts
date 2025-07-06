@@ -21,10 +21,10 @@ type AtomicUpdateInternalOptions = {
   concurrent?: GuardToken | ExclusiveToken | SequencerToken;
 };
 
-export type AtomicSuccess<T> = { ok: true; value: T };
-export type AtomicReject = { ok: false; reason: string };
+export type AtomicExecuted<T> = { executed: true; value: T };
+export type AtomicReject = { executed: false; reason: string };
 
-export type AtomicUpdateResult<T> = AtomicSuccess<T> | AtomicReject;
+export type AtomicUpdateResult<T> = AtomicExecuted<T> | AtomicReject;
 
 function atomicUpdateInternal<T>(
   fn: (ops: AtomicOperations) => T | Promise<T>,
@@ -35,7 +35,7 @@ function atomicUpdateInternal<T>(
   //beforeRun
   const beforeRunResult = concurrentAction?.beforeRun?.();
   if (beforeRunResult != null && typeof beforeRunResult === 'string') {
-    return { ok: false, reason: beforeRunResult } as AtomicReject;
+    return { executed: false, reason: beforeRunResult } as AtomicReject;
   }
 
   const isContextOwner = !options?.context;
@@ -69,6 +69,11 @@ function atomicUpdateInternal<T>(
     concurrentAction?.afterFailure?.(atomicContext);
     clearPendingIfOwner();
 
+    // Note: We throw errors instead of returning them as AtomicReject.
+    // This is intentional - especially with ExclusiveToken, users often fire-and-forget
+    // without checking the return value. If we returned errors as results,
+    // system exceptions could be silently ignored.
+    // Only concurrent control rejections are returned as { ok: false, reason }.
     throw error;
   }
 
@@ -78,7 +83,7 @@ function atomicUpdateInternal<T>(
         //afterRun
         const afterRunResult = concurrentAction?.afterRun?.(atomicContext);
         if (afterRunResult != null && typeof afterRunResult === 'string') {
-          return { ok: false, reason: afterRunResult } as AtomicReject;
+          return { executed: false, reason: afterRunResult } as AtomicReject;
         }
 
         if (isContextOwner) {
@@ -87,7 +92,7 @@ function atomicUpdateInternal<T>(
           concurrentAction?.afterCommit?.(atomicContext);
         }
         clearPendingIfOwner();
-        return { ok: true, value } as AtomicSuccess<T>;
+        return { executed: true, value } as AtomicExecuted<T>;
       })
       .catch((error) => {
         //afterFailure
@@ -100,7 +105,7 @@ function atomicUpdateInternal<T>(
     //afterRun
     const afterRunResult = concurrentAction?.afterRun?.(atomicContext);
     if (afterRunResult != null && typeof afterRunResult === 'string') {
-      return { ok: false, reason: afterRunResult };
+      return { executed: false, reason: afterRunResult };
     }
 
     if (isContextOwner) {
@@ -110,7 +115,7 @@ function atomicUpdateInternal<T>(
       concurrentAction?.afterCommit?.(atomicContext);
     }
     clearPendingIfOwner();
-    return { ok: true, value: result } as AtomicSuccess<T>;
+    return { executed: true, value: result } as AtomicExecuted<T>;
   }
 }
 
@@ -132,14 +137,14 @@ export function atomicUpdate<T>(fn: (ops: AtomicOperations) => T | Promise<T>, o
   const result = atomicUpdateInternal(fn, options);
   if (result instanceof Promise) {
     return result.then((r) => {
-      if (r.ok) {
+      if (r.executed) {
         return r.value;
       } else {
         throw new Error('internal error');
       }
     });
   } else {
-    if (result.ok) {
+    if (result.executed) {
       return result.value;
     } else {
       throw new Error('internal error');

@@ -1,42 +1,21 @@
+import { markDirtyRecursive } from './markDirtyRecursive';
 import type { State } from './state';
-import { throwDisposedStateError } from './stateUtil/throwDisposedStateError';
-import { touch } from './touch';
-
-function collectDependentStatesInternal(state: State, promise: Promise<any>, visited: Set<State>, states: State[]): void {
-  if (visited.has(state)) {
-    return;
-  }
-  visited.add(state);
-  states.push(state);
-
-  state.pendingPromise = promise;
-
-  for (const dependent of state.dependents) {
-    collectDependentStatesInternal(dependent, promise, visited, states);
-  }
-}
-
-function collectDependentStates(state: State, promise: Promise<any>): State[] {
-  const visited = new Set<State>();
-  const states: State[] = [];
-  collectDependentStatesInternal(state, promise, visited, states);
-  return states;
-}
+import { isCell, isComputed } from './stateUtil/typeUtil';
 
 export function pending<T>(state: State<T>, promise: Promise<any>): void {
-  const states = collectDependentStates(state, promise);
-
-  if(state.isDisposed) {
-    throwDisposedStateError();
-  }
-
-  touch(state);
+  state.pendingPromise = promise;
 
   promise.finally(() => {
-    for (const s of states) {
-      if (s.pendingPromise === promise) {
-        s.pendingPromise = undefined;
-      }
+    if(state.pendingPromise === promise) {
+      state.pendingPromise = undefined;
     }
   });
+
+  if(isCell(state)) {
+    for(const dependent of state.dependents) {
+      markDirtyRecursive(dependent);
+    }
+  } else if(isComputed(state)) {
+    markDirtyRecursive(state);
+  }
 }

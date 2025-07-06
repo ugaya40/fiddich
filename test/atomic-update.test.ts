@@ -1,160 +1,187 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { Cell, Computed } from '../src';
-import { atomicUpdate, createCell, createComputed, get } from '../src';
+import { describe, it, expect } from 'vitest';
+import { createCell, createComputed, get, set, atomicUpdate, tryAtomicUpdate } from '../src';
 
-describe('atomicUpdate operations', () => {
-  describe('Basic atomicUpdate', () => {
-    it('should update single cell atomically', () => {
-      const cell = createCell(10);
-
-      atomicUpdate((ops) => {
-        ops.set(cell, 20);
-        expect(ops.get(cell)).toBe(20); // Should see new value inside
-      });
-
-      expect(get(cell)).toBe(20); // Should be committed
+describe('AtomicUpdate basic operations', () => {
+  it('should commit changes atomically', () => {
+    const cellA = createCell(10);
+    const cellB = createCell(20);
+    const computed = createComputed(({ get }) => get(cellA) + get(cellB));
+    
+    expect(get(computed)).toBe(30);
+    
+    atomicUpdate(({ get, set }) => {
+      set(cellA, 15);
+      set(cellB, 25);
+      // Inside atomic update, changes are visible
+      expect(get(cellA)).toBe(15);
+      expect(get(cellB)).toBe(25);
+      expect(get(computed)).toBe(40);
     });
+    
+    // After commit, changes are reflected
+    expect(get(cellA)).toBe(15);
+    expect(get(cellB)).toBe(25);
+    expect(get(computed)).toBe(40);
+  });
 
-    it('should update multiple cells atomically', () => {
-      const cell1 = createCell(10);
-      const cell2 = createCell(20);
-      const sum = createComputed(({ get }) => get(cell1) + get(cell2));
-
-      atomicUpdate((ops) => {
-        ops.set(cell1, 100);
-        ops.set(cell2, 200);
-        expect(ops.get(sum)).toBe(300); // Should see updated sum
+  it('should rollback changes on error', () => {
+    const cellA = createCell(10);
+    const cellB = createCell(20);
+    
+    expect(() => {
+      atomicUpdate(({ set }) => {
+        set(cellA, 15);
+        set(cellB, 25);
+        throw new Error('Test error');
       });
+    }).toThrow('Test error');
+    
+    // Values should remain unchanged
+    expect(get(cellA)).toBe(10);
+    expect(get(cellB)).toBe(20);
+  });
 
-      expect(get(cell1)).toBe(100);
-      expect(get(cell2)).toBe(200);
-      expect(get(sum)).toBe(300);
+
+  it('should track dependencies correctly in atomic update', () => {
+    const condition = createCell(true);
+    const cellA = createCell(10);
+    const cellB = createCell(20);
+    const computed = createComputed(({ get }) => {
+      return get(condition) ? get(cellA) : get(cellB);
     });
+    
+    expect(get(computed)).toBe(10);
+    
+    atomicUpdate(({ set }) => {
+      set(condition, false);
+      // Computed should now depend on cellB instead of cellA
+    });
+    
+    expect(get(computed)).toBe(20);
+    
+    // Changing cellA should not affect computed
+    set(cellA, 100);
+    expect(get(computed)).toBe(20);
+    
+    // Changing cellB should affect computed
+    set(cellB, 200);
+    expect(get(computed)).toBe(200);
+  });
 
-    it('should return value from atomicUpdate', () => {
-      const cell = createCell(10);
+  it('should handle computed creation inside atomic update', () => {
+    const cell = createCell(10);
+    let computedRef: any;
+    
+    atomicUpdate(({ get }) => {
+      computedRef = createComputed(({ get }) => get(cell) * 2);
+      expect(get(computedRef)).toBe(20);
+    });
+    
+    expect(get(computedRef)).toBe(20);
+    set(cell, 15);
+    expect(get(computedRef)).toBe(30);
+  });
 
-      const result = atomicUpdate((ops) => {
-        ops.set(cell, 20);
-        return ops.get(cell) * 2;
+  it('should handle multiple atomic updates in sequence', () => {
+    const cell = createCell(0);
+    
+    atomicUpdate(({ set }) => set(cell, 1));
+    expect(get(cell)).toBe(1);
+    
+    atomicUpdate(({ set }) => set(cell, 2));
+    expect(get(cell)).toBe(2);
+    
+    atomicUpdate(({ set }) => set(cell, 3));
+    expect(get(cell)).toBe(3);
+  });
+
+  it('should handle tryAtomicUpdate without throwing', () => {
+    const cell = createCell(10);
+    
+    // Successful update
+    const result1 = tryAtomicUpdate(({ set }) => {
+      set(cell, 20);
+      return 'success';
+    });
+    
+    expect(result1.executed).toBe(true);
+    if (result1.executed) {
+      expect(result1.value).toBe('success');
+    }
+    expect(get(cell)).toBe(20);
+    
+    // Failed update - tryAtomicUpdate still throws errors without concurrent tokens
+    expect(() => {
+      tryAtomicUpdate(({ set }) => {
+        set(cell, 30);
+        throw new Error('Test error');
       });
+    }).toThrow('Test error');
+    
+    expect(get(cell)).toBe(20); // Value unchanged due to rollback
+  });
 
-      expect(result).toBe(40);
+  it('should handle complex state updates', () => {
+    const counter = createCell(0);
+    const multiplier = createCell(2);
+    const result = createComputed(({ get }) => get(counter) * get(multiplier));
+    
+    atomicUpdate(({ get, set }) => {
+      const currentCounter = get(counter);
+      const currentMultiplier = get(multiplier);
+      
+      set(counter, currentCounter + 10);
+      set(multiplier, currentMultiplier * 2);
+      
+      // Verify computed updates correctly inside atomic
+      expect(get(result)).toBe(40); // 10 * 4
+    });
+    
+    expect(get(result)).toBe(40);
+  });
+
+
+  it('should isolate changes between concurrent atomic updates', async () => {
+    const cell = createCell(0);
+    const computed = createComputed(({ get }) => get(cell) * 10);
+    
+    // Start two async atomic updates
+    const update1 = atomicUpdate(async ({ get, set }) => {
+      expect(get(cell)).toBe(0);
+      set(cell, 1);
+      expect(get(cell)).toBe(1);
+      expect(get(computed)).toBe(10);
+      
+      // Simulate async work
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      expect(get(cell)).toBe(1);
+      set(cell, 2);
+      expect(get(cell)).toBe(2);
+      expect(get(computed)).toBe(20);
+    });
+    
+    const update2 = atomicUpdate(async ({ get, set }) => {
+      expect(get(cell)).toBe(0);
+      set(cell, 10);
+      expect(get(cell)).toBe(10);
+      expect(get(computed)).toBe(100);
+      
+      // Simulate async work
+      await new Promise(resolve => setTimeout(resolve, 5));
+      
+      expect(get(cell)).toBe(10);
+      set(cell, 20);
       expect(get(cell)).toBe(20);
+      expect(get(computed)).toBe(200);
     });
-
-    it('should trigger Cell onChange on commit', () => {
-      const onChange = vi.fn();
-      const cell = createCell<number>(10, { onChange });
-
-      atomicUpdate((ops) => {
-        ops.set(cell, 20);
-        expect(onChange).toHaveBeenCalledTimes(0); // Not called yet
-      });
-
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange).toHaveBeenCalledWith(10, 20);
-    });
+    
+    // Wait for both to complete
+    await Promise.all([update1, update2]);
+    
+    // Last writer wins
+    const finalValue = get(cell);
+    expect([2, 20]).toContain(finalValue);
+    expect(get(computed)).toBe(finalValue * 10);
   });
-
-  describe('Computed creation inside atomicUpdate', () => {
-    it('should create and use computed inside atomicUpdate', () => {
-      const cell1 = createCell(10);
-      const cell2 = createCell(20);
-
-      const result = atomicUpdate((ops) => {
-        const sum = createComputed(({ get }) => get(cell1) + get(cell2));
-        return ops.get(sum);
-      });
-
-      expect(result).toBe(30);
-    });
-
-    it('should create computed with updated values', () => {
-      const cell = createCell(10);
-      let computedRef: Computed<number> = null!;
-
-      atomicUpdate((ops) => {
-        ops.set(cell, 100);
-        computedRef = createComputed(({ get }) => get(cell) * 2);
-        expect(ops.get(computedRef)).toBe(200); // Should use updated value
-      });
-
-      expect(get(computedRef)).toBe(200); // Should remain consistent after commit
-    });
-
-    it('should handle complex state creation pattern', () => {
-      const storeCell = createCell<{ count: Cell<number>; doubled: Computed<number> } | null>(null);
-
-      atomicUpdate((ops) => {
-        const count = createCell(0);
-        const doubled = createComputed(({ get }) => get(count) * 2);
-
-        ops.set(count, 10);
-        ops.set(storeCell, { count, doubled });
-      });
-
-      const store = get(storeCell)!;
-      expect(get(store.count)).toBe(10);
-      expect(get(store.doubled)).toBe(20);
-    });
-  });
-
-  describe('Nested atomicUpdate', () => {
-    it('should handle nested atomicUpdate calls', () => {
-      const cell = createCell(10);
-
-      atomicUpdate((ops1) => {
-        ops1.set(cell, 20);
-
-        // Nested atomicUpdate with shared context
-        atomicUpdate(
-          (ops2) => {
-            ops2.set(cell, 30);
-            expect(ops2.get(cell)).toBe(30);
-          },
-          { context: ops1.context }
-        );
-
-        // Outer should see the committed value from inner
-        expect(ops1.get(cell)).toBe(30);
-      });
-
-      expect(get(cell)).toBe(30);
-    });
-  });
-
-  describe('Async atomicUpdate', () => {
-    it('should handle async operations', async () => {
-      const cell = createCell(10);
-
-      await atomicUpdate(async (ops) => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        ops.set(cell, 20);
-        expect(ops.get(cell)).toBe(20);
-      });
-
-      expect(get(cell)).toBe(20);
-    });
-
-    it('should handle multiple async operations', async () => {
-      const cell1 = createCell(10);
-      const cell2 = createCell(20);
-
-      const result = await atomicUpdate(async (ops) => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        ops.set(cell1, 100);
-
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        ops.set(cell2, 200);
-
-        return ops.get(cell1) + ops.get(cell2);
-      });
-
-      expect(result).toBe(300);
-      expect(get(cell1)).toBe(100);
-      expect(get(cell2)).toBe(200);
-    });
-  });
-
 });

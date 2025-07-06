@@ -1,16 +1,22 @@
-let scheduled = false;
-const pendingNotifications = new Set<() => void>();
+import { State } from "../state";
 
-export function scheduleNotifications(notifications: Array<() => void>): void {
-  notifications.forEach((notify) => pendingNotifications.add(notify));
+let scheduled = false;
+const pendingNotifications = new Set<State>();
+
+export function scheduleNotifications(notificationStates: State[]): void {
+  notificationStates.forEach(state => {
+    if(state.onNotify != null) {
+      pendingNotifications.add(state);
+    }
+  });
 
   if (!scheduled) {
     scheduled = true;
     queueMicrotask(() => {
-      scheduled = false;
       const toExecute = [...pendingNotifications];
       pendingNotifications.clear();
-      toExecute.forEach((notify) => notify());
+      toExecute.forEach(state => state.onNotify?.());
+      scheduled = false;
     });
   }
 }
