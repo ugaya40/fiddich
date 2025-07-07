@@ -39,21 +39,6 @@ export function compute(computed: Computed) {
     tracker.exitScope(scope);
   }
 
-  const dependencyPromises = computed.dependencies.values()
-  .filter(state => state.pendingPromise != null)
-  .map(state => state.pendingPromise!)
-  .toArray();
-
-  if(dependencyPromises.length != 0) {
-    const pendingPromise = Promise.all(dependencyPromises);
-    computed.pendingPromise = pendingPromise;
-    pendingPromise.finally(() => {
-      if(computed.pendingPromise === pendingPromise) {
-        computed.pendingPromise = undefined;
-      }
-    });
-  }
-
   if(!computed.compare(computed.stableValue, newValue)) {
     computed.stableValue = newValue;
     computed.isDirty = false;

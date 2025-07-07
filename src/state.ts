@@ -9,6 +9,7 @@ export interface StateBase<T = any> {
   pendingPromise?: Promise<any>;
   isDisposed: boolean;
   onNotify?: () => void;
+  onPendingChange?: () => void;
 }
 
 export interface Cell<T = any> extends StateBase<T>, Disposable {

@@ -1,15 +1,18 @@
 import { isState } from '../stateUtil/typeUtil';
 import type { AtomicContext } from './types';
+import type { State } from '../state';
 
-function applyDirtyFlags(context: AtomicContext) {
+export function commit(context: AtomicContext): void {
+  const scheduledForNotification = new Set<State>();
+
+  // Apply dirty flags and schedule notifications
   for(const computedCopy of context.valueDirty) {
     computedCopy.original.isDirty = true;
+    scheduledForNotification.add(computedCopy.original);
   }
-}
 
-function applyDependencyChanges(context: AtomicContext) {
+  // Apply dependency changes
   for (const dependencyChanges of context.dependencyDirty) {
-    
     const {added, deleted, computed} = dependencyChanges;
     const original = computed.original;
 
@@ -23,36 +26,29 @@ function applyDependencyChanges(context: AtomicContext) {
       original.dependencies.add(newOriginal);
     }
   }
-}
 
-
-function applyValueChanges(context: AtomicContext) {
+  // Apply value changes and schedule notifications
   for (const copy of context.valueChanged) {
     copy.original.stableValue = copy.value;
+    scheduledForNotification.add(copy.original);
   }
-}
 
-function executeDisposals(context: AtomicContext) {
+  // Execute disposals and schedule notifications
   for (const disposable of context.toDispose) {
     if(isState(disposable)) {
       if(!disposable.isDisposed) {
         disposable[Symbol.dispose]();
+        scheduledForNotification.add(disposable);
       }
     } else {
       disposable[Symbol.dispose]();
     }
   }
-}
 
-function sendNotifications(context: AtomicContext) {
-  context.toNotify.values().map(c => c.original).forEach(state => state.onNotify?.());
-}
-
-
-export function commit(context: AtomicContext): void {
-  applyDirtyFlags(context);
-  applyDependencyChanges(context);
-  applyValueChanges(context);
-  executeDisposals(context);
-  sendNotifications(context);
+  // Send notifications for items not already scheduled
+  for (const copy of context.toNotify) {
+    if (!scheduledForNotification.has(copy.original)) {
+      copy.original.onNotify?.();
+    }
+  }
 }

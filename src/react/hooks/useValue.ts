@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { computed } from '../../computed';
+import { get } from '../../get';
 import type { State } from '../../state';
 import { getValueForSuspense } from '../getValueForSuspense';
 
-export function useValue<T>(state: State<T>): T {
+export type UseValueOptions = {
+  suspense?: boolean;
+};
+
+export function useValue<T>(state: State<T>, options?: UseValueOptions): T {
+  const suspense = options?.suspense ?? true;
   // Wrapper object ensures referential inequality on each notification.
   // This is necessary because useSyncExternalStore relies on Object.is() comparison
   // to detect changes. With mutable-first design, the actual value reference might
@@ -28,23 +34,25 @@ export function useValue<T>(state: State<T>): T {
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       const watcher = computed(({ get }) => get(state),{
-        onNotify: () => batchedNotify(onStoreChange)
+        onNotify: () => batchedNotify(onStoreChange),
+        // Only use onPendingChange when suspense is enabled
+        onPendingChange: suspense ? () => batchedNotify(onStoreChange) : undefined
       });
 
       return () => {
         watcher[Symbol.dispose]();
       };
     },
-    [state] // Only recreate when state changes
+    [state, suspense]
   );
 
   const getSnapshot = useCallback(() => {
-    const value = getValueForSuspense(state); // This may throw for Suspense
+    const value = suspense ? getValueForSuspense(state) : get(state);
     if (!wrapperRef.current) {
       wrapperRef.current = {value};
     }
     return wrapperRef.current;
-  },[state])
+  },[state, suspense])
 
   const store = useSyncExternalStore(
     subscribe,

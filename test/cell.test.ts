@@ -59,7 +59,7 @@ describe('Cell basic operations', () => {
 });
 
 describe('Cell touch', () => {
-  it('should trigger onNotify for cell', async () => {
+  it('should trigger onNotify for cell', () => {
     const onNotify = vi.fn();
     const cellA = cell(10, { onNotify });
     
@@ -69,27 +69,23 @@ describe('Cell touch', () => {
     // Touch should trigger notification
     touch(cellA);
     
-    // Wait for microtask
-    await Promise.resolve();
-    
     expect(onNotify).toHaveBeenCalledTimes(1);
     expect(get(cellA)).toBe(10); // Value unchanged
   });
   
-  it('should handle touch in atomicUpdate', async () => {
+  it('should handle touch in atomicUpdate', () => {
     const onNotify = vi.fn();
-    const cellA = cell(10, { onNotify });
+    const onPendingChange = vi.fn();
+    const cellA = cell(10, { onNotify, onPendingChange });
     
     atomicUpdate((ops) => {
       ops.set(cellA, 20);
       ops.touch(cellA);
     });
     
-    // Wait for microtask
-    await Promise.resolve();
-    
     // Should be notified once (deduplication)
     expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(onPendingChange).not.toHaveBeenCalled();
     expect(get(cellA)).toBe(20);
   });
 });
@@ -106,14 +102,11 @@ describe('Cell dispose', () => {
     expect(() => set(cellA, 20)).toThrow('Cannot access disposed state');
   });
   
-  it('should trigger onNotify when disposed', async () => {
+  it('should trigger onNotify when disposed', () => {
     const onNotify = vi.fn();
     const cellA = cell(10, { onNotify });
     
     cellA[Symbol.dispose]();
-    
-    // Wait for microtask
-    await Promise.resolve();
     
     expect(onNotify).toHaveBeenCalledTimes(1);
   });
@@ -134,7 +127,7 @@ describe('Cell dispose', () => {
     expect(() => get(cellA)).toThrow('Cannot access disposed state');
   });
   
-  it('should handle dispose in atomicUpdate', async () => {
+  it('should handle dispose in atomicUpdate', () => {
     const onNotify = vi.fn();
     const disposeFn = vi.fn();
     const disposableValue = {
@@ -147,9 +140,6 @@ describe('Cell dispose', () => {
     atomicUpdate((ops) => {
       ops.dispose(cellA);
     });
-    
-    // Wait for microtask
-    await Promise.resolve();
     
     // Cell should be disposed
     expect(() => get(cellA)).toThrow('Cannot access disposed state');
@@ -184,7 +174,7 @@ describe('Cell pending', () => {
     expect(cellA.pendingPromise).toBeUndefined();
     
     const promise = Promise.resolve(20);
-    pending(cellA, promise);
+    pending(cellA, promise, { propagate: true });
     
     expect(cellA.pendingPromise).toBe(promise);
     
@@ -195,55 +185,62 @@ describe('Cell pending', () => {
     expect(cellA.pendingPromise).toBeUndefined();
   });
   
-  it('should trigger notification when pending is set', async () => {
+  it('should trigger notification when pending is set', () => {
     const onNotify = vi.fn();
-    const cellA = cell(10, { onNotify });
+    const onPendingChange = vi.fn();
+    const cellA = cell(10, { onNotify, onPendingChange });
     
     const promise = Promise.resolve(20);
-    pending(cellA, promise);
+    pending(cellA, promise, { propagate: true });
     
-    // Wait for microtask
-    await Promise.resolve();
-    
-    expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(onNotify).not.toHaveBeenCalled();
+    expect(onPendingChange).toHaveBeenCalledTimes(1);
   });
   
-  it('should mark dependents as dirty when pending is set', () => {
-    const cellA = cell(10);
+  it('should propagate pending to dependents when pending is set', () => {
+    const onPendingChangeCell = vi.fn();
+    const onPendingChangeComputed = vi.fn();
+    const cellA = cell(10, { onPendingChange: onPendingChangeCell });
     const computedA = computed(({ get }) => get(cellA) * 2);
+    computedA.onPendingChange = onPendingChangeComputed;
     
     // Establish dependency
     expect(get(computedA)).toBe(20);
     expect(computedA.isDirty).toBe(false);
     
     const promise = Promise.resolve(30);
-    pending(cellA, promise);
+    pending(cellA, promise, { propagate: true });
     
-    // Dependents should be marked dirty
-    expect(computedA.isDirty).toBe(true);
+    // Dependents should NOT be marked dirty but should have pending
+    expect(computedA.isDirty).toBe(false);
+    expect(computedA.pendingPromise).toBeDefined();
+    expect(onPendingChangeCell).toHaveBeenCalledTimes(1);
+    expect(onPendingChangeComputed).toHaveBeenCalledTimes(1);
   });
   
   it('should handle pending in atomicUpdate', async () => {
     const onNotify = vi.fn();
-    const cellA = cell(10, { onNotify });
+    const onPendingChange = vi.fn();
+    const cellA = cell(10, { onNotify, onPendingChange });
     
     const updatePromise = atomicUpdate(async (ops) => {
       ops.set(cellA, 20);
-      ops.pending(cellA);
+      ops.pending(cellA, { propagate: true });
       await new Promise(resolve => setTimeout(resolve, 10));
     });
     
-    // Wait for microtask
-    await Promise.resolve();
-    
-    // Cell should have a pending promise (not checking identity)
+    // Before await - pending should be set, but no commit yet
     expect(cellA.pendingPromise).toBeDefined();
     expect(cellA.pendingPromise).toBeInstanceOf(Promise);
-    expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(onNotify).toHaveBeenCalledTimes(0);
+    expect(onPendingChange).toHaveBeenCalledTimes(1);
     
     await updatePromise;
     await Promise.resolve();
     
+    // After await - commit should have happened
+    expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(onPendingChange).toHaveBeenCalledTimes(1);
     expect(cellA.pendingPromise).toBeUndefined();
   });
   
@@ -253,10 +250,10 @@ describe('Cell pending', () => {
     const promise1 = new Promise(resolve => setTimeout(() => resolve(1), 10));
     const promise2 = new Promise(resolve => setTimeout(() => resolve(2), 20));
     
-    pending(cellA, promise1);
+    pending(cellA, promise1, { propagate: true });
     expect(cellA.pendingPromise).toBe(promise1);
     
-    pending(cellA, promise2);
+    pending(cellA, promise2, { propagate: true });
     expect(cellA.pendingPromise).toBe(promise2);
     
     // Wait for promise1 to complete

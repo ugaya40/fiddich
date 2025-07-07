@@ -155,12 +155,13 @@ describe('Computed basic operations', () => {
 });
 
 describe('Computed touch', () => {
-  it('should trigger onNotify for computed', async () => {
+  it('should trigger onNotify for computed', () => {
     const onNotify = vi.fn();
+    const onPendingChange = vi.fn();
     const cellA = cell(10);
     const computedA = computed(
       ({ get }) => get(cellA) * 2,
-      { onNotify }
+      { onNotify, onPendingChange }
     );
     
     // Initial get
@@ -170,27 +171,27 @@ describe('Computed touch', () => {
     // Touch should trigger notification
     touch(computedA);
     
-    // Wait for microtask
-    await Promise.resolve();
-    
     expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(onPendingChange).not.toHaveBeenCalled();
     
     // Value should remain the same
     expect(get(computedA)).toBe(20);
   });
   
-  it('should propagate touch to dependents', async () => {
+  it('should propagate touch to dependents', () => {
     const onNotifyParent = vi.fn();
     const onNotifyChild = vi.fn();
+    const onPendingChangeParent = vi.fn();
+    const onPendingChangeChild = vi.fn();
     
     const cellA = cell(10);
     const parent = computed(
       ({ get }) => get(cellA) * 2,
-      { onNotify: onNotifyParent }
+      { onNotify: onNotifyParent, onPendingChange: onPendingChangeParent }
     );
     const child = computed(
       ({ get }) => get(parent) + 5,
-      { onNotify: onNotifyChild }
+      { onNotify: onNotifyChild, onPendingChange: onPendingChangeChild }
     );
     
     // Initial evaluation
@@ -199,19 +200,19 @@ describe('Computed touch', () => {
     // Touch parent should notify both parent and child
     touch(parent);
     
-    // Wait for microtask
-    await Promise.resolve();
-    
     expect(onNotifyParent).toHaveBeenCalledTimes(1);
     expect(onNotifyChild).toHaveBeenCalledTimes(1);
+    expect(onPendingChangeParent).not.toHaveBeenCalled();
+    expect(onPendingChangeChild).not.toHaveBeenCalled();
   });
   
-  it('should handle touch in atomicUpdate', async () => {
+  it('should handle touch in atomicUpdate', () => {
     const onNotify = vi.fn();
+    const onPendingChange = vi.fn();
     const cellA = cell(10);
     const computedA = computed(
       ({ get }) => get(cellA) * 2,
-      { onNotify }
+      { onNotify, onPendingChange }
     );
     
     expect(get(computedA)).toBe(20);
@@ -221,11 +222,9 @@ describe('Computed touch', () => {
       ops.touch(computedA);
     });
     
-    // Wait for microtask
-    await Promise.resolve();
-    
     // Should be notified once (from set, not from touch due to deduplication)
     expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(onPendingChange).not.toHaveBeenCalled();
     expect(get(computedA)).toBe(40);
   });
 });
@@ -242,7 +241,7 @@ describe('Computed dispose', () => {
     expect(() => get(computedA)).toThrow('Cannot access disposed state');
   });
   
-  it('should trigger onNotify when disposed', async () => {
+  it('should trigger onNotify when disposed', () => {
     const onNotify = vi.fn();
     const cellA = cell(10);
     const computedA = computed(
@@ -253,9 +252,6 @@ describe('Computed dispose', () => {
     expect(get(computedA)).toBe(20);
     
     computedA[Symbol.dispose]();
-    
-    // Wait for microtask
-    await Promise.resolve();
     
     expect(onNotify).toHaveBeenCalledTimes(1);
   });
@@ -279,7 +275,7 @@ describe('Computed dispose', () => {
     expect(computedA.dependents.has(dependent)).toBe(true);
   });
   
-  it('should handle dispose in atomicUpdate', async () => {
+  it('should handle dispose in atomicUpdate', () => {
     const onNotify = vi.fn();
     const cellA = cell(10);
     const computedA = computed(
@@ -295,9 +291,6 @@ describe('Computed dispose', () => {
       ops.set(cellA, 20);
     });
     
-    // Wait for microtask
-    await Promise.resolve();
-    
     // Computed should be disposed
     expect(() => get(computedA)).toThrow('Cannot access disposed state');
     // Should have been notified
@@ -308,72 +301,95 @@ describe('Computed dispose', () => {
 });
 
 describe('Computed pending', () => {
-  it('should mark computed as dirty when pending is set', () => {
+  it('should set pending and trigger onPendingChange when pending is set', () => {
+    const onPendingChange = vi.fn();
     const cellA = cell(10);
     const computedA = computed(({ get }) => get(cellA) * 2);
+    computedA.onPendingChange = onPendingChange;
     
     // Initial evaluation
     expect(get(computedA)).toBe(20);
     expect(computedA.isDirty).toBe(false);
     
     const promise = Promise.resolve(30);
-    pending(computedA, promise);
+    pending(computedA, promise, { propagate: true });
     
-    // Computed should be marked dirty
-    expect(computedA.isDirty).toBe(true);
+    // Computed should NOT be marked dirty when pending is set
+    expect(computedA.isDirty).toBe(false);
     expect(computedA.pendingPromise).toBe(promise);
+    expect(onPendingChange).toHaveBeenCalledTimes(1);
   });
   
   it('should propagate pending from dependencies', () => {
+    const onPendingChangeA = vi.fn();
+    const onPendingChangeB = vi.fn();
     const cellA = cell(10);
     const computedA = computed(({ get }) => get(cellA) * 2);
     const dependent = computed(({ get }) => get(computedA) + 5);
+    computedA.onPendingChange = onPendingChangeA;
+    dependent.onPendingChange = onPendingChangeB;
     
     // Establish dependencies
     expect(get(dependent)).toBe(25);
     
     const promise = Promise.resolve(30);
-    pending(cellA, promise);
+    pending(cellA, promise, { propagate: true });
     
-    // Computed should be dirty
-    expect(computedA.isDirty).toBe(true);
+    // Computed should NOT be dirty from pending alone
+    expect(computedA.isDirty).toBe(false);
     
-    // When computed is re-evaluated, it should pick up cell's pending
-    expect(get(computedA)).toBe(20);
+    // Pending should be propagated
     expect(computedA.pendingPromise).toBeDefined();
     expect(computedA.pendingPromise).toBeInstanceOf(Promise);
+    expect(onPendingChangeA).toHaveBeenCalledTimes(1);
     
-    // Dependent should also pick up the pending when evaluated
-    expect(get(dependent)).toBe(25);
+    // Dependent should also have pending
     expect(dependent.pendingPromise).toBeDefined();
     expect(dependent.pendingPromise).toBeInstanceOf(Promise);
+    expect(onPendingChangeB).toHaveBeenCalledTimes(1);
   });
   
   it('should aggregate multiple pending promises', async () => {
+    const onPendingChange = vi.fn();
     const cell1 = cell(10);
     const cell2 = cell(20);
     const computedA = computed(({ get }) => get(cell1) + get(cell2));
+    computedA.onPendingChange = onPendingChange;
     
     expect(get(computedA)).toBe(30);
     
-    const promise1 = Promise.resolve(15);
-    const promise2 = Promise.resolve(25);
+    // Create promises with manual resolution
+    let resolve1: (value: any) => void;
+    let resolve2: (value: any) => void;
+    const promise1 = new Promise<number>(r => { resolve1 = r; });
+    const promise2 = new Promise<number>(r => { resolve2 = r; });
     
-    pending(cell1, promise1);
-    pending(cell2, promise2);
+    pending(cell1, promise1, { propagate: true });
+    pending(cell2, promise2, { propagate: true });
     
-    // Re-evaluate computed
-    expect(computedA.isDirty).toBe(true);
-    expect(get(computedA)).toBe(30);
+    // Computed should NOT be dirty from pending
+    expect(computedA.isDirty).toBe(false);
     
     // Should have aggregated promise
     expect(computedA.pendingPromise).toBeDefined();
     expect(computedA.pendingPromise).toBeInstanceOf(Promise);
     
-    // Verify it resolves when all dependencies resolve
-    await Promise.all([promise1, promise2]);
-    await computedA.pendingPromise;
-    // Success - no error thrown
+    // Resolve only first promise
+    resolve1!(15);
+    await promise1;
+    
+    // Computed's pending should still be active (waiting for second promise)
+    expect(computedA.pendingPromise).toBeDefined();
+    
+    // Resolve second promise
+    resolve2!(25);
+    await promise2;
+    
+    // Wait for finally handler to execute
+    await Promise.resolve();
+    
+    // Now computed's pending should be cleared
+    expect(computedA.pendingPromise).toBeUndefined();
   });
   
   it('should clear pending promise after resolution', async () => {
@@ -383,7 +399,7 @@ describe('Computed pending', () => {
     expect(get(computedA)).toBe(20);
     
     const promise = Promise.resolve(30);
-    pending(cellA, promise);
+    pending(cellA, promise, { propagate: true });
     
     // Re-evaluate to pick up pending
     expect(get(computedA)).toBe(20);
@@ -404,28 +420,31 @@ describe('Computed pending', () => {
   
   it('should handle pending in atomicUpdate', async () => {
     const onNotify = vi.fn();
+    const onPendingChange = vi.fn();
     const cellA = cell(10);
     const computedA = computed(
       ({ get }) => get(cellA) * 2,
-      { onNotify }
+      { onNotify, onPendingChange }
     );
     
     expect(get(computedA)).toBe(20);
     
     const updatePromise = atomicUpdate(async (ops) => {
-      ops.pending(computedA);
+      ops.pending(computedA, { propagate: true });
       await new Promise(resolve => setTimeout(resolve, 10));
     });
     
-    // Wait for microtask
-    await Promise.resolve();
-    
-    // Computed should be marked dirty and notified
-    expect(computedA.isDirty).toBe(true);
-    expect(onNotify).toHaveBeenCalledTimes(1);
+    // Computed should NOT be marked dirty from pending
+    expect(computedA.isDirty).toBe(false);
+    expect(onNotify).not.toHaveBeenCalled();
+    expect(onPendingChange).toHaveBeenCalledTimes(1);
     expect(computedA.pendingPromise).toBeDefined();
     expect(computedA.pendingPromise).toBeInstanceOf(Promise);
     
     await updatePromise;
+    await Promise.resolve(); // Wait for finally handler
+    
+    // Pending should be cleared after promise resolution
+    expect(computedA.pendingPromise).toBeUndefined();
   });
 });

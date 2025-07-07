@@ -7,7 +7,8 @@ export function cell<T>(
   initialValue: T,
   options?: {
     compare?: Compare<T>;
-    onNotify: () => void;
+    onNotify?: () => void;
+    onPendingChange?: () => void;
   }
 ): Cell<T> {
   const compare = options?.compare ?? defaultCompare;
@@ -34,6 +35,8 @@ export function cell<T>(
     isDisposed: false,
 
     onNotify: options?.onNotify,
+    
+    onPendingChange: options?.onPendingChange,
 
     get pendingPromise() {
       return pendingPromiseInternal;
@@ -41,7 +44,9 @@ export function cell<T>(
 
     set pendingPromise(value: Promise<any> | undefined) {
       pendingPromiseInternal = value;
-      current.onNotify?.();
+      if (value != null) {
+        current.onPendingChange?.();
+      }
     },
 
     [Symbol.dispose](): void {

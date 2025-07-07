@@ -8,12 +8,14 @@ export function computed<T>(
   fn: (arg: { get: <V>(target: State<V>) => V }) => T,
   options?: {
     compare?: Compare<T>;
-    onNotify: () => void;
+    onNotify?: () => void;
+    onPendingChange?: () => void;
   }
 ): Computed<T> {
   const compare = options?.compare ?? defaultCompare;
   let isDirtyInternal = true;
   let stableValue: T = undefined as any;
+  let pendingPromiseInternal: Promise<any> | undefined = undefined;
 
   const current: Computed<T> = {
     id: generateStateId(),
@@ -42,6 +44,19 @@ export function computed<T>(
     },
 
     onNotify: options?.onNotify,
+    
+    onPendingChange: options?.onPendingChange,
+
+    get pendingPromise() {
+      return pendingPromiseInternal;
+    },
+
+    set pendingPromise(value: Promise<any> | undefined) {
+      pendingPromiseInternal = value;
+      if (value != null) {
+        current.onPendingChange?.();
+      }
+    },
 
     [Symbol.dispose](): void {
       if(current.isDisposed) return;

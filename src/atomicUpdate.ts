@@ -1,4 +1,4 @@
-import { type AtomicContext, createAtomicContext, createAtomicOperations } from './atomicContext';
+import { type AtomicContext, type AtomicPendingOptions, createAtomicContext, createAtomicOperations } from './atomicContext';
 import { commit } from './atomicContext/commit';
 import { getConcurrentActions } from './concurrent';
 import type { ExclusiveToken } from './concurrent/exclusive';
@@ -11,7 +11,7 @@ export type AtomicOperations = {
   set: <T>(cell: Cell<T>, value: T) => void;
   touch: <T>(state: State<T>) => void;
   dispose: <T extends Disposable>(target: T) => void;
-  pending: (state: State, promise?: Promise<any>) => void;
+  pending: <T>(state: State<T>, options?: AtomicPendingOptions) => void;
   rejectAllChanges: () => void;
   context: AtomicContext;
 };

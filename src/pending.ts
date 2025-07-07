@@ -1,8 +1,15 @@
-import { markDirtyRecursive } from './markDirtyRecursive';
+import { pendingNotifyRecursive } from './pendingNotifyRecursive';
 import type { State } from './state';
-import { isCell, isComputed } from './stateUtil/typeUtil';
 
-export function pending<T>(state: State<T>, promise: Promise<any>): void {
+export interface PendingOptions {
+  propagate?: boolean;
+}
+
+export function pending<T>(
+  state: State<T>, 
+  promise: Promise<any>,
+  options?: PendingOptions
+): void {
   state.pendingPromise = promise;
 
   promise.finally(() => {
@@ -10,12 +17,11 @@ export function pending<T>(state: State<T>, promise: Promise<any>): void {
       state.pendingPromise = undefined;
     }
   });
-
-  if(isCell(state)) {
+  
+  // Propagate to dependents if requested (default: false)
+  if (options?.propagate) {
     for(const dependent of state.dependents) {
-      markDirtyRecursive(dependent);
+      pendingNotifyRecursive(dependent);
     }
-  } else if(isComputed(state)) {
-    markDirtyRecursive(state);
   }
 }

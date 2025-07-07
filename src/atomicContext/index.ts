@@ -2,6 +2,7 @@ import {
   disposeForAtomicOperation,
   getForAtomicOperation,
   pendingForAtomicOperation,
+  type AtomicPendingOptions,
   rejectAllChanges,
   setForAtomicOperation,
   touchForAtomicOperation,
@@ -12,6 +13,7 @@ import { createCopyStore } from './copyStore';
 import type { AtomicContext, ComputedCopy, StateCopy } from './types';
 
 export * from './types';
+export type { AtomicPendingOptions } from '../atomicOperations';
 
 export function createAtomicContext(): AtomicContext {
   const valueDirty = new Set<ComputedCopy>();
@@ -41,7 +43,7 @@ export function createAtomicOperations(context: AtomicContext) {
     set: <T>(cell: Cell<T>, newValue: T) => setForAtomicOperation(cell, newValue, context),
     touch: (state: State) => touchForAtomicOperation(state, context),
     dispose: <T extends Disposable>(target: T) => disposeForAtomicOperation(target, context),
-    pending: <T>(state: State<T>, promise?: Promise<any>) => pendingForAtomicOperation(state, context, promise),
+    pending: <T>(state: State<T>, options?: AtomicPendingOptions) => pendingForAtomicOperation(state, context, options),
     rejectAllChanges: () => rejectAllChanges(context),
   };
 }
