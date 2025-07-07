@@ -183,7 +183,7 @@ npm run type-check
 
 #### ❌ 未実装
 - ReactiveCollection（ReactiveMap/ReactiveArray）
-- createManagedObject（リソース管理の自動化）
+- managed（リソース管理の自動化）
 
 ### 最近の主要な改善
 
@@ -221,7 +221,7 @@ npm run type-check
 ### 実装の優先順位（2025年6月時点）
 1. **次に実装すべきもの**
    - ReactiveCollection（ReactiveMap/ReactiveArray）の実装
-   - createManagedObjectの実装
+   - managedの実装
 
 2. **その後の検討事項**
    - パフォーマンス最適化

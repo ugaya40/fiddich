@@ -50,7 +50,7 @@
 
 * **ReactiveCollection (リアクティブコレクション)**: (例: ReactiveMap, ReactiveArray) コレクション（配列やマップなど）のリアクティブな管理を目的とした専用のエンティティです。内部でCellを利用しつつ、要素の追加・削除に伴う関連リソース（CellやComputedなど）の自動的なSymbol.disposeや、要素自体の変更（ミュータブルなオブジェクトの内部変更も含む）の効率的な検知・通知を行います。atomicUpdateスコープ内での操作時には、オプションでAtomicContextを明示的に引き渡すことで、トランザクショナルな挙動（ロールバック時の状態復元を含む）を保証します。これにより、Cell<Map/Array>とops.touchを直接利用する場合に比べて、より宣言的で安全なコレクション操作を実現します。
 
-* **ManagedObject (マネージドオブジェクト)**: createManagedObject(() => T) APIによって生成される、リソース管理が強化されたオブジェクトです。Proxyを利用して、オブジェクト自身のSymbol.dispose時に内部のCell、Computed、他のManagedObject、またはReactiveCollectionなどのdisposableなメンバーのSymbol.disposeを連鎖的に呼び出す機能を提供します。開発者はファクトリ関数内で独自のSymbol.disposeロジックを定義し、ライブラリによる自動Symbol.disposeと協調させることも可能です。リアクティブな状態は引き続き明示的なCell/Computedで管理され、ManagedObjectは主にライフサイクル管理の責務を担います。
+* **ManagedObject (マネージドオブジェクト)**: managed(() => T) APIによって生成される、リソース管理が強化されたオブジェクトです。Proxyを利用して、オブジェクト自身のSymbol.dispose時に内部のCell、Computed、他のManagedObject、またはReactiveCollectionなどのdisposableなメンバーのSymbol.disposeを連鎖的に呼び出す機能を提供します。開発者はファクトリ関数内で独自のSymbol.disposeロジックを定義し、ライブラリによる自動Symbol.disposeと協調させることも可能です。リアクティブな状態は引き続き明示的なCell/Computedで管理され、ManagedObjectは主にライフサイクル管理の責務を担います。
 
 * **アプリケーションロジック (Application Logic)**: UIフレームワークの具体的な実装から分離された、アプリケーションの関心事の中核を担うロジックの総体。これには、ビジネスルールや永続化すべきデータだけでなく、UI固有の状態（例：ダイアログの開閉状態、フォームの入力値など）が含まれることもあります。一般的に、リアクティブな状態 (Cell, Computed等) と、それを操作する**アプリケーションアクション**群をカプセル化したモジュールやオブジェクトとして構築されます。
 
@@ -179,10 +179,10 @@ createReactiveArray<T extends { [Symbol.dispose]?: () => void }>(
 
 リアクティブなArrayインスタンスを作成します。要素はSymbol.disposeメソッドを持つことが期待されます。
 
-#### createManagedObject
+#### managed
 
 ```typescript
-createManagedObject<T>(factory: () => T): T & { [Symbol.dispose](): void }
+managed<T>(factory: () => T): T & { [Symbol.dispose](): void }
 ```
 
 リソース管理が強化されたオブジェクト（ManagedObject）を生成します。詳細はセクション4.4を参照。
@@ -397,9 +397,9 @@ await atomicUpdate(async ops => {
 
 同時実行制御トークンを指定しない場合、操作は「last writer wins」のセマンティクスで実行されます。つまり、競合検出や排他制御は行われず、最後に実行された操作の結果が反映されます。
 
-### 4.5. 高度なリソース管理ユーティリティ (createManagedObject)
+### 4.5. 高度なリソース管理ユーティリティ (managed)
 
-`createManagedObject(factory: () => T): T & { [Symbol.dispose](): void }` は、リソース管理が強化されたオブジェクト（ManagedObject）を生成するためのトップレベル関数です。
+`managed(factory: () => T): T & { [Symbol.dispose](): void }` は、リソース管理が強化されたオブジェクト（ManagedObject）を生成するためのトップレベル関数です。
 
 #### 目的と機能
 
@@ -427,19 +427,19 @@ ManagedObjectが内部にReactiveCollectionインスタンスを保持する場�
 
 アプリケーションの状態とそれを操作するロジック（**アプリケーションロジック**）は、本ライブラリのコアエンティティ（Cell, Computed, ReactiveCollection, ManagedObject）とトップレベル関数（atomicUpdateなど）を組み合わせて構築します。ここでは、推奨される主要な2つの構築パターンについて説明します。
 
-### 5.1. createManagedObject を利用したパターン (推奨)
+### 5.1. managed を利用したパターン (推奨)
 
-createManagedObject は、状態のカプセル化とリソース管理の自動化を促進し、堅牢で保守性の高い**アプリケーションロジック**のオブジェクト構築を支援します。
+managed は、状態のカプセル化とリソース管理の自動化を促進し、堅牢で保守性の高い**アプリケーションロジック**のオブジェクト構築を支援します。
 
 #### 基本的な構造
 
-* ファクトリ関数 `() => T` を createManagedObject に渡して、**アプリケーションロジック**を内包するオブジェクトを生成します。
+* ファクトリ関数 `() => T` を managed に渡して、**アプリケーションロジック**を内包するオブジェクトを生成します。
 * ファクトリ関数内で、cell や computed を用いてリアクティブな状態を定義し、それらを操作するメソッド（**アプリケーションアクション**）も同じクロージャスコープ内に定義します。これにより、状態とロジックがカプセル化されます。
 * 必要に応じて、ReactiveCollection を内部に持ち、より複雑なコレクションの状態を管理します。
 
 ```typescript
 // 例: カウンターのアプリケーションロジック
-const createCounter = () => createManagedObject(() => {
+const createCounter = () => managed(() => {
   const count = cell(0);
 
   // アプリケーションアクション
@@ -475,7 +475,7 @@ counter[Symbol.dispose](); // 内部のcount (Cell) も自動的にSymbol.dispos
 
 ### 5.2. 手動管理パターン (プレーンオブジェクトとコアエンティティの直接利用)
 
-createManagedObject を使用せず、プレーンなJavaScriptオブジェクトを返すファクトリ関数を定義し、その内部で Cell、Computed、ReactiveCollection を直接管理するパターンです。
+managed を使用せず、プレーンなJavaScriptオブジェクトを返すファクトリ関数を定義し、その内部で Cell、Computed、ReactiveCollection を直接管理するパターンです。
 
 #### 基本的な構造
 
@@ -539,7 +539,7 @@ manualCounter[Symbol.dispose]();
 
 ### どちらのパターンを選択するか
 
-基本的には、リソース管理の安全性と開発効率の観点から、createManagedObject を利用したパターンを推奨します。
+基本的には、リソース管理の安全性と開発効率の観点から、managed を利用したパターンを推奨します。
 手動管理パターンは、パフォーマンスが極めてクリティカルな限定的なケースや、ライブラリのコア機能のみを利用したい場合に選択肢として残ります。
 
 ## 6. Reactとの連携イメージ (構想)
@@ -554,7 +554,7 @@ useValue<T>(target: Cell<T> | Computed<T> | ReactiveCollection<any,any>): T
 
 Cell/Computed/ReactiveCollectionの値を購読し、変更時に再レンダリング。Suspense連携も行います。
 
-### グローバルストアとアプリケーションアクションの連携例 (Todoアイテム - ReactiveArray と createManagedObject 使用)
+### グローバルストアとアプリケーションアクションの連携例 (Todoアイテム - ReactiveArray と managed 使用)
 
 ```typescript
 // store.ts
@@ -574,7 +574,7 @@ declare const api: {
 };
 
 // --- グローバルストア (アプリケーションロジックを内包) ---
-export const globalStore = createManagedObject(() => {
+export const globalStore = managed(() => {
   const todos = createReactiveArray<TodoItem>();
 
   // 初期化処理
@@ -585,7 +585,7 @@ export const globalStore = createManagedObject(() => {
 
   atomicUpdate(ops => {
     initialData.forEach(data => {
-      const todoItem = createManagedObject(() => ({
+      const todoItem = managed(() => ({
         id: data.id,
         text: cell(data.text),
         completed: cell(data.completed)
@@ -628,7 +628,7 @@ export const todoItemActions = {
   async addTodoItem(text: string): Promise<void> {
     const newId = crypto.randomUUID();
     return atomicUpdate(ops => {
-      const newItem = createManagedObject(() => ({
+      const newItem = managed(() => ({
         id: newId,
         text: cell(text),
         completed: cell(false)
@@ -725,7 +725,7 @@ export default App;
 
 ### 6.1. リソース管理の推奨パターン (Symbol.disposeの利用)
 
-本ライブラリでは、Cell、Computed、ReactiveCollection、そしてcreateManagedObjectによって生成されるManagedObjectが、それぞれSymbol.disposeメソッドを通じたリソース解放の仕組みを提供します。これにより、メモリリークを防ぎ、アプリケーションを安定して動作させることが可能です。
+本ライブラリでは、Cell、Computed、ReactiveCollection、そしてmanagedによって生成されるManagedObjectが、それぞれSymbol.disposeメソッドを通じたリソース解放の仕組みを提供します。これにより、メモリリークを防ぎ、アプリケーションを安定して動作させることが可能です。
 
 #### 基本的なリソース解放
 
@@ -743,9 +743,9 @@ export default App;
 * ReactiveCollection（例: ReactiveMap, ReactiveArray）は、要素がコレクションから削除される際（例: delete, pop, spliceなど）や、コレクション自体がSymbol.disposeされる際に、保持している要素のSymbol.disposeメソッドを自動的に呼び出します。
 * atomicUpdateスコープ内でこれらの操作を行う場合、ReactiveCollectionのメソッドにops.context（またはAtomicContextを含むオプションオブジェクト）を渡すことで、要素のSymbol.disposeもトランザクショナルに（コミット時まで遅延して）実行されるように設計されます。
 
-#### createManagedObjectによる包括的なリソース管理
+#### managedによる包括的なリソース管理
 
-* createManagedObjectは、生成されたオブジェクトのSymbol.dispose時に、そのオブジェクトが内部に持つCell、Computed、他のManagedObject、ReactiveCollectionなどのdisposableなメンバーを再帰的にSymbol.disposeする仕組みを提供します。
+* managedは、生成されたオブジェクトのSymbol.dispose時に、そのオブジェクトが内部に持つCell、Computed、他のManagedObject、ReactiveCollectionなどのdisposableなメンバーを再帰的にSymbol.disposeする仕組みを提供します。
 * 開発者は、ファクトリ関数内で独自のSymbol.disposeロジックを定義し、ライブラリによる自動Symbol.disposeチェーンと協調させることも可能です。
 * これにより、特にネストした**アプリケーションロジック**オブジェクトやコレクションを含む複雑な構造のリソース管理が大幅に簡略化され、安全性も向上します。
 
