@@ -2,7 +2,6 @@ import type { Cell, Computed } from './state';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
 import { markDirtyRecursive } from './markDirtyRecursive';
 import { DisposedStateError } from './errors';
-import { scheduleNotifications } from './stateUtil/scheduleNotifications';
 
 export function cell<T>(
   initialValue: T,
@@ -25,7 +24,7 @@ export function cell<T>(
 
     set stableValue(value: T) {
       stableValueInternal = value;
-      scheduleNotifications([current]);
+      current.onNotify?.();
     },
 
     dependents: new Set<Computed>(),
@@ -42,7 +41,7 @@ export function cell<T>(
 
     set pendingPromise(value: Promise<any> | undefined) {
       pendingPromiseInternal = value;
-      scheduleNotifications([current]);
+      current.onNotify?.();
     },
 
     [Symbol.dispose](): void {
@@ -57,7 +56,7 @@ export function cell<T>(
         markDirtyRecursive(computed);
       }
 
-      scheduleNotifications([current]);
+      current.onNotify?.();
     },
 
     toJSON(): T {

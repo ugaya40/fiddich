@@ -1,4 +1,3 @@
-import { scheduleNotifications } from '../stateUtil/scheduleNotifications';
 import { isState } from '../stateUtil/typeUtil';
 import type { AtomicContext } from './types';
 
@@ -46,10 +45,7 @@ function executeDisposals(context: AtomicContext) {
 }
 
 function sendNotifications(context: AtomicContext) {
-  // Note: We should only notify states that are not included in valueDirty/valueChanged/toDispose,
-  // but checking each Set's values up to their originals for accurate filtering would be costly.
-  // Instead, we delegate deduplication to the Set inside scheduleNotifications.
-  scheduleNotifications(context.toNotify.values().map(c => c.original).toArray());
+  context.toNotify.values().map(c => c.original).forEach(state => state.onNotify?.());
 }
 
 

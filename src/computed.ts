@@ -3,7 +3,6 @@ import type { Computed, State } from './state';
 import { type Compare, defaultCompare, generateStateId } from './util';
 import { markDirtyRecursive } from './markDirtyRecursive';
 import { DisposedStateError } from './errors';
-import { scheduleNotifications } from './stateUtil/scheduleNotifications';
 
 export function computed<T>(
   fn: (arg: { get: <V>(target: State<V>) => V }) => T,
@@ -38,7 +37,7 @@ export function computed<T>(
     set isDirty(value: boolean) {
       isDirtyInternal = value;
       if(isDirtyInternal) {
-        scheduleNotifications([current]);
+        current.onNotify?.();
       }
     },
 
