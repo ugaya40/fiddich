@@ -11,6 +11,7 @@ export { createSequencerToken } from './concurrent/sequencer';
 export { get } from './get';
 export { pending } from './pending';
 export { useValue } from './react/hooks/useValue';
+export { useValueStatus } from './react/hooks/useValueStatus';
 export { set } from './set';
 export type {
   Cell,
