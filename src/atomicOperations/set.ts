@@ -1,11 +1,11 @@
 import type { AtomicContext } from '../atomicContext/index';
 import { DisposedStateError } from '../errors';
-import type { Cell } from '../state';
+import type { Cell, RefCell } from '../state';
 import { isDisposable } from '../util';
 import { disposeForAtomicOperation } from './dispose';
 import { markDirtyRecursiveForCopy } from './markDirtyRecursiveForCopy';
 
-export function setForAtomicOperation<T>(cell: Cell<T>, newValue: T, context: AtomicContext) {
+export function setForAtomicOperation<T>(cell: Cell<T> | RefCell<T>, newValue: T, context: AtomicContext) {
   const { copyStore, valueChanged: valueChangedDirty } = context;
   const copy = copyStore.getCopy(cell);
 
@@ -19,7 +19,7 @@ export function setForAtomicOperation<T>(cell: Cell<T>, newValue: T, context: At
   copy.value = newValue;
   valueChangedDirty.add(copy);
 
-  if (isDisposable(oldValue)) {
+  if (cell.autoDispose && isDisposable(oldValue)) {
     disposeForAtomicOperation(oldValue, context);
   }
 

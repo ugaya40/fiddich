@@ -6,7 +6,7 @@ export type { GuardToken } from './concurrent/guard';
 export { createGuardToken } from './concurrent/guard';
 export type { SequencerToken } from './concurrent/sequencer';
 export { createSequencerToken } from './concurrent/sequencer';
-export { cell } from './cell';
+export { cell, refCell } from './cell';
 export { computed } from './computed';
 export { get } from './get';
 export { pending } from './pending';
@@ -14,6 +14,7 @@ export { useValue } from './react/hooks/useValue';
 export { set } from './set';
 export type {
   Cell,
+  RefCell,
   CellValue,
   Computed,
   ComputedValue,

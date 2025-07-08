@@ -7,7 +7,7 @@ import {
   setForAtomicOperation,
   touchForAtomicOperation,
 } from '../atomicOperations';
-import type { Cell, State } from '../state';
+import type { Cell, RefCell, State } from '../state';
 import { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 import { createCopyStore } from './copyStore';
 import type { AtomicContext, ComputedCopy, StateCopy } from './types';
@@ -40,7 +40,7 @@ export function createAtomicContext(): AtomicContext {
 export function createAtomicOperations(context: AtomicContext) {
   return {
     get: <T>(state: State<T>) => getForAtomicOperation(state, context),
-    set: <T>(cell: Cell<T>, newValue: T) => setForAtomicOperation(cell, newValue, context),
+    set: <T>(cell: Cell<T> | RefCell<T>, newValue: T) => setForAtomicOperation(cell, newValue, context),
     touch: (state: State) => touchForAtomicOperation(state, context),
     dispose: <T extends Disposable>(target: T) => disposeForAtomicOperation(target, context),
     pending: <T>(state: State<T>, options?: AtomicPendingOptions) => pendingForAtomicOperation(state, context, options),

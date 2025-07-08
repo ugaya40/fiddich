@@ -1,21 +1,22 @@
-import type { Cell, Computed } from './state';
+import type { Cell, Computed, RefCell } from './state';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
 import { markDirtyRecursive } from './markDirtyRecursive';
 import { DisposedStateError } from './errors';
 
-export function cell<T>(
+function createCellInternal<T>(
   initialValue: T,
+  autoDispose: boolean,
   options?: {
     compare?: Compare<T>;
     onNotify?: () => void;
     onPendingChange?: () => void;
   }
-): Cell<T> {
+): Cell<T> | RefCell<T> {
   const compare = options?.compare ?? defaultCompare;
   let stableValueInternal = initialValue;
   let pendingPromiseInternal: Promise<any> | undefined = undefined;
 
-  const current: Cell<T> = {
+  const current: Cell<T> | RefCell<T> = {
     id: generateStateId(),
     kind: 'cell',
 
@@ -31,6 +32,8 @@ export function cell<T>(
     dependents: new Set<Computed>(),
 
     compare,
+
+    autoDispose,
     
     isDisposed: false,
 
@@ -73,5 +76,27 @@ export function cell<T>(
   };
 
   return current;
+}
+
+export function cell<T>(
+  initialValue: T,
+  options?: {
+    compare?: Compare<T>;
+    onNotify?: () => void;
+    onPendingChange?: () => void;
+  }
+): Cell<T> {
+  return createCellInternal(initialValue, true, options) as Cell<T>;
+}
+
+export function refCell<T>(
+  initialValue: T,
+  options?: {
+    compare?: Compare<T>;
+    onNotify?: () => void;
+    onPendingChange?: () => void;
+  }
+): RefCell<T> {
+  return createCellInternal(initialValue, false, options) as RefCell<T>;
 }
 

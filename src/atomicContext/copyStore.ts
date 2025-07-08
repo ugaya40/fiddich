@@ -1,10 +1,10 @@
-import type { Cell, Computed, State } from '../state';
+import type { Cell, Computed, RefCell, State } from '../state';
 import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
 import { assertUnreachable } from '../util';
 import type { AtomicContext } from './index';
 import type { CellCopy, ComputedCopy, StateCopy } from './types';
 
-function createCopy<T>(state: Cell<T>): CellCopy<T>;
+function createCopy<T>(state: Cell<T> | RefCell<T>): CellCopy<T>;
 function createCopy<T>(state: Computed<T>): ComputedCopy<T>;
 function createCopy<T>(state: State<T>): StateCopy<T>;
 function createCopy<T>(state: State<T>): StateCopy<T> {
@@ -34,7 +34,7 @@ function createCopy<T>(state: State<T>): StateCopy<T> {
   }
 }
 
-function getCopyInternal<T>(state: Cell<T>, context: AtomicContext): CellCopy<T>;
+function getCopyInternal<T>(state: Cell<T> | RefCell<T>, context: AtomicContext): CellCopy<T>;
 function getCopyInternal<T>(state: Computed<T>, context: AtomicContext): ComputedCopy<T>;
 function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<T>;
 function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<T> {
@@ -69,7 +69,7 @@ function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<
 export function createCopyStore(context: AtomicContext) {
   const copyStoreMap = new Map<State, StateCopy>();
 
-  function getCopy<T>(state: Cell<T>): CellCopy<T>;
+  function getCopy<T>(state: Cell<T> | RefCell<T>): CellCopy<T>;
   function getCopy<T>(state: Computed<T>): ComputedCopy<T>;
   function getCopy<T>(state: State<T>): StateCopy<T>;
   function getCopy<T>(state: State<T>): StateCopy<T> {

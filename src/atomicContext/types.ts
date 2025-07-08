@@ -1,4 +1,4 @@
-import type { Cell, Computed, State } from '../state';
+import type { Cell, Computed, RefCell, State } from '../state';
 import { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 
 export type StateCopyBase<T = any> = {
@@ -10,7 +10,7 @@ export type StateCopyBase<T = any> = {
 export interface CellCopy<T = any> extends StateCopyBase<T> {
   kind: 'cell';
   dependents: Set<ComputedCopy>;
-  original: Cell<T>;
+  original: Cell<T> | RefCell<T>;
 }
 
 export interface ComputedCopy<T = any> extends StateCopyBase<T> {

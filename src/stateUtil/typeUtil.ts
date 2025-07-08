@@ -1,7 +1,7 @@
 import type { CellCopy, ComputedCopy, StateCopy } from '../atomicContext';
-import type { Cell, Computed, State } from '../state';
+import type { Cell, Computed, RefCell, State } from '../state';
 
-export function isCell<T = unknown>(value: any): value is Cell<T> {
+export function isCell<T = unknown>(value: any): value is Cell<T> | RefCell<T> {
   return value != null && typeof value === 'object' && value.kind === 'cell';
 }
 

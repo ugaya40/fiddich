@@ -14,6 +14,13 @@ export interface StateBase<T = any> {
 
 export interface Cell<T = any> extends StateBase<T>, Disposable {
   kind: 'cell';
+  autoDispose: true;
+  dependents: Set<Computed>;
+}
+
+export interface RefCell<T = any> extends StateBase<T>, Disposable {
+  kind: 'cell';
+  autoDispose: false;
   dependents: Set<Computed>;
 }
 
@@ -22,10 +29,10 @@ export interface Computed<T = any> extends StateBase<T>, Disposable {
   dependents: Set<Computed>;
   dependencies: Set<State>;
   isDirty: boolean;
-  compute(getter: <V>(target: Cell<V> | Computed<V>) => V): T;
+  compute(getter: <V>(target: State<V>) => V): T;
 }
 
-export type State<T = any> = Cell<T> | Computed<T>;
+export type State<T = any> = Cell<T> | RefCell<T> | Computed<T>;
 
 /**
  * Extract the value type from a Cell or Computed
@@ -41,7 +48,7 @@ export type StateValue<T> = T extends State<infer V> ? V : never;
  * type CountCell = Cell<number>;
  * type Count = CellValue<CountCell>; // number
  */
-export type CellValue<T> = T extends Cell<infer V> ? V : never;
+export type CellValue<T> = T extends (Cell<infer V> | RefCell<infer V>) ? V : never;
 
 /**
  * Extract the value type from a Computed

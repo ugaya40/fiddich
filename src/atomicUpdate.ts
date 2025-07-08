@@ -4,11 +4,11 @@ import { getConcurrentActions } from './concurrent';
 import type { ExclusiveToken } from './concurrent/exclusive';
 import type { GuardToken } from './concurrent/guard';
 import type { SequencerToken } from './concurrent/sequencer';
-import type { Cell, State } from './state';
+import type { Cell, RefCell, State } from './state';
 
 export type AtomicOperations = {
   get: <T>(state: State<T>) => T;
-  set: <T>(cell: Cell<T>, value: T) => void;
+  set: <T>(cell: Cell<T> | RefCell<T>, value: T) => void;
   touch: <T>(state: State<T>) => void;
   dispose: <T extends Disposable>(target: T) => void;
   pending: <T>(state: State<T>, options?: AtomicPendingOptions) => void;
