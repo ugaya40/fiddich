@@ -8,12 +8,9 @@ type UseValueInternalOptions = {
   suspense: boolean;
 };
 
-export function useValueInternal<T>(
-  state: State<T>,
-  options: UseValueInternalOptions
-): [isPending: boolean, value: T] {
+export function useValueInternal<T>(state: State<T>, options: UseValueInternalOptions): [isPending: boolean, value: T] {
   const { suspense } = options;
-  
+
   // Wrapper object ensures referential inequality on each notification.
   // This is necessary because useSyncExternalStore relies on Object.is() comparison
   // to detect changes. With mutable-first design, the actual value reference might
