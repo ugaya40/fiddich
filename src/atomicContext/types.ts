@@ -1,5 +1,5 @@
 import type { Cell, Computed, RefCell, State } from '../state';
-import { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
+import type { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 
 export type StateCopyBase<T = any> = {
   id: string;

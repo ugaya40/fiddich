@@ -17,7 +17,7 @@ function createCircularDetector(): CircularDetector {
         throw new CircularDependencyError(item.id);
       }
       store.add(item.id);
-    }
+    },
   });
 
   return {

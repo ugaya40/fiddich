@@ -48,7 +48,7 @@ export type StateValue<T> = T extends State<infer V> ? V : never;
  * type CountCell = Cell<number>;
  * type Count = CellValue<CountCell>; // number
  */
-export type CellValue<T> = T extends (Cell<infer V> | RefCell<infer V>) ? V : never;
+export type CellValue<T> = T extends Cell<infer V> ? V : T extends RefCell<infer V> ? V : never;
 
 /**
  * Extract the value type from a Computed
@@ -62,5 +62,3 @@ export type ComputedValue<T> = T extends Computed<infer V> ? V : never;
  * Type for a getter function used in Computed definitions
  */
 export type StateGetter = <T>(state: State<T>) => T;
-
-

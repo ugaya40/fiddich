@@ -1,5 +1,5 @@
-import type { AtomicContext } from "../atomicContext";
-import { AtomicOperations } from "../atomicUpdate";
+import type { AtomicContext } from '../atomicContext';
+import type { AtomicOperations } from '../atomicUpdate';
 
 export type ConcurrentToken = {
   type: string;

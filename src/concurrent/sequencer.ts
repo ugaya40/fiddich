@@ -1,4 +1,4 @@
-import { AtomicOperations } from '../atomicUpdate';
+import type { AtomicOperations } from '../atomicUpdate';
 import type { ConcurrentActions, ConcurrentToken } from './types';
 
 const maps = new WeakMap<SequencerToken, SequencerInfo>();

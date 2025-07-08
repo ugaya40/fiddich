@@ -1,19 +1,19 @@
 import {
+  type AtomicPendingOptions,
   disposeForAtomicOperation,
   getForAtomicOperation,
   pendingForAtomicOperation,
-  type AtomicPendingOptions,
   rejectAllChanges,
   setForAtomicOperation,
   touchForAtomicOperation,
 } from '../atomicOperations';
 import type { Cell, RefCell, State } from '../state';
-import { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
+import type { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 import { createCopyStore } from './copyStore';
 import type { AtomicContext, ComputedCopy, StateCopy } from './types';
 
-export * from './types';
 export type { AtomicPendingOptions } from '../atomicOperations';
+export * from './types';
 
 export function createAtomicContext(): AtomicContext {
   const valueDirty = new Set<ComputedCopy>();
@@ -29,7 +29,7 @@ export function createAtomicContext(): AtomicContext {
     toDispose,
     toNotify,
     copyStore: null!,
-    atomicUpdatePromise: undefined
+    atomicUpdatePromise: undefined,
   };
 
   partialContext.copyStore = createCopyStore(partialContext);

@@ -9,11 +9,11 @@ export function setForAtomicOperation<T>(cell: Cell<T> | RefCell<T>, newValue: T
   const { copyStore, valueChanged: valueChangedDirty } = context;
   const copy = copyStore.getCopy(cell);
 
-  if(copy.isDisposed) {
+  if (copy.isDisposed) {
     throw new DisposedStateError();
   }
 
-  if(cell.compare(copy.value, newValue)) return;
+  if (cell.compare(copy.value, newValue)) return;
 
   const oldValue = copy.value;
   copy.value = newValue;

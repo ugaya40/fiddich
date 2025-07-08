@@ -8,18 +8,18 @@ export function touchForAtomicOperation<T>(state: State<T>, context: AtomicConte
   touchForAtomicOperationInternal(visited, copy, context);
 }
 
-function touchForAtomicOperationInternal<T>(visited: Set<StateCopy> ,copy: StateCopy<T>, context: AtomicContext) {
-  if(visited.has(copy)) return;
+function touchForAtomicOperationInternal<T>(visited: Set<StateCopy>, copy: StateCopy<T>, context: AtomicContext) {
+  if (visited.has(copy)) return;
   visited.add(copy);
 
   context.toNotify.add(copy);
 
-  if(isComputedCopy(copy)) {
+  if (isComputedCopy(copy)) {
     copy.isDirty = true;
     context.valueDirty.add(copy);
   }
-  
-  for(const dependent of copy.dependents) {
+
+  for (const dependent of copy.dependents) {
     touchForAtomicOperationInternal(visited, dependent, context);
   }
 }

@@ -7,7 +7,7 @@ import { computeForCopy } from './computeForCopy';
 export function getForAtomicOperation<T>(state: State<T>, context: AtomicContext) {
   const targetCopy = context.copyStore.getCopy(state);
 
-  if(targetCopy.isDisposed) {
+  if (targetCopy.isDisposed) {
     throw new DisposedStateError();
   }
 

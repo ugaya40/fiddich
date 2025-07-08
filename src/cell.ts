@@ -1,7 +1,7 @@
+import { DisposedStateError } from './errors';
+import { markDirtyRecursive } from './markDirtyRecursive';
 import type { Cell, Computed, RefCell } from './state';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
-import { markDirtyRecursive } from './markDirtyRecursive';
-import { DisposedStateError } from './errors';
 
 function createCellInternal<T>(
   initialValue: T,
@@ -14,7 +14,7 @@ function createCellInternal<T>(
 ): Cell<T> | RefCell<T> {
   const compare = options?.compare ?? defaultCompare;
   let stableValueInternal = initialValue;
-  let pendingPromiseInternal: Promise<any> | undefined = undefined;
+  let pendingPromiseInternal: Promise<any> | undefined;
 
   const current: Cell<T> | RefCell<T> = {
     id: generateStateId(),
@@ -34,11 +34,11 @@ function createCellInternal<T>(
     compare,
 
     autoDispose,
-    
+
     isDisposed: false,
 
     onNotify: options?.onNotify,
-    
+
     onPendingChange: options?.onPendingChange,
 
     get pendingPromise() {
@@ -53,14 +53,14 @@ function createCellInternal<T>(
     },
 
     [Symbol.dispose](): void {
-      if(current.isDisposed) return;
+      if (current.isDisposed) return;
 
       current.isDisposed = true;
 
       if (isDisposable(current.stableValue)) {
         current.stableValue[Symbol.dispose]();
       }
-      for(const computed of current.dependents) {
+      for (const computed of current.dependents) {
         markDirtyRecursive(computed);
       }
 
@@ -68,7 +68,7 @@ function createCellInternal<T>(
     },
 
     toJSON(): T {
-      if(current.isDisposed) {
+      if (current.isDisposed) {
         throw new DisposedStateError();
       }
       return current.stableValue;
@@ -99,4 +99,3 @@ export function refCell<T>(
 ): RefCell<T> {
   return createCellInternal(initialValue, false, options) as RefCell<T>;
 }
-

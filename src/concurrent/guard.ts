@@ -31,12 +31,12 @@ export function createGuardActions(token: GuardToken): ConcurrentActions {
   const afterRun = (context: AtomicContext) => {
     // Check if this is a read-only operation
     isReadOnly = context.valueChanged.size === 0;
-    
+
     // Skip conflict check for read-only operations
     if (isReadOnly) {
       return true;
     }
-    
+
     if (currentRevision !== info.revision) {
       return `Concurrent operation failed: conflict`;
     } else {

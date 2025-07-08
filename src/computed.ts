@@ -1,8 +1,8 @@
+import { DisposedStateError } from './errors';
 import { get } from './get';
+import { markDirtyRecursive } from './markDirtyRecursive';
 import type { Computed, State } from './state';
 import { type Compare, defaultCompare, generateStateId } from './util';
-import { markDirtyRecursive } from './markDirtyRecursive';
-import { DisposedStateError } from './errors';
 
 export function computed<T>(
   fn: (arg: { get: <V>(target: State<V>) => V }) => T,
@@ -15,7 +15,7 @@ export function computed<T>(
   const compare = options?.compare ?? defaultCompare;
   let isDirtyInternal = true;
   let stableValue: T = undefined as any;
-  let pendingPromiseInternal: Promise<any> | undefined = undefined;
+  let pendingPromiseInternal: Promise<any> | undefined;
 
   const current: Computed<T> = {
     id: generateStateId(),
@@ -29,7 +29,7 @@ export function computed<T>(
     },
 
     compare,
-    
+
     isDisposed: false,
 
     get isDirty() {
@@ -38,13 +38,13 @@ export function computed<T>(
 
     set isDirty(value: boolean) {
       isDirtyInternal = value;
-      if(isDirtyInternal) {
+      if (isDirtyInternal) {
         current.onNotify?.();
       }
     },
 
     onNotify: options?.onNotify,
-    
+
     onPendingChange: options?.onPendingChange,
 
     get pendingPromise() {
@@ -59,10 +59,10 @@ export function computed<T>(
     },
 
     [Symbol.dispose](): void {
-      if(current.isDisposed) return;
+      if (current.isDisposed) return;
       current.isDisposed = true;
 
-      for(const dependency of current.dependencies) {
+      for (const dependency of current.dependencies) {
         dependency.dependents.delete(current);
       }
       current.dependencies.clear();
@@ -71,11 +71,11 @@ export function computed<T>(
     },
 
     toJSON(): T {
-      if(current.isDisposed) {
+      if (current.isDisposed) {
         throw new DisposedStateError();
       }
 
-      if(current.isDirty) {
+      if (current.isDirty) {
         current.compute(get);
       }
 
@@ -85,5 +85,3 @@ export function computed<T>(
 
   return current;
 }
-
-
