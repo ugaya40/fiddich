@@ -42,7 +42,9 @@
 
 * **Cell (セル)**: アプリケーションの基本的な「状態」を保持する最小単位。リアクティブな値の入れ物です。TC39で標準化が検討されているSignalに類似した概念ですが、本ライブラリでは将来的にTC39 Signalの仕様に追随する予定はなく、標準化後の混乱を避けるためにCellという名称を採用しています。
 
-* **Computed (コンピューテッド)**: 派生状態。一つ以上のCellまたは他のComputedから値を計算し、依存元が変更されると自動的に再計算されるリアクティブな値です。その計算処理は、オブジェクトのgetterオンリープロパティのような軽量な処理にとどめ、副作用などを記述しないことが推奨されます。Computedの計算関数内で循環依存が発生した場合、エラーがスローされます。値が変わらない場合は、その依存先への再計算の伝播を停止し、効率的な更新を実現します。
+* **RefCell (リファレンスセル)**: 参照のみを保持し、値の自動disposeを行わないCell。通常のCellと異なり、値を差し替えても古い値のSymbol.disposeメソッドは呼び出されません。参照の切り替えが必要なユースケース（例：選択中のユーザーオブジェクト）で使用します。
+
+* **Computed (コンピューテッド)**: 派生状態。一つ以上のCell、RefCell、または他のComputedから値を計算するリアクティブな値です。値が必要とされる時点で、依存する状態の変更を検知し、必要に応じて再計算を行います。その計算処理は、オブジェクトのgetterオンリープロパティのような軽量な処理にとどめ、副作用などを記述しないことが推奨されます。Computedの計算関数内で循環依存が発生した場合、エラーがスローされます。値が変わらない場合は、その依存先への再計算の伝播を停止し、効率的な更新を実現します。
 
 * **atomicUpdate (アトミックアップデート)**: 複数の状態変更や副作用を伴う一連の操作を、一つの不可分な単位として実行するための仕組み。後述の**アプリケーションアクション**を定義する際に中心的な役割を果たします。
 
@@ -87,57 +89,74 @@ cell<T>(
   initialValue: T, 
   options?: { 
     compare?: (oldValue: T, newValue: T) => boolean,
-    onNotify?: () => void
+    onNotify?: () => void,
+    onPendingChange?: () => void
   }
 ): Cell<T>
 ```
 
-新しい Cell を作成します。compare オプションで値の比較関数を指定できます（デフォルトは厳密等価 ===）。
+新しい Cell を作成します。compare オプションで値の比較関数を指定できます（デフォルトは厳密等価 ===）。onPendingChange オプションでpending状態の変更時のコールバックを指定できます。
+
+#### refCell
+
+```typescript
+refCell<T>(
+  initialValue: T, 
+  options?: { 
+    compare?: (oldValue: T, newValue: T) => boolean,
+    onNotify?: () => void,
+    onPendingChange?: () => void
+  }
+): RefCell<T>
+```
+
+新しい RefCell を作成します。通常のCellと異なり、値の差し替え時に古い値のSymbol.disposeメソッドは呼び出されません。
 
 #### computed
 
 ```typescript
 computed<T>(
-  fn: (arg: { get: <V>(target: Cell<V> | Computed<V>) => V }) => T,
+  fn: (arg: { get: <V>(target: Cell<V> | RefCell<V> | Computed<V>) => V }) => T,
   options?: { 
     compare?: (oldValue: T, newValue: T) => boolean,
-    onNotify?: () => void
+    onNotify?: () => void,
+    onPendingChange?: () => void
   }
 ): Computed<T>
 ```
 
-新しい Computed を作成します。compare オプションで値の比較関数を指定でき、onNotify オプションで変更通知時のコールバックを指定できます。循環依存が検出された場合はエラーがスローされます。
+新しい Computed を作成します。compare オプションで値の比較関数を指定でき、onNotify オプションで変更通知時のコールバック、onPendingChange オプションでpending状態変更時のコールバックを指定できます。循環依存が検出された場合はエラーがスローされます。
 
 #### get
 
 ```typescript
-get<T>(target: Cell<T> | Computed<T> | ReactiveCollection<any, any>): T
+get<T>(target: Cell<T> | RefCell<T> | Computed<T> | ReactiveCollection<any, any>): T
 ```
 
-Cell、Computed、またはReactiveCollectionの現在のコミット済みの値（またはコレクションの表現）を取得します。
-* target がペンディング状態の場合の振る舞いやSuspense連携は、対象の型に応じて適切に処理されます。
+Cell、RefCell、Computed、またはReactiveCollectionの現在のコミット済みの値（またはコレクションの表現）を取得します。Computedの場合、必要に応じて再計算が行われます。
+* pending状態の場合でも、現在の値を返します（Promiseを投げません）。
 
 #### set
 
 ```typescript
-set<T>(cell: Cell<T>, newValue: T): void
+set<T>(cell: Cell<T> | RefCell<T>, newValue: T): void
 ```
 
-Cell の値を設定します。Cell 作成時に指定された compare 関数（またはデフォルト）に基づき、実際の値変更があった場合のみ通知が行われます。atomicUpdate のスコープ外で呼び出された場合、この操作のために内部的に短命な AtomicContext が発行され、即座にコミットされます。
+CellまたはRefCellの値を設定します。Cell/RefCell作成時に指定された compare 関数（またはデフォルト）に基づき、実際の値変更があった場合のみ通知が行われます。atomicUpdate のスコープ外で呼び出された場合、この操作のために内部的に短命な AtomicContext が発行され、即座にコミットされます。
 
-**また、set 操作によって Cell が保持する値が新しいオブジェクトに差し替えられる際、以前保持していた値（オブジェクト）が Symbol.dispose メソッドを持つ場合には、その Symbol.dispose メソッドが自動的に呼び出されます。これにより、不要になったリソースの解放漏れを防ぎます。**
+**Cellの場合、set操作によって保持する値が新しいオブジェクトに差し替えられる際、以前保持していた値（オブジェクト）がSymbol.disposeメソッドを持つ場合には、そのSymbol.disposeメソッドが自動的に呼び出されます。RefCellの場合、この自動disposeは行われません。**
 
 #### touch
 
 ```typescript
-touch(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>): void
+touch(target: Cell<any> | RefCell<any> | Computed<any> | ReactiveCollection<any, any>): void
 ```
 
-Cell、Computed、またはReactiveCollectionに手動で変更通知を促します。**これはエスケープハッチであり、基本的なシナリオでは使用しません。**
+Cell、RefCell、Computed、またはReactiveCollectionに手動で変更通知を促します。**これはエスケープハッチであり、基本的なシナリオでは使用しません。**
 
-* **Cell に対して**: Cellの保持する値や参照は変わらずとも、変更通知を強制的に発行します。
+* **Cell/RefCell に対して**: Cell/RefCellの保持する値や参照は変わらずとも、変更通知を発行します。
 
-* **Computed に対して**: Computed をダーティとしてマークし、再計算をトリガーします。これは、Computed がリアクティブシステム管理外の要因に依存する場合の「エスケープハッチ」として利用できますが、依存関係は可能な限り明示的な Cell/Computed で表現することが推奨されます。
+* **Computed に対して**: Computed の再計算を促します。これは、Computed がリアクティブシステム管理外の要因に依存する場合の「エスケープハッチ」として利用できますが、依存関係は可能な限り明示的な Cell/RefCell/Computed で表現することが推奨されます。
 
 * **ReactiveCollection に対して**: コレクションの操作メソッド（set, push等）を経由しなかった場合などに変更をシステムに通知するのに使用します。
 
@@ -146,12 +165,13 @@ Cell、Computed、またはReactiveCollectionに手動で変更通知を促し�
 #### pending
 
 ```typescript
-pending<T>(state: Cell<T> | Computed<T>, promise: Promise<any>): void
+pending<T>(state: Cell<T> | RefCell<T> | Computed<T>, promise: Promise<any>, options?: { propagate?: boolean }): void
 ```
 
-CellまたはComputedを指定されたPromiseと関連付け、ペンディング状態にします。
+Cell、RefCell、またはComputedを指定されたPromiseと関連付け、ペンディング状態にします。
 
-* 指定されたstateとその依存先（dependents）のすべてにpromiseを関連付けます
+* 指定されたstateにpromiseを関連付けます
+* `propagate`オプションがtrueの場合、依存先（dependents）にもペンディング状態を伝播します（デフォルト: false）
 * promiseが解決（成功または失敗）した際に、自動的にペンディング状態が解除されます
 * 主にReact Suspenseとの連携で使用され、非同期処理中のUIの適切な表示を可能にします
 * **基本的にはatomicUpdate内でops.pendingを使用することが推奨されます**
@@ -187,7 +207,7 @@ managed<T>(factory: () => T): T & { [Symbol.dispose](): void }
 
 リソース管理が強化されたオブジェクト（ManagedObject）を生成します。詳細はセクション4.4を参照。
 
-### 4.2. コアエンティティ (Cell, Computed, ReactiveCollection)
+### 4.2. コアエンティティ (Cell, RefCell, Computed, ReactiveCollection)
 
 #### 4.2.1. Cell
 
@@ -197,15 +217,25 @@ managed<T>(factory: () => T): T & { [Symbol.dispose](): void }
 
 (その他の詳細は「4.1 トップレベル関数」の cell, get, set, touch および後述の ops 内の同名操作を参照)
 
-#### 4.2.2. Computed
+#### 4.2.2. RefCell
 
-一つ以上のリアクティブな値から派生する状態。Computed インスタンスも、不要になった際にリソースを解放するための `[Symbol.dispose](): void` メソッドを実装します。計算結果の変更検知には、作成時に指定された compare 関数（デフォルトは ===）が使用されます。Computedは遅延初期化され、初回アクセス時に計算が実行されます。この仕組みにより、atomicUpdate内で作成されたComputedは、そのトランザクションコンテキスト内の最新の値を参照して初期化されることが保証されます。初期化時に循環依存が検出された場合はエラーがスローされます。(副作用に関する注意点はセクション2を参照)
+参照のみを保持するリアクティブな状態の単位。RefCellインスタンスも、Cell同様に`[Symbol.dispose](): void`メソッドを実装しますが、値の差し替え時に古い値のSymbol.disposeメソッドは呼び出しません。これにより、参照の切り替えが必要なユースケースで安全に使用できます。
 
-* `[Symbol.dispose](): void`: Computed が依存している他の Cell や Computed から自身を削除し、依存先への通知を発行します。一度 Symbol.dispose された Computed は再利用できません。
+* `[Symbol.dispose](): void`: 依存先への通知を発行します。RefCellが保持する値のSymbol.disposeメソッドは呼び出しません。一度 Symbol.dispose された RefCell は再利用できません。
+
+(その他の詳細は「4.1 トップレベル関数」の refCell, get, set, touch および後述の ops 内の同名操作を参照)
+
+#### 4.2.3. Computed
+
+一つ以上のリアクティブな値から派生する状態。Computed インスタンスも、不要になった際にリソースを解放するための `[Symbol.dispose](): void` メソッドを実装します。計算結果の変更検知には、作成時に指定された compare 関数（デフォルトは ===）が使用されます。
+
+Computedは遅延評価され、値が必要とされる時点で必要に応じて再計算を行います。依存関係は計算実行時に動的に収集されるため、条件分岐などにより実際に参照される依存関係のみが追跡されます。初期化時または再計算時に循環依存が検出された場合はエラーがスローされます。(副作用に関する注意点はセクション2を参照)
+
+* `[Symbol.dispose](): void`: Computed が依存している他の Cell/RefCell/Computed から自身を削除し、依存先への通知を発行します。一度 Symbol.dispose された Computed は再利用できません。
 
 (その他の詳細は「4.1 トップレベル関数」の computed, get, touch および後述の ops 内の同名操作を参照)
 
-#### 4.2.3. ReactiveCollection (例: ReactiveMap, ReactiveArray)
+#### 4.2.4. ReactiveCollection (例: ReactiveMap, ReactiveArray)
 
 リアクティブなコレクション（MapやArrayなど）を扱うための専用エンティティです。Cell<Map/Array>を直接操作するよりも高度な機能を提供し、特にコレクション要素のライフサイクル管理や変更通知を簡素化します。
 
@@ -251,11 +281,11 @@ splice(start: number, deleteCount: number, ...items: T[], options?: {context: At
 
 ```typescript
 interface AtomicOperations {
-  get<T>(target: Cell<T> | Computed<T> | ReactiveCollection<any, any>): T;
-  set<T>(target: Cell<T>, value: T): void;
-  pending(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>, promise?: Promise<any>): void;
+  get<T>(target: Cell<T> | RefCell<T> | Computed<T> | ReactiveCollection<any, any>): T;
+  set<T>(target: Cell<T> | RefCell<T>, value: T): void;
+  pending(target: Cell<any> | RefCell<any> | Computed<any> | ReactiveCollection<any, any>, options?: { promise?: Promise<any>; propagate?: boolean }): void;
   rejectAllChanges(): void;
-  touch(target: Cell<any> | Computed<any> | ReactiveCollection<any, any>): void;
+  touch(target: Cell<any> | RefCell<any> | Computed<any> | ReactiveCollection<any, any>): void;
   dispose<T extends { [Symbol.dispose](): void }>(target: T): void;
   readonly context: AtomicContext; // 現在のAtomicContextを公開
 }
@@ -280,16 +310,19 @@ function atomicUpdate<T>(
 
 * **ops.get(target)**: 常にトランザクション内の最新の状態を反映した値を返します。Computed の場合は必要に応じて再計算されます。
 
-* **ops.set(cell, value)**: Cellへの変更を AtomicContext の内部バッファに記録します。値の比較は Cell 自身の compare 関数に従います。
+* **ops.set(cell, value)**: CellまたはRefCellへの変更を AtomicContext の内部バッファに記録します。値の比較は Cell/RefCell 自身の compare 関数に従います。Cellの場合、古い値がSymbol.disposeメソッドを持つ場合は自動的に呼び出されます。
 
-* **ops.pending(target, promise?)**: 対象の Cell、Computed、または ReactiveCollection が、現在の AtomicContext 内で非同期的に解決されることをマークします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。**重要：この操作はatomicUpdateのコミットを待たずに即座にtargetにPromiseを関連付けます。**
-  * **Promiseとの関連付け**: ops.pending を呼び出すと、target は内部的に、指定された Promise と関連付けられます。非同期の atomicUpdate 内（コールバック関数が Promise を返す場合）では promise 引数を省略でき、その場合は atomicUpdate のコールバック関数が返す Promise が自動的に使用されます。同期的な atomicUpdate 内でも promise 引数を省略できます（内部的に即座に解決される Promise が使用されます）。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
+* **ops.pending(target, options?)**: 対象の Cell、RefCell、Computed、または ReactiveCollection を、現在の AtomicContext 内でペンディング状態にします。主な目的は、UI層（例: useValue フック）と React Suspense との連携を可能にすることです。**重要：この操作はatomicUpdateのコミットを待たずに即座にtargetにPromiseを関連付けます。**
+  * **オプション**: 
+    - `promise`: 関連付けるPromise（省略時はatomicUpdateが返すPromiseを使用）
+    - `propagate`: trueの場合、依存先（dependents）にもペンディング状態を伝播（デフォルト: false）
+  * **Promiseとの関連付け**: 非同期の atomicUpdate 内（コールバック関数が Promise を返す場合）では promise を省略でき、その場合は atomicUpdate のコールバック関数が返す Promise が自動的に使用されます。UI層がこの target の値を読み取ろうとした際に、この関連付けられた Promise を用いてSuspenseをトリガーできます。
   * **ペンディング状態の解除**: 関連付けられたPromiseが解決（成功または失敗）した時に、自動的にペンディング状態が解除されます。
   * このメソッド自体は値を返しません。
 
 * **ops.rejectAllChanges()**: バッファされた全ての状態変更（ReactiveCollectionへの変更も含む）を破棄します。
 
-* **ops.touch(target)**: Cell、Computed、またはReactiveCollectionに、現在のトランザクション内で変更があったことを通知します。これはエスケープハッチであり、基本的なシナリオでは使用しません。通常は適切な依存関係の設計により、自動的な変更通知に任せるべきです。
+* **ops.touch(target)**: Cell、RefCell、Computed、またはReactiveCollectionに、現在のトランザクション内で変更があったことを通知します。これはエスケープハッチであり、基本的なシナリオでは使用しません。通常は適切な依存関係の設計により、自動的な変更通知に任せるべきです。
 
 * **ops.dispose(target)**: 対象オブジェクトの Symbol.dispose メソッドの実行を、現在の AtomicContext のコミット時まで遅延させます。トランザクションがロールバックされた場合、この Symbol.dispose 処理は実行されません。target は `[Symbol.dispose](): void` メソッドを持つオブジェクトである必要があります。これにより、リソース解放処理もトランザクションの原子性に含めることができます。
 
@@ -549,10 +582,18 @@ UIと**アプリケーションロジック**の分離を推奨。Cell、Compute
 ### useValue フック
 
 ```typescript
-useValue<T>(target: Cell<T> | Computed<T> | ReactiveCollection<any,any>): T
+useValue<T>(target: Cell<T> | RefCell<T> | Computed<T> | ReactiveCollection<any,any>): T
 ```
 
-Cell/Computed/ReactiveCollectionの値を購読し、変更時に再レンダリング。Suspense連携も行います。
+Cell/RefCell/Computed/ReactiveCollectionの値を購読し、変更時に再レンダリング。Suspense連携を行い、pending状態の場合はPromiseを投げます。
+
+### useValueStatus フック
+
+```typescript
+useValueStatus<T>(target: Cell<T> | RefCell<T> | Computed<T> | ReactiveCollection<any,any>): [isPending: boolean, value: T]
+```
+
+Cell/RefCell/Computed/ReactiveCollectionの値とpending状態を購読し、変更時に再レンダリング。Suspenseを使わずにpending状態を手動で処理する場合に使用します。
 
 ### グローバルストアとアプリケーションアクションの連携例 (Todoアイテム - ReactiveArray と managed 使用)
 
@@ -751,7 +792,7 @@ export default App;
 
 #### 手動管理の選択肢
 
-これらの自動化・半自動化の仕組みを利用せず、従来通りプレーンなオブジェクトや基本的なCell/Computedを用いて、開発者がSymbol.disposeメソッドを明示的に呼び出してリソースを管理することも引き続き可能です。これにより、パフォーマンス要件や対象の複雑さに応じて最適な管理方法を選択できる柔軟性が提供されます。
+これらの自動化・半自動化の仕組みを利用せず、従来通りプレーンなオブジェクトや基本的なCell/RefCell/Computedを用いて、開発者がSymbol.disposeメソッドを明示的に呼び出してリソースを管理することも引き続き可能です。これにより、パフォーマンス要件や対象の複雑さに応じて最適な管理方法を選択できる柔軟性が提供されます。
 
 これらのパターンを適切に組み合わせることで、アプリケーションの特性に応じた堅牢かつ効率的なリソース管理を実現できます。
 
