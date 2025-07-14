@@ -1,4 +1,10 @@
-import type { Compare } from './util';
+import { EventEmitter } from './util/eventEmitter';
+import type { Compare } from './util/util';
+
+export type StateEvent = {
+  onNotify: void,
+  onPendingChange: void
+}
 
 export interface StateBase<T = any> {
   kind: string;
@@ -8,8 +14,7 @@ export interface StateBase<T = any> {
   toJSON(): T;
   pendingPromise?: Promise<any>;
   isDisposed: boolean;
-  onNotify?: () => void;
-  onPendingChange?: () => void;
+  event: EventEmitter<StateEvent>
 }
 
 export interface Cell<T = any> extends StateBase<T>, Disposable {

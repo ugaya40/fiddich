@@ -1,3 +1,6 @@
+// @ts-ignore
+Symbol.dispose ??= Symbol("Symbol.dispose");
+
 export type { AtomicExecuted, AtomicReject, AtomicUpdateResult } from './atomicUpdate';
 export { atomicUpdate, tryAtomicUpdate } from './atomicUpdate';
 export { cell, refCell } from './cell';

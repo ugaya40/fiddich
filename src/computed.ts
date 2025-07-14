@@ -1,8 +1,9 @@
 import { DisposedStateError } from './errors';
 import { get } from './get';
 import { markDirtyRecursive } from './markDirtyRecursive';
-import type { Computed, State } from './state';
-import { type Compare, defaultCompare, generateStateId } from './util';
+import type { Computed, State, StateEvent } from './state';
+import { createEventEmitter } from './util/eventEmitter';
+import { type Compare, defaultCompare, generateStateId } from './util/util';
 
 export function computed<T>(
   fn: (arg: { get: <V>(target: State<V>) => V }) => T,
@@ -17,12 +18,22 @@ export function computed<T>(
   let stableValue: T = undefined as any;
   let pendingPromiseInternal: Promise<any> | undefined;
 
+  const event = createEventEmitter<StateEvent>();
+  if(options?.onNotify != null) {
+    event.on('onNotify', options.onNotify);
+  }
+
+  if(options?.onPendingChange != null) {
+    event.on('onPendingChange', options.onPendingChange);
+  }
+
   const current: Computed<T> = {
     id: generateStateId(),
     kind: 'computed',
     stableValue,
     dependents: new Set<Computed>(),
     dependencies: new Set<State>(),
+    event,
 
     compute(getter: <V>(target: State<V>) => V): T {
       return fn({ get: getter });
@@ -39,13 +50,9 @@ export function computed<T>(
     set isDirty(value: boolean) {
       isDirtyInternal = value;
       if (isDirtyInternal) {
-        current.onNotify?.();
+        event.emit('onNotify', undefined);
       }
     },
-
-    onNotify: options?.onNotify,
-
-    onPendingChange: options?.onPendingChange,
 
     get pendingPromise() {
       return pendingPromiseInternal;
@@ -54,7 +61,7 @@ export function computed<T>(
     set pendingPromise(value: Promise<any> | undefined) {
       pendingPromiseInternal = value;
       if (value != null) {
-        current.onPendingChange?.();
+        event.emit('onPendingChange', undefined);
       }
     },
 
@@ -68,6 +75,7 @@ export function computed<T>(
       current.dependencies.clear();
 
       markDirtyRecursive(current);
+      event[Symbol.dispose]();
     },
 
     toJSON(): T {

@@ -267,7 +267,6 @@ push(item: T, context?: AtomicContext): number;
 pop(context?: AtomicContext): T | undefined;
 splice(start: number, deleteCount?: number, context?: AtomicContext): T[]; // 要素削除・置換（アイテムなし）の場合
 splice(start: number, deleteCount: number, ...items: T[], options?: {context: AtomicContext}): T[]; // 要素追加・置換の場合 - この形式ではoptionsオブジェクトを使用
-// その他、標準的なArrayメソッド（map, filter, forEachなど）も提供し、これらはリアクティブな振る舞いを維持します。
 [Symbol.dispose](): void; // コレクション自体と、保持する全要素のSymbol.disposeを実行
 ```
 

@@ -1,6 +1,6 @@
 import type { Cell, Computed, RefCell, State } from '../state';
 import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
-import { assertUnreachable } from '../util';
+import { assertUnreachable } from '../util/util';
 import type { AtomicContext } from './index';
 import type { CellCopy, ComputedCopy, StateCopy } from './types';
 

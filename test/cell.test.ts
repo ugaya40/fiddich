@@ -201,7 +201,7 @@ describe('Cell pending', () => {
     const onPendingChangeComputed = vi.fn();
     const cellA = cell(10, { onPendingChange: onPendingChangeCell });
     const computedA = computed(({ get }) => get(cellA) * 2);
-    computedA.onPendingChange = onPendingChangeComputed;
+    computedA.event.on('onPendingChange',onPendingChangeComputed);
 
     // Establish dependency
     expect(get(computedA)).toBe(20);

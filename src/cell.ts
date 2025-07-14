@@ -1,7 +1,8 @@
 import { DisposedStateError } from './errors';
 import { markDirtyRecursive } from './markDirtyRecursive';
-import type { Cell, Computed, RefCell } from './state';
-import { type Compare, defaultCompare, generateStateId, isDisposable } from './util';
+import type { Cell, Computed, RefCell, StateEvent } from './state';
+import { createEventEmitter } from './util/eventEmitter';
+import { type Compare, defaultCompare, generateStateId, isDisposable } from './util/util';
 
 function createCellInternal<T>(
   initialValue: T,
@@ -16,9 +17,19 @@ function createCellInternal<T>(
   let stableValueInternal = initialValue;
   let pendingPromiseInternal: Promise<any> | undefined;
 
+  const event = createEventEmitter<StateEvent>();
+  if(options?.onNotify != null) {
+    event.on('onNotify', options.onNotify);
+  }
+
+  if(options?.onPendingChange != null) {
+    event.on('onPendingChange', options.onPendingChange);
+  }
+
   const current: Cell<T> | RefCell<T> = {
     id: generateStateId(),
     kind: 'cell',
+    event,
 
     get stableValue() {
       return stableValueInternal;
@@ -26,7 +37,7 @@ function createCellInternal<T>(
 
     set stableValue(value: T) {
       stableValueInternal = value;
-      current.onNotify?.();
+      event.emit('onNotify', undefined);
     },
 
     dependents: new Set<Computed>(),
@@ -37,10 +48,6 @@ function createCellInternal<T>(
 
     isDisposed: false,
 
-    onNotify: options?.onNotify,
-
-    onPendingChange: options?.onPendingChange,
-
     get pendingPromise() {
       return pendingPromiseInternal;
     },
@@ -48,7 +55,7 @@ function createCellInternal<T>(
     set pendingPromise(value: Promise<any> | undefined) {
       pendingPromiseInternal = value;
       if (value != null) {
-        current.onPendingChange?.();
+        event.emit('onPendingChange', undefined);
       }
     },
 
@@ -64,7 +71,8 @@ function createCellInternal<T>(
         markDirtyRecursive(computed);
       }
 
-      current.onNotify?.();
+      event.emit('onNotify', undefined);
+      event[Symbol.dispose]();
     },
 
     toJSON(): T {

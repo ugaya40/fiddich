@@ -48,7 +48,7 @@ export function commit(context: AtomicContext): void {
   // Send notifications for items not already scheduled
   for (const copy of context.toNotify) {
     if (!scheduledForNotification.has(copy.original)) {
-      copy.original.onNotify?.();
+      copy.original.event.emit('onNotify', undefined);
     }
   }
 }

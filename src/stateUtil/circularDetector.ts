@@ -1,7 +1,7 @@
 import type { StateCopy } from '../atomicContext';
 import { CircularDependencyError } from '../errors';
 import type { State } from '../state';
-import { createScopedCollector, type ScopedCollector } from '../util';
+import { createScopedCollector, type ScopedCollector } from '../util/scopedCollector';
 
 type CircularDetector = {
   setScope: (obj: Record<string, never>) => void;

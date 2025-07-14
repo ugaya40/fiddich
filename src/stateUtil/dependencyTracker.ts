@@ -1,6 +1,6 @@
 import type { ComputedCopy, StateCopy } from '../atomicContext';
 import type { Computed, State } from '../state';
-import { createScopedCollector, type ScopedCollector } from '../util';
+import { createScopedCollector, type ScopedCollector } from '../util/scopedCollector';
 
 export type OriginalState = {
   computed: Computed;
