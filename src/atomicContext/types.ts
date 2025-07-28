@@ -1,31 +1,19 @@
-import type { Cell, Computed, RefCell, State } from '../state';
+import type { ValueStates } from '../state';
 import type { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
+import type { CellCopy, ComputedCopy, StateCopy } from './copy';
 
-export type StateCopyBase<T = any> = {
-  id: string;
-  value: T;
-  isDisposed: boolean;
-};
+export type { CellCopy, ComputedCopy, StateCopy, StateCopyBase } from './copy';
 
-export interface CellCopy<T = any> extends StateCopyBase<T> {
-  kind: 'cell';
-  dependents: Set<ComputedCopy>;
-  original: Cell<T> | RefCell<T>;
-}
-
-export interface ComputedCopy<T = any> extends StateCopyBase<T> {
-  kind: 'computed';
-  dependents: Set<ComputedCopy>;
-  dependencies: Set<StateCopy>;
-  original: Computed<T>;
-  isDirty: boolean;
-}
-
-export type StateCopy<T = any> = CellCopy<T> | ComputedCopy<T>;
+import type { Cell, Computed, RefCell } from '../state';
 
 export type CopyStore = {
-  copyStoreMap: Map<State, StateCopy>;
-  getCopy: <T>(state: State<T>) => StateCopy<T>;
+  copyStoreMap: Map<ValueStates, StateCopy>;
+  getCopy: {
+    <T>(state: Cell<T> | RefCell<T>): CellCopy<T>;
+    <T>(state: Computed<T>): ComputedCopy<T>;
+    <T>(state: ValueStates<T>): StateCopy<T>;
+  };
+  registerCopy: (state: ValueStates, copy: StateCopy) => void;
   clear: () => void;
 };
 

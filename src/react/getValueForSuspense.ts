@@ -1,7 +1,7 @@
 import { get } from '../get';
-import type { State } from '../state';
+import type { ValueStates } from '../state';
 
-export function getValueForSuspense<T>(state: State<T>): T {
+export function getValueForSuspense<T>(state: ValueStates<T>): T {
   if (state.pendingPromise != null) {
     throw state.pendingPromise;
   }

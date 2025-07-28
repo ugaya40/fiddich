@@ -1,11 +1,11 @@
 import { pendingNotifyRecursive } from './pendingNotifyRecursive';
-import type { State } from './state';
+import type { States } from './state';
 
 export interface PendingOptions {
   propagate?: boolean;
 }
 
-export function pending<T>(state: State<T>, promise: Promise<any>, options?: PendingOptions): void {
+export function pending(state: States, promise: Promise<any>, options?: PendingOptions): void {
   state.pendingPromise = promise;
 
   promise.finally(() => {

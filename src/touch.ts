@@ -1,7 +1,7 @@
 import { atomicUpdate } from './atomicUpdate';
-import type { State } from './state';
+import type { ValueStates } from './state';
 
-export function touch<T>(state: State<T>): void {
+export function touch<T>(state: ValueStates<T>): void {
   atomicUpdate((ops) => {
     ops.touch(state);
   });

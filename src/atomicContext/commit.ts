@@ -1,9 +1,9 @@
-import type { State } from '../state';
-import { isState } from '../stateUtil/typeUtil';
+import type { ValueStates } from '../state';
+import { isValueState } from '../stateUtil/typeUtil';
 import type { AtomicContext } from './types';
 
 export function commit(context: AtomicContext): void {
-  const scheduledForNotification = new Set<State>();
+  const scheduledForNotification = new Set<ValueStates>();
 
   // Apply dirty flags and schedule notifications
   for (const computedCopy of context.valueDirty) {
@@ -35,7 +35,7 @@ export function commit(context: AtomicContext): void {
 
   // Execute disposals and schedule notifications
   for (const disposable of context.toDispose) {
-    if (isState(disposable)) {
+    if (isValueState(disposable)) {
       if (!disposable.isDisposed) {
         disposable[Symbol.dispose]();
         scheduledForNotification.add(disposable);

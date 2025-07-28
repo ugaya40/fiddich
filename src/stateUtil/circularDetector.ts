@@ -1,16 +1,16 @@
 import type { StateCopy } from '../atomicContext';
 import { CircularDependencyError } from '../errors';
-import type { State } from '../state';
+import type { ValueStates } from '../state';
 import { createScopedCollector, type ScopedCollector } from '../util/scopedCollector';
 
 type CircularDetector = {
   setScope: (obj: Record<string, never>) => void;
   exitScope: (obj: Record<string, never>) => void;
-  collect(targetUnit: string, target: State | StateCopy): void;
+  collect(targetUnit: string, target: ValueStates | StateCopy): void;
 };
 
 function createCircularDetector(): CircularDetector {
-  const collector: ScopedCollector<string, State | StateCopy, Set<string>> = createScopedCollector({
+  const collector: ScopedCollector<string, ValueStates | StateCopy, Set<string>> = createScopedCollector({
     createStoreForUnit: () => new Set<string>(),
     processItem: (_, store, item) => {
       if (store.has(item.id)) {

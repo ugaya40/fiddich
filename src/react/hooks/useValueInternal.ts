@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { computed } from '../../computed';
 import { get } from '../../get';
-import type { State } from '../../state';
+import type { ValueStates } from '../../state';
 import { getValueForSuspense } from '../getValueForSuspense';
 
 type UseValueInternalOptions = {
   suspense: boolean;
 };
 
-export function useValueInternal<T>(state: State<T>, options: UseValueInternalOptions): [isPending: boolean, value: T] {
+export function useValueInternal<T>(state: ValueStates<T>, options: UseValueInternalOptions): [isPending: boolean, value: T] {
   const { suspense } = options;
 
   // Wrapper object ensures referential inequality on each notification.

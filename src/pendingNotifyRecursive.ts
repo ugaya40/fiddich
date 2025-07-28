@@ -1,7 +1,7 @@
-import type { State } from './state';
+import type { ValueStates } from './state';
 import { isComputed } from './stateUtil/typeUtil';
 
-function pendingNotifyRecursiveInternal(state: State, visited: Set<State>) {
+function pendingNotifyRecursiveInternal(state: ValueStates, visited: Set<ValueStates>) {
   if (visited.has(state)) return;
   visited.add(state);
 
@@ -28,6 +28,6 @@ function pendingNotifyRecursiveInternal(state: State, visited: Set<State>) {
   }
 }
 
-export function pendingNotifyRecursive(state: State) {
-  pendingNotifyRecursiveInternal(state, new Set<State>());
+export function pendingNotifyRecursive(state: ValueStates) {
+  pendingNotifyRecursiveInternal(state, new Set<ValueStates>());
 }

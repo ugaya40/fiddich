@@ -1,8 +1,9 @@
 import type { AtomicContext, StateCopy } from '../atomicContext/index';
-import type { State } from '../state';
+import { ReactiveCollection } from '../collections';
+import type { ValueStates } from '../state';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 
-export function touchForAtomicOperation<T>(state: State<T>, context: AtomicContext) {
+export function touchForAtomicOperation<T>(state: ValueStates<T>, context: AtomicContext) {
   const visited = new Set<StateCopy>();
   const copy = context.copyStore.getCopy(state);
   touchForAtomicOperationInternal(visited, copy, context);

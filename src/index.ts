@@ -22,9 +22,9 @@ export type {
   Computed,
   ComputedValue,
   RefCell,
-  State,
+  ValueStates,
   StateGetter,
   StateValue,
 } from './state';
-export { isCell, isComputed, isState } from './stateUtil/typeUtil';
+export { isCell, isComputed, isValueState as isState } from './stateUtil/typeUtil';
 export { touch } from './touch';

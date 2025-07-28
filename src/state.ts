@@ -1,3 +1,4 @@
+import { ReactiveCollections } from './collections';
 import { EventEmitter } from './util/eventEmitter';
 import type { Compare } from './util/util';
 
@@ -6,9 +7,14 @@ export type StateEvent = {
   onPendingChange: void
 }
 
-export interface StateBase<T = any> {
+export interface ReactiveState {
   kind: string;
   id: string;
+  dependents: Set<Computed>;
+  toJSON(): unknown;
+}
+
+export interface ValueState<T = any> extends ReactiveState {
   stableValue: T;
   compare: Compare<T>;
   toJSON(): T;
@@ -17,27 +23,25 @@ export interface StateBase<T = any> {
   event: EventEmitter<StateEvent>
 }
 
-export interface Cell<T = any> extends StateBase<T>, Disposable {
+export interface Cell<T = any> extends ValueState<T>, Disposable {
   kind: 'cell';
   autoDispose: true;
-  dependents: Set<Computed>;
 }
 
-export interface RefCell<T = any> extends StateBase<T>, Disposable {
+export interface RefCell<T = any> extends ValueState<T>, Disposable {
   kind: 'cell';
   autoDispose: false;
-  dependents: Set<Computed>;
 }
 
-export interface Computed<T = any> extends StateBase<T>, Disposable {
+export interface Computed<T = any> extends ValueState<T>, Disposable {
   kind: 'computed';
-  dependents: Set<Computed>;
-  dependencies: Set<State>;
+  dependencies: Set<ValueStates>;
   isDirty: boolean;
-  compute(getter: <V>(target: State<V>) => V): T;
+  compute(getter: <V>(target: ValueStates<V>) => V): T;
 }
 
-export type State<T = any> = Cell<T> | RefCell<T> | Computed<T>;
+export type ValueStates<T = any> = Cell<T> | RefCell<T> | Computed<T>;
+export type States = ValueStates | ReactiveCollections;
 
 /**
  * Extract the value type from a Cell or Computed
@@ -45,7 +49,7 @@ export type State<T = any> = Cell<T> | RefCell<T> | Computed<T>;
  * type CountCell = Cell<number>;
  * type Count = StateValue<CountCell>; // number
  */
-export type StateValue<T> = T extends State<infer V> ? V : never;
+export type StateValue<T> = T extends ValueStates<infer V> ? V : never;
 
 /**
  * Extract the value type from a Cell
@@ -66,4 +70,4 @@ export type ComputedValue<T> = T extends Computed<infer V> ? V : never;
 /**
  * Type for a getter function used in Computed definitions
  */
-export type StateGetter = <T>(state: State<T>) => T;
+export type StateGetter = <T>(state: ValueStates<T>) => T;

@@ -1,9 +1,9 @@
 import { compute } from './compute';
 import { DisposedStateError } from './errors';
-import type { State } from './state';
+import type { ValueStates } from './state';
 import { isComputed } from './stateUtil/typeUtil';
 
-export function get<T>(state: State<T>): T {
+export function get<T>(state: ValueStates<T>): T {
   if (state.isDisposed) {
     throw new DisposedStateError();
   }

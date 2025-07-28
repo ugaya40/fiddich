@@ -1,26 +1,39 @@
 import type { CellCopy, ComputedCopy, StateCopy } from '../atomicContext';
-import type { Cell, Computed, RefCell, State } from '../state';
+import { ReactiveCollection } from '../collections';
+import type { Cell, Computed, RefCell, ValueStates } from '../state';
 
-export function isCell<T = unknown>(value: any): value is Cell<T> | RefCell<T> {
-  return value != null && typeof value === 'object' && value.kind === 'cell';
+export function isCell<T>(value: ValueStates<T>): value is Cell<T> | RefCell<T>;
+export function isCell(value: unknown): value is Cell | RefCell;
+export function isCell(value: unknown): value is Cell | RefCell {
+  return value != null && typeof value === 'object' && (value as any).kind === 'cell';
 }
 
-export function isComputed<T = unknown>(value: any): value is Computed<T> {
-  return value != null && typeof value === 'object' && value.kind === 'computed';
+export function isComputed<T>(value: ValueStates<T>): value is Computed<T>;
+export function isComputed(value: unknown): value is Computed;
+export function isComputed(value: unknown): value is Computed {
+  return value != null && typeof value === 'object' && (value as any).kind === 'computed';
 }
 
-export function isState<T = unknown>(value: any): value is State<T> {
+export function isValueState(value: unknown): value is ValueStates {
   return isCell(value) || isComputed(value);
 }
 
-export function isStateCopy<T = unknown>(value: any): value is StateCopy<T> {
-  return value != null && typeof value === 'object' && value.original && value.kind;
+export function isReactiveCollection(value: unknown): value is ReactiveCollection {
+  return value != null && typeof value === 'object' && (value as any).kind === 'collection';
 }
 
-export function isCellCopy<T = unknown>(copy: StateCopy<T>): copy is CellCopy<T> {
+export function isStateCopy(value: unknown): value is StateCopy {
+  return value != null && typeof value === 'object' && (value as any).original && (value as any).kind;
+}
+
+export function isCellCopy<T>(copy: StateCopy<T>): copy is CellCopy<T>;
+export function isCellCopy(copy: StateCopy): copy is CellCopy;
+export function isCellCopy(copy: StateCopy): copy is CellCopy {
   return copy.kind === 'cell';
 }
 
-export function isComputedCopy<T = unknown>(copy: StateCopy<T>): copy is ComputedCopy<T> {
+export function isComputedCopy<T>(copy: StateCopy<T>): copy is ComputedCopy<T>;
+export function isComputedCopy(copy: StateCopy): copy is ComputedCopy;
+export function isComputedCopy(copy: StateCopy): copy is ComputedCopy {
   return copy.kind === 'computed';
 }

@@ -1,12 +1,12 @@
 import { DisposedStateError } from './errors';
 import { get } from './get';
 import { markDirtyRecursive } from './markDirtyRecursive';
-import type { Computed, State, StateEvent } from './state';
+import type { Computed, ValueStates, StateEvent } from './state';
 import { createEventEmitter } from './util/eventEmitter';
 import { type Compare, defaultCompare, generateStateId } from './util/util';
 
 export function computed<T>(
-  fn: (arg: { get: <V>(target: State<V>) => V }) => T,
+  fn: (arg: { get: <V>(target: ValueStates<V>) => V }) => T,
   options?: {
     compare?: Compare<T>;
     onNotify?: () => void;
@@ -32,10 +32,10 @@ export function computed<T>(
     kind: 'computed',
     stableValue,
     dependents: new Set<Computed>(),
-    dependencies: new Set<State>(),
+    dependencies: new Set<ValueStates>(),
     event,
 
-    compute(getter: <V>(target: State<V>) => V): T {
+    compute(getter: <V>(target: ValueStates<V>) => V): T {
       return fn({ get: getter });
     },
 

@@ -1,84 +1,47 @@
-import type { Cell, Computed, RefCell, State } from '../state';
-import { isCellCopy, isComputedCopy } from '../stateUtil/typeUtil';
-import { assertUnreachable } from '../util/util';
+import type { Cell, Computed, RefCell, ValueStates } from '../state';
+import { isCell, isComputed } from '../stateUtil/typeUtil';
 import type { AtomicContext } from './index';
-import type { CellCopy, ComputedCopy, StateCopy } from './types';
+import type { CellCopy, ComputedCopy, StateCopy } from './copy';
+import { createCellCopy } from './copy/cell';
+import { createComputedCopy } from './copy/computed';
 
-function createCopy<T>(state: Cell<T> | RefCell<T>): CellCopy<T>;
-function createCopy<T>(state: Computed<T>): ComputedCopy<T>;
-function createCopy<T>(state: State<T>): StateCopy<T>;
-function createCopy<T>(state: State<T>): StateCopy<T> {
-  switch (state.kind) {
-    case 'cell':
-      return {
-        id: state.id,
-        kind: 'cell',
-        original: state,
-        value: state.stableValue,
-        dependents: new Set(),
-        isDisposed: state.isDisposed,
-      };
-    case 'computed':
-      return {
-        id: state.id,
-        kind: 'computed',
-        original: state,
-        value: state.stableValue,
-        dependents: new Set(),
-        dependencies: new Set(),
-        isDirty: state.isDirty,
-        isDisposed: state.isDisposed,
-      };
-    default:
-      assertUnreachable(state);
-  }
-}
 
 function getCopyInternal<T>(state: Cell<T> | RefCell<T>, context: AtomicContext): CellCopy<T>;
 function getCopyInternal<T>(state: Computed<T>, context: AtomicContext): ComputedCopy<T>;
-function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<T>;
-function getCopyInternal<T>(state: State<T>, context: AtomicContext): StateCopy<T> {
+function getCopyInternal<T>(state: ValueStates<T>, context: AtomicContext): StateCopy<T>;
+function getCopyInternal<T>(state: ValueStates<T>, context: AtomicContext): StateCopy<T> {
   const { copyStoreMap } = context.copyStore;
   const existing = copyStoreMap.get(state);
   if (existing) {
     return existing;
   }
 
-  const newCopy = createCopy(state);
-
-  // Must add to map immediately to handle recursive dependencies correctly.
-  // If we delay this, dependent copies might create duplicate copies of this state.
-  copyStoreMap.set(state, newCopy);
-
-  if (isCellCopy(newCopy)) {
-    for (const dependent of newCopy.original.dependents) {
-      newCopy.dependents.add(getCopyInternal(dependent, context));
-    }
-  } else if (isComputedCopy(newCopy)) {
-    for (const dependent of newCopy.original.dependents) {
-      newCopy.dependents.add(getCopyInternal(dependent, context));
-    }
-    for (const dependency of newCopy.original.dependencies) {
-      newCopy.dependencies.add(getCopyInternal(dependency, context));
-    }
+  if (isCell(state)) {
+    return createCellCopy(state, context);
+  } else if (isComputed(state)) {
+    return createComputedCopy(state, context);
+  } else {
+    throw new Error(`Unexpected state kind: ${(state as any).kind}`);
   }
-
-  return newCopy;
 }
 
 export function createCopyStore(context: AtomicContext) {
-  const copyStoreMap = new Map<State, StateCopy>();
+  const copyStoreMap = new Map<ValueStates, StateCopy>();
 
   function getCopy<T>(state: Cell<T> | RefCell<T>): CellCopy<T>;
   function getCopy<T>(state: Computed<T>): ComputedCopy<T>;
-  function getCopy<T>(state: State<T>): StateCopy<T>;
-  function getCopy<T>(state: State<T>): StateCopy<T> {
+  function getCopy<T>(state: ValueStates<T>): StateCopy<T>;
+  function getCopy<T>(state: ValueStates<T>): StateCopy<T> {
     return getCopyInternal(state, context);
+  }
+
+  function registerCopy(state: ValueStates, copy: StateCopy): void {
+    copyStoreMap.set(state, copy);
   }
 
   function clear() {
     copyStoreMap.clear();
   }
 
-  return { copyStoreMap, getCopy, clear };
+  return { copyStoreMap, getCopy, registerCopy, clear };
 }
