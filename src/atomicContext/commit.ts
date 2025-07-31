@@ -1,5 +1,5 @@
-import type { ValueStates } from '../state';
 import { isValueState } from '../stateUtil/typeUtil';
+import type { ValueStates } from '../types';
 import type { AtomicContext } from './types';
 
 export function commit(context: AtomicContext): void {

@@ -1,5 +1,5 @@
-import type { ValueStates } from './state';
 import { isComputed } from './stateUtil/typeUtil';
+import type { ValueStates } from './types';
 
 function pendingNotifyRecursiveInternal(state: ValueStates, visited: Set<ValueStates>) {
   if (visited.has(state)) return;

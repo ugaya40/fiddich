@@ -1,5 +1,5 @@
 import { pendingNotifyRecursive } from './pendingNotifyRecursive';
-import type { States } from './state';
+import type { States } from './types';
 
 export interface PendingOptions {
   propagate?: boolean;

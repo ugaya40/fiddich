@@ -1,20 +1,17 @@
-import type { Computed } from '../../state';
+import type { Computed } from '../../types';
 import type { AtomicContext } from '../index';
-import type { StateCopy } from './';
-import type { StateCopyBase } from './state';
+import type { ValueStateCopy } from './';
+import type { ValueStateCopyBase } from './types';
 
-export interface ComputedCopy<T = any> extends StateCopyBase<T> {
+export interface ComputedCopy<T = any> extends ValueStateCopyBase<T> {
   kind: 'computed';
   dependents: Set<ComputedCopy>;
-  dependencies: Set<StateCopy>;
+  dependencies: Set<ValueStateCopy>;
   original: Computed<T>;
   isDirty: boolean;
 }
 
-export function createComputedCopy<T>(
-  computed: Computed<T>,
-  context: AtomicContext
-): ComputedCopy<T> {
+export function createComputedCopy<T>(computed: Computed<T>, context: AtomicContext): ComputedCopy<T> {
   const copy: ComputedCopy<T> = {
     id: computed.id,
     kind: 'computed',

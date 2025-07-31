@@ -1,11 +1,11 @@
-import { ReactiveCollections } from './collections';
-import { EventEmitter } from './util/eventEmitter';
+import type { ReactiveCollections } from './collections';
+import type { EventEmitter } from './util/eventEmitter';
 import type { Compare } from './util/util';
 
 export type StateEvent = {
-  onNotify: void,
-  onPendingChange: void
-}
+  onNotify: void;
+  onPendingChange: void;
+};
 
 export interface ReactiveState {
   kind: string;
@@ -20,7 +20,7 @@ export interface ValueState<T = any> extends ReactiveState {
   toJSON(): T;
   pendingPromise?: Promise<any>;
   isDisposed: boolean;
-  event: EventEmitter<StateEvent>
+  event: EventEmitter<StateEvent>;
 }
 
 export interface Cell<T = any> extends ValueState<T>, Disposable {

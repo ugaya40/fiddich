@@ -1,5 +1,5 @@
 // @ts-ignore
-Symbol.dispose ??= Symbol("Symbol.dispose");
+Symbol.dispose ??= Symbol('Symbol.dispose');
 
 export type { AtomicExecuted, AtomicReject, AtomicUpdateResult } from './atomicUpdate';
 export { atomicUpdate, tryAtomicUpdate } from './atomicUpdate';
@@ -16,15 +16,15 @@ export { pending } from './pending';
 export { useValue } from './react/hooks/useValue';
 export { useValueStatus } from './react/hooks/useValueStatus';
 export { set } from './set';
+export { isCell, isComputed, isValueState as isState } from './stateUtil/typeUtil';
+export { touch } from './touch';
 export type {
   Cell,
   CellValue,
   Computed,
   ComputedValue,
   RefCell,
-  ValueStates,
   StateGetter,
   StateValue,
-} from './state';
-export { isCell, isComputed, isValueState as isState } from './stateUtil/typeUtil';
-export { touch } from './touch';
+  ValueStates,
+} from './types';

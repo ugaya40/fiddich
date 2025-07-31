@@ -36,7 +36,8 @@
         "noConsole": "error",
         "noDebugger": "error",
         "noExplicitAny": "off",
-        "noVar": "error"
+        "noVar": "error",
+        "noConfusingVoidType": "off"
       },
       "style": {
         "noNonNullAssertion": "off",

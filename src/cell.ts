@@ -1,6 +1,6 @@
 import { DisposedStateError } from './errors';
 import { markDirtyRecursive } from './markDirtyRecursive';
-import type { Cell, Computed, RefCell, StateEvent } from './state';
+import type { Cell, Computed, RefCell, StateEvent } from './types';
 import { createEventEmitter } from './util/eventEmitter';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util/util';
 
@@ -18,11 +18,11 @@ function createCellInternal<T>(
   let pendingPromiseInternal: Promise<any> | undefined;
 
   const event = createEventEmitter<StateEvent>();
-  if(options?.onNotify != null) {
+  if (options?.onNotify != null) {
     event.on('onNotify', options.onNotify);
   }
 
-  if(options?.onPendingChange != null) {
+  if (options?.onPendingChange != null) {
     event.on('onPendingChange', options.onPendingChange);
   }
 

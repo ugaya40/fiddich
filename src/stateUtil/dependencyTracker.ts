@@ -1,5 +1,5 @@
-import type { ComputedCopy, StateCopy } from '../atomicContext';
-import type { Computed, ValueStates } from '../state';
+import type { ComputedCopy, ValueStateCopy } from '../atomicContext';
+import type { Computed, ValueStates } from '../types';
 import { createScopedCollector, type ScopedCollector } from '../util/scopedCollector';
 
 export type OriginalState = {
@@ -9,7 +9,7 @@ export type OriginalState = {
 
 export type CopyState = {
   computed: ComputedCopy;
-  state: StateCopy;
+  state: ValueStateCopy;
 };
 
 type ContextComputed<T extends OriginalState | CopyState> = T['computed'];

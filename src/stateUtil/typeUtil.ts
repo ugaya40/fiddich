@@ -1,6 +1,6 @@
-import type { CellCopy, ComputedCopy, StateCopy } from '../atomicContext';
-import { ReactiveCollection } from '../collections';
-import type { Cell, Computed, RefCell, ValueStates } from '../state';
+import type { CellCopy, ComputedCopy, ValueStateCopy } from '../atomicContext';
+import type { ReactiveCollection } from '../collections';
+import type { Cell, Computed, RefCell, ValueStates } from '../types';
 
 export function isCell<T>(value: ValueStates<T>): value is Cell<T> | RefCell<T>;
 export function isCell(value: unknown): value is Cell | RefCell;
@@ -22,18 +22,18 @@ export function isReactiveCollection(value: unknown): value is ReactiveCollectio
   return value != null && typeof value === 'object' && (value as any).kind === 'collection';
 }
 
-export function isStateCopy(value: unknown): value is StateCopy {
+export function isStateCopy(value: unknown): value is ValueStateCopy {
   return value != null && typeof value === 'object' && (value as any).original && (value as any).kind;
 }
 
-export function isCellCopy<T>(copy: StateCopy<T>): copy is CellCopy<T>;
-export function isCellCopy(copy: StateCopy): copy is CellCopy;
-export function isCellCopy(copy: StateCopy): copy is CellCopy {
+export function isCellCopy<T>(copy: ValueStateCopy<T>): copy is CellCopy<T>;
+export function isCellCopy(copy: ValueStateCopy): copy is CellCopy;
+export function isCellCopy(copy: ValueStateCopy): copy is CellCopy {
   return copy.kind === 'cell';
 }
 
-export function isComputedCopy<T>(copy: StateCopy<T>): copy is ComputedCopy<T>;
-export function isComputedCopy(copy: StateCopy): copy is ComputedCopy;
-export function isComputedCopy(copy: StateCopy): copy is ComputedCopy {
+export function isComputedCopy<T>(copy: ValueStateCopy<T>): copy is ComputedCopy<T>;
+export function isComputedCopy(copy: ValueStateCopy): copy is ComputedCopy;
+export function isComputedCopy(copy: ValueStateCopy): copy is ComputedCopy {
   return copy.kind === 'computed';
 }

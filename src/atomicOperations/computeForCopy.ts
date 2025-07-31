@@ -1,8 +1,8 @@
-import type { AtomicContext, ComputedCopy } from '../atomicContext/types';
-import type { ValueStates } from '../state';
+import type { AtomicContext, ComputedCopy } from '../atomicContext';
 import { globalCircularDetector } from '../stateUtil/circularDetector';
 import { globalCopyDependencyTracker } from '../stateUtil/dependencyTracker';
-import { getForAtomicOperation } from '.';
+import type { ValueStates } from '../types';
+import { getForAtomicOperation } from './get';
 
 function getForComputeCopy<T>(state: ValueStates<T>, owner: ComputedCopy, context: AtomicContext): T {
   const targetCopy = context.copyStore.getCopy(state);

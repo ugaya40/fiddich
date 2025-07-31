@@ -1,15 +1,13 @@
-import type { Cell, Computed, RefCell, ValueStates } from '../state';
 import { isCell, isComputed } from '../stateUtil/typeUtil';
+import type { Cell, Computed, RefCell, ValueStates } from '../types';
+import type { CellCopy, ComputedCopy, ValueStateCopy } from './copy';
+import { createCellCopy, createComputedCopy } from './copy';
 import type { AtomicContext } from './index';
-import type { CellCopy, ComputedCopy, StateCopy } from './copy';
-import { createCellCopy } from './copy/cell';
-import { createComputedCopy } from './copy/computed';
-
 
 function getCopyInternal<T>(state: Cell<T> | RefCell<T>, context: AtomicContext): CellCopy<T>;
 function getCopyInternal<T>(state: Computed<T>, context: AtomicContext): ComputedCopy<T>;
-function getCopyInternal<T>(state: ValueStates<T>, context: AtomicContext): StateCopy<T>;
-function getCopyInternal<T>(state: ValueStates<T>, context: AtomicContext): StateCopy<T> {
+function getCopyInternal<T>(state: ValueStates<T>, context: AtomicContext): ValueStateCopy<T>;
+function getCopyInternal<T>(state: ValueStates<T>, context: AtomicContext): ValueStateCopy<T> {
   const { copyStoreMap } = context.copyStore;
   const existing = copyStoreMap.get(state);
   if (existing) {
@@ -26,16 +24,16 @@ function getCopyInternal<T>(state: ValueStates<T>, context: AtomicContext): Stat
 }
 
 export function createCopyStore(context: AtomicContext) {
-  const copyStoreMap = new Map<ValueStates, StateCopy>();
+  const copyStoreMap = new Map<ValueStates, ValueStateCopy>();
 
   function getCopy<T>(state: Cell<T> | RefCell<T>): CellCopy<T>;
   function getCopy<T>(state: Computed<T>): ComputedCopy<T>;
-  function getCopy<T>(state: ValueStates<T>): StateCopy<T>;
-  function getCopy<T>(state: ValueStates<T>): StateCopy<T> {
+  function getCopy<T>(state: ValueStates<T>): ValueStateCopy<T>;
+  function getCopy<T>(state: ValueStates<T>): ValueStateCopy<T> {
     return getCopyInternal(state, context);
   }
 
-  function registerCopy(state: ValueStates, copy: StateCopy): void {
+  function registerCopy(state: ValueStates, copy: ValueStateCopy): void {
     copyStoreMap.set(state, copy);
   }
 

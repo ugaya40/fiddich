@@ -1,4 +1,4 @@
-import type { AtomicContext } from '../atomicContext/index';
+import type { AtomicContext } from '../atomicContext';
 import { isComputedCopy, isValueState } from '../stateUtil/typeUtil';
 import { markDirtyRecursiveForCopy } from './markDirtyRecursiveForCopy';
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { computed } from '../../computed';
 import { get } from '../../get';
-import type { ValueStates } from '../../state';
+import type { ValueStates } from '../../types';
 import { getValueForSuspense } from '../getValueForSuspense';
 
 type UseValueInternalOptions = {

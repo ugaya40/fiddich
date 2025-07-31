@@ -1,7 +1,7 @@
 import { DisposedStateError } from './errors';
 import { get } from './get';
 import { markDirtyRecursive } from './markDirtyRecursive';
-import type { Computed, ValueStates, StateEvent } from './state';
+import type { Computed, StateEvent, ValueStates } from './types';
 import { createEventEmitter } from './util/eventEmitter';
 import { type Compare, defaultCompare, generateStateId } from './util/util';
 
@@ -19,11 +19,11 @@ export function computed<T>(
   let pendingPromiseInternal: Promise<any> | undefined;
 
   const event = createEventEmitter<StateEvent>();
-  if(options?.onNotify != null) {
+  if (options?.onNotify != null) {
     event.on('onNotify', options.onNotify);
   }
 
-  if(options?.onPendingChange != null) {
+  if (options?.onPendingChange != null) {
     event.on('onPendingChange', options.onPendingChange);
   }
 

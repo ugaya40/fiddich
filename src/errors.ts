@@ -18,7 +18,10 @@ export class CircularDependencyError extends FiddichError {
 }
 
 export class IndexOutOfRangeError extends FiddichError {
-  constructor(public readonly index: number, public readonly length: number) {
+  constructor(
+    public readonly index: number,
+    public readonly length: number
+  ) {
     super(`Index ${index} is out of range. Array length is ${length}`);
   }
 }

@@ -1,3 +1,2 @@
-import { ReactiveArray } from "../../../collections/array/rArray";
-import { AtomicContext } from "../../types";
-
+import { ReactiveArray } from '../../../collections/array/rArray';
+import { AtomicContext } from '../../types';

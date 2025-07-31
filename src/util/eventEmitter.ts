@@ -13,16 +13,19 @@ export function createEventEmitter<Events extends Record<PropertyKey, any>>(): E
   const listeners: { [K in keyof Events]?: Set<Listener<Events[K]>> } = {};
 
   function on<K extends keyof Events>(event: K, fn: Listener<Events[K]>): Disposable {
-    (listeners[event] ??= new Set()).add(fn);
+    if (!listeners[event]) {
+      listeners[event] = new Set();
+    }
+    listeners[event].add(fn);
     return {
       [Symbol.dispose]() {
         off(event, fn);
-      }
+      },
     };
   }
 
   function once<K extends keyof Events>(event: K, fn: Listener<Events[K]>): Disposable {
-    const wrapper: Listener<Events[K]> = payload => {
+    const wrapper: Listener<Events[K]> = (payload) => {
       off(event, wrapper);
       fn(payload);
     };
@@ -39,7 +42,7 @@ export function createEventEmitter<Events extends Record<PropertyKey, any>>(): E
   }
 
   function emit<K extends keyof Events>(event: K, payload: Events[K]): void {
-    [...(listeners[event] ?? [])].forEach(fn => fn(payload));
+    [...(listeners[event] ?? [])].forEach((fn) => fn(payload));
   }
 
   function listenerCount<K extends keyof Events>(event: K): number {
@@ -57,6 +60,6 @@ export function createEventEmitter<Events extends Record<PropertyKey, any>>(): E
       for (const event in listeners) {
         delete listeners[event];
       }
-    }
+    },
   };
 }

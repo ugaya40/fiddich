@@ -287,7 +287,7 @@ describe('Computed pending', () => {
     const onPendingChange = vi.fn();
     const cellA = cell(10);
     const computedA = computed(({ get }) => get(cellA) * 2);
-    computedA.event.on('onPendingChange',onPendingChange);
+    computedA.event.on('onPendingChange', onPendingChange);
 
     // Initial evaluation
     expect(get(computedA)).toBe(20);
@@ -308,8 +308,8 @@ describe('Computed pending', () => {
     const cellA = cell(10);
     const computedA = computed(({ get }) => get(cellA) * 2);
     const dependent = computed(({ get }) => get(computedA) + 5);
-    computedA.event.on('onPendingChange',onPendingChangeA);
-    dependent.event.on('onPendingChange',onPendingChangeB);
+    computedA.event.on('onPendingChange', onPendingChangeA);
+    dependent.event.on('onPendingChange', onPendingChangeB);
 
     // Establish dependencies
     expect(get(dependent)).toBe(25);

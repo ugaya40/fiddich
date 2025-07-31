@@ -4,7 +4,7 @@ import { getConcurrentActions } from './concurrent';
 import type { ExclusiveToken } from './concurrent/exclusive';
 import type { GuardToken } from './concurrent/guard';
 import type { SequencerToken } from './concurrent/sequencer';
-import type { Cell, RefCell, ValueStates } from './state';
+import type { Cell, RefCell, ValueStates } from './types';
 
 export type AtomicOperations = {
   get: <T>(state: ValueStates<T>) => T;

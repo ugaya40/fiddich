@@ -1,19 +1,15 @@
-import type { Cell, RefCell } from '../../state';
+import type { Cell, RefCell } from '../../types';
 import type { AtomicContext } from '../index';
-import type { StateCopyBase } from './state';
-
 import type { ComputedCopy } from './computed';
+import type { ValueStateCopyBase } from './types';
 
-export interface CellCopy<T = any> extends StateCopyBase<T> {
+export interface CellCopy<T = any> extends ValueStateCopyBase<T> {
   kind: 'cell';
   dependents: Set<ComputedCopy>;
   original: Cell<T> | RefCell<T>;
 }
 
-export function createCellCopy<T>(
-  cell: Cell<T> | RefCell<T>,
-  context: AtomicContext
-): CellCopy<T> {
+export function createCellCopy<T>(cell: Cell<T> | RefCell<T>, context: AtomicContext): CellCopy<T> {
   const copy: CellCopy<T> = {
     id: cell.id,
     kind: 'cell',

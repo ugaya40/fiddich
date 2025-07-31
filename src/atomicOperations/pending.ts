@@ -1,7 +1,6 @@
 import type { AtomicContext } from '../atomicContext/index';
-import { ReactiveCollection } from '../collections';
 import { type PendingOptions, pending } from '../pending';
-import type { States, ValueStates } from '../state';
+import type { States } from '../types';
 
 export interface AtomicPendingOptions extends PendingOptions {
   promise?: Promise<any>;

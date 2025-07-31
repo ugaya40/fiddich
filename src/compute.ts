@@ -1,7 +1,7 @@
 import { get } from './get';
-import type { Computed, ValueStates } from './state';
 import { globalCircularDetector } from './stateUtil/circularDetector';
 import { globalDependencyTracker } from './stateUtil/dependencyTracker';
+import type { Computed, ValueStates } from './types';
 
 function getForCompute<T>(state: ValueStates<T>, owner: Computed): T {
   const tracker = globalDependencyTracker();

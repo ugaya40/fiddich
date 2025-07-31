@@ -1,7 +1,7 @@
 import type { AtomicContext } from '../atomicContext/index';
 import { DisposedStateError } from '../errors';
-import type { ValueStates } from '../state';
 import { isComputedCopy } from '../stateUtil/typeUtil';
+import type { ValueStates } from '../types';
 import { computeForCopy } from './computeForCopy';
 
 export function getForAtomicOperation<T>(state: ValueStates<T>, context: AtomicContext) {
