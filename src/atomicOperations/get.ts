@@ -1,4 +1,4 @@
-import type { AtomicContext } from '../atomicContext/index';
+import type { AtomicContext } from '../atomicContext';
 import { DisposedStateError } from '../errors';
 import { isComputedCopy } from '../stateUtil/typeUtil';
 import type { ValueStates } from '../types';

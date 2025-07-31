@@ -1,4 +1,4 @@
-import type { AtomicContext } from '../atomicContext/index';
+import type { AtomicContext } from '../atomicContext';
 import { DisposedStateError } from '../errors';
 import type { Cell, RefCell } from '../types';
 import { isDisposable } from '../util/util';

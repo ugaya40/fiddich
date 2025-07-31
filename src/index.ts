@@ -16,7 +16,7 @@ export { pending } from './pending';
 export { useValue } from './react/hooks/useValue';
 export { useValueStatus } from './react/hooks/useValueStatus';
 export { set } from './set';
-export { isCell, isComputed, isValueState as isState } from './stateUtil/typeUtil';
+export { isCell, isComputed, isValueState } from './stateUtil/typeUtil';
 export { touch } from './touch';
 export type {
   Cell,

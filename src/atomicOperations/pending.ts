@@ -1,4 +1,4 @@
-import type { AtomicContext } from '../atomicContext/index';
+import type { AtomicContext } from '../atomicContext';
 import { type PendingOptions, pending } from '../pending';
 import type { States } from '../types';
 

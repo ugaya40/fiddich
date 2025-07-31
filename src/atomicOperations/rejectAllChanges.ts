@@ -1,4 +1,4 @@
-import type { AtomicContext } from '../atomicContext/types';
+import type { AtomicContext } from '../atomicContext';
 
 export function rejectAllChanges(context: AtomicContext) {
   context.dependencyDirty.clear();

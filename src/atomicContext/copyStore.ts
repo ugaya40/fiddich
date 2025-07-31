@@ -1,8 +1,7 @@
 import { isCell, isComputed } from '../stateUtil/typeUtil';
 import type { Cell, Computed, RefCell, ValueStates } from '../types';
-import type { CellCopy, ComputedCopy, ValueStateCopy } from './copy';
-import { createCellCopy, createComputedCopy } from './copy';
-import type { AtomicContext } from './index';
+import { type CellCopy, type ComputedCopy, createCellCopy, createComputedCopy, type ValueStateCopy } from './copy';
+import type { AtomicContext } from './types';
 
 function getCopyInternal<T>(state: Cell<T> | RefCell<T>, context: AtomicContext): CellCopy<T>;
 function getCopyInternal<T>(state: Computed<T>, context: AtomicContext): ComputedCopy<T>;
