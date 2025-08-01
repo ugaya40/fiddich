@@ -1,5 +1,5 @@
-import { Cell, RefCell } from '../cell';
-import { Computed } from '../computed';
+import type { Cell, RefCell } from '../cell';
+import type { Computed } from '../computed';
 import type { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 import type { ValueStates } from '../types';
 import type { CellCopy, ComputedCopy, ValueStateCopy } from './copy';

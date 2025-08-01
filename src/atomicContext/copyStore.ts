@@ -1,5 +1,5 @@
-import { Cell, RefCell } from '../cell';
-import { Computed } from '../computed';
+import type { Cell, RefCell } from '../cell';
+import type { Computed } from '../computed';
 import { isCell, isComputed } from '../stateUtil/typeUtil';
 import type { ValueStates } from '../types';
 import { type CellCopy, type ComputedCopy, createCellCopy, createComputedCopy, type ValueStateCopy } from './copy';

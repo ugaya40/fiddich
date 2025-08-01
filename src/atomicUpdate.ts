@@ -1,5 +1,5 @@
 import { type AtomicContext, type AtomicPendingOptions, commit, createAtomicContext, createAtomicOperations } from './atomicContext';
-import { Cell, RefCell } from './cell';
+import type { Cell, RefCell } from './cell';
 import { type ExclusiveToken, type GuardToken, getConcurrentActions, type SequencerToken } from './concurrent';
 import type { ValueStates } from './types';
 

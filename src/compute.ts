@@ -1,4 +1,4 @@
-import { Computed } from './computed';
+import type { Computed } from './computed';
 import { get } from './get';
 import { globalCircularDetector } from './stateUtil/circularDetector';
 import { globalDependencyTracker } from './stateUtil/dependencyTracker';

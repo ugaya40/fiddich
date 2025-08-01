@@ -1,6 +1,6 @@
-import { Cell, RefCell } from './cell';
+import type { Cell, RefCell } from './cell';
 import type { ReactiveCollections } from './collections';
-import { Computed } from './computed';
+import type { Computed } from './computed';
 import type { EventEmitter } from './util/eventEmitter';
 import type { Compare } from './util/util';
 
@@ -9,10 +9,13 @@ export type StateEvent = {
   onPendingChange: void;
 };
 
-export interface ReactiveState {
+export interface ReactiveState extends Disposable {
   kind: string;
   id: string;
   dependents: Set<Computed>;
+  isDisposed: boolean;
+  pendingPromise?: Promise<any>;
+  event: EventEmitter<StateEvent>;
   toJSON(): unknown;
 }
 
@@ -20,9 +23,6 @@ export interface ValueState<T = any> extends ReactiveState {
   stableValue: T;
   compare: Compare<T>;
   toJSON(): T;
-  pendingPromise?: Promise<any>;
-  isDisposed: boolean;
-  event: EventEmitter<StateEvent>;
 }
 
 export type ValueStates<T = any> = Cell<T> | RefCell<T> | Computed<T>;

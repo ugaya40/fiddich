@@ -1,4 +1,4 @@
-import { Computed } from '../computed';
+import type { Computed } from '../computed';
 import type { ReactiveState } from '../types';
 import type { EventEmitter } from '../util/eventEmitter';
 import type { ReactiveArray } from './array/rArray';
@@ -10,16 +10,13 @@ export type Reset = { type: 'reset' };
 
 export type CollectionChanged<T> = {
   onCollectionChanged: (Add<T> | Remove<T> | Replace<T> | Reset)[];
-  onPendingChange: void;
 };
 
 export interface ReactiveCollection<T = any> extends ReactiveState {
   kind: 'collection';
   type: string;
   dependents: Set<Computed>;
-  isDisposed: boolean;
-  pendingPromise?: Promise<any>;
-  event: EventEmitter<CollectionChanged<T>>;
+  collectionEvent: EventEmitter<CollectionChanged<T>>;
 }
 
 export type ReactiveCollections = ReactiveArray;

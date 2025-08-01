@@ -7,7 +7,7 @@ import {
   setForAtomicOperation,
   touchForAtomicOperation,
 } from '../atomicOperations';
-import { Cell, RefCell } from '../cell';
+import type { Cell, RefCell } from '../cell';
 import type { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 import type { ValueStates } from '../types';
 import type { ComputedCopy, ValueStateCopy } from './copy';

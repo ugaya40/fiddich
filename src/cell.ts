@@ -1,4 +1,4 @@
-import { Computed } from './computed';
+import type { Computed } from './computed';
 import { DisposedStateError } from './errors';
 import { markDirtyRecursive } from './markDirtyRecursive';
 import type { StateEvent, ValueState } from './types';

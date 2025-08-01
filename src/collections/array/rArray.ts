@@ -1,5 +1,7 @@
-import { IndexOutOfRangeError } from '../../errors';
 import type { Computed } from '../../computed';
+import { IndexOutOfRangeError } from '../../errors';
+import { markDirtyRecursive } from '../../markDirtyRecursive';
+import type { StateEvent } from '../../types';
 import { createEventEmitter } from '../../util/eventEmitter';
 import { generateStateId } from '../../util/util';
 import type { CollectionChanged, ReactiveCollection } from '../types';
@@ -64,29 +66,29 @@ function set<T>(rArray: ReactiveArray<T>, index: number, item: T): void {
   }
   const oldItem = rArray.internalArray[index];
   rArray.internalArray[index] = item;
-  rArray.event.emit('onCollectionChanged', [{ type: 'replace', newItem: item, oldItem, index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'replace', newItem: item, oldItem, index }]);
 }
 
 function add<T>(rArray: ReactiveArray<T>, item: T): void {
   const index = rArray.internalArray.length;
   rArray.internalArray.push(item);
-  rArray.event.emit('onCollectionChanged', [{ type: 'add', newItems: [item], newStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'add', newItems: [item], newStartingIndex: index }]);
 }
 
 function addRange<T>(rArray: ReactiveArray<T>, items: T[]): void {
   const index = rArray.internalArray.length;
   rArray.internalArray.push(...items);
-  rArray.event.emit('onCollectionChanged', [{ type: 'add', newItems: items, newStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'add', newItems: items, newStartingIndex: index }]);
 }
 
 function insert<T>(rArray: ReactiveArray<T>, index: number, item: T): void {
   rArray.internalArray.splice(index, 0, item);
-  rArray.event.emit('onCollectionChanged', [{ type: 'add', newItems: [item], newStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'add', newItems: [item], newStartingIndex: index }]);
 }
 
 function insertRange<T>(rArray: ReactiveArray<T>, index: number, items: T[]): void {
   rArray.internalArray.splice(index, 0, ...items);
-  rArray.event.emit('onCollectionChanged', [{ type: 'add', newItems: items, newStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'add', newItems: items, newStartingIndex: index }]);
 }
 
 function remove<T>(rArray: ReactiveArray<T>, item: T): boolean {
@@ -94,7 +96,7 @@ function remove<T>(rArray: ReactiveArray<T>, item: T): boolean {
   if (index !== -1) {
     const oldItem = rArray.internalArray[index];
     rArray.internalArray.splice(index, 1);
-    rArray.event.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [oldItem], oldStartingIndex: index }]);
+    rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [oldItem], oldStartingIndex: index }]);
     return true;
   }
   return false;
@@ -103,13 +105,13 @@ function remove<T>(rArray: ReactiveArray<T>, item: T): boolean {
 function removeAt<T>(rArray: ReactiveArray<T>, index: number): void {
   const oldItem = rArray.internalArray[index];
   rArray.internalArray.splice(index, 1);
-  rArray.event.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [oldItem], oldStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [oldItem], oldStartingIndex: index }]);
 }
 
 function removeRange<T>(rArray: ReactiveArray<T>, index: number, count: number): void {
   const oldItems = rArray.internalArray.slice(index, index + count);
   rArray.internalArray.splice(index, count);
-  rArray.event.emit('onCollectionChanged', [{ type: 'remove', oldImtes: oldItems, oldStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: oldItems, oldStartingIndex: index }]);
 }
 
 function removeAll<T>(rArray: ReactiveArray<T>, predicate: (item: T) => boolean): number {
@@ -124,7 +126,7 @@ function removeAll<T>(rArray: ReactiveArray<T>, predicate: (item: T) => boolean)
   for (let i = toRemove.length - 1; i >= 0; i--) {
     const { index, item } = toRemove[i];
     rArray.internalArray.splice(index, 1);
-    rArray.event.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [item], oldStartingIndex: index }]);
+    rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [item], oldStartingIndex: index }]);
   }
 
   if (toRemove.length !== 0) {
@@ -137,7 +139,7 @@ function removeAll<T>(rArray: ReactiveArray<T>, predicate: (item: T) => boolean)
       }))
       .toArray();
 
-    rArray.event.emit('onCollectionChanged', args);
+    rArray.collectionEvent.emit('onCollectionChanged', args);
   }
 
   return toRemove.length;
@@ -145,12 +147,13 @@ function removeAll<T>(rArray: ReactiveArray<T>, predicate: (item: T) => boolean)
 
 function clear<T>(rArray: ReactiveArray<T>): void {
   rArray.internalArray.length = 0;
-  rArray.event.emit('onCollectionChanged', [{ type: 'reset' }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'reset' }]);
 }
 
 function createReactiveArray<T>(source?: Iterable<T>): ReactiveArray<T> {
   const internalArray = Array.from(source ?? []);
-  const event = createEventEmitter<CollectionChanged<T>>();
+  const event = createEventEmitter<StateEvent>();
+  const collectionEvent = createEventEmitter<CollectionChanged<T>>();
   let pendingPromiseInternal: Promise<any> | undefined;
   const array: ReactiveArray<T> = {
     id: generateStateId(),
@@ -169,7 +172,8 @@ function createReactiveArray<T>(source?: Iterable<T>): ReactiveArray<T> {
         event.emit('onPendingChange', undefined);
       }
     },
-    event: createEventEmitter(),
+    event,
+    collectionEvent: collectionEvent,
     internalArray,
     toJSON() {
       return internalArray;
@@ -192,6 +196,20 @@ function createReactiveArray<T>(source?: Iterable<T>): ReactiveArray<T> {
     removeRange: (index, count) => removeRange(array, index, count),
     removeAll: (predicate) => removeAll(array, predicate),
     clear: () => clear(array),
+
+    [Symbol.dispose](): void {
+      if (array.isDisposed) return;
+
+      array.isDisposed = true;
+
+      for (const computed of array.dependents) {
+        markDirtyRecursive(computed);
+      }
+      collectionEvent.emit('onCollectionChanged', [{ type: 'reset' }]);
+      collectionEvent[Symbol.dispose]();
+      event.emit('onNotify', undefined);
+      event[Symbol.dispose]();
+    },
   };
   return array;
 }

@@ -1,5 +1,5 @@
 import type { ComputedCopy, ValueStateCopy } from '../atomicContext';
-import { Computed } from '../computed';
+import type { Computed } from '../computed';
 import type { ValueStates } from '../types';
 import { createScopedCollector, type ScopedCollector } from '../util/scopedCollector';
 
