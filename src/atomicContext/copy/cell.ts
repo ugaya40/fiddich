@@ -1,4 +1,4 @@
-import type { Cell, RefCell } from '../../types';
+import type { Cell, RefCell } from '../../cell';
 import type { AtomicContext } from '../types';
 import type { ComputedCopy } from './computed';
 import type { ValueStateCopyBase } from './types';

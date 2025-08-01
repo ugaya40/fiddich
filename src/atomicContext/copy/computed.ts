@@ -1,4 +1,4 @@
-import type { Computed } from '../../types';
+import type { Computed } from '../../computed';
 import type { AtomicContext } from '../index';
 import type { ValueStateCopy } from './';
 import type { ValueStateCopyBase } from './types';

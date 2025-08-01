@@ -1,6 +1,8 @@
 import type { CellCopy, ComputedCopy, ValueStateCopy } from '../atomicContext';
+import { Cell, RefCell } from '../cell';
 import type { ReactiveCollection } from '../collections';
-import type { Cell, Computed, RefCell, ValueStates } from '../types';
+import { Computed } from '../computed';
+import type { ValueStates } from '../types';
 
 export function isCell<T>(value: ValueStates<T>): value is Cell<T> | RefCell<T>;
 export function isCell(value: unknown): value is Cell | RefCell;

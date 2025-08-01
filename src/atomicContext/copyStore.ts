@@ -1,5 +1,7 @@
+import { Cell, RefCell } from '../cell';
+import { Computed } from '../computed';
 import { isCell, isComputed } from '../stateUtil/typeUtil';
-import type { Cell, Computed, RefCell, ValueStates } from '../types';
+import type { ValueStates } from '../types';
 import { type CellCopy, type ComputedCopy, createCellCopy, createComputedCopy, type ValueStateCopy } from './copy';
 import type { AtomicContext } from './types';
 

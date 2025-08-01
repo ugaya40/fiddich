@@ -3,8 +3,8 @@ Symbol.dispose ??= Symbol('Symbol.dispose');
 
 export type { AtomicExecuted, AtomicReject, AtomicUpdateResult } from './atomicUpdate';
 export { atomicUpdate, tryAtomicUpdate } from './atomicUpdate';
-export { cell, refCell } from './cell';
-export { computed } from './computed';
+export { cell, refCell, type Cell, type RefCell } from './cell';
+export { computed, type Computed } from './computed';
 export type { ExclusiveToken } from './concurrent/exclusive';
 export { createExclusiveToken } from './concurrent/exclusive';
 export type { GuardToken } from './concurrent/guard';
@@ -19,11 +19,8 @@ export { set } from './set';
 export { isCell, isComputed, isValueState } from './stateUtil/typeUtil';
 export { touch } from './touch';
 export type {
-  Cell,
   CellValue,
-  Computed,
   ComputedValue,
-  RefCell,
   StateGetter,
   StateValue,
   ValueStates,

@@ -1,4 +1,4 @@
-import type { Computed } from './types';
+import type { Computed } from './computed';
 
 export function markDirtyRecursive(computed: Computed) {
   // Note: We don't need circular dependency detection here.

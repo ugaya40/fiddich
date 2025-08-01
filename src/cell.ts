@@ -1,8 +1,19 @@
+import { Computed } from './computed';
 import { DisposedStateError } from './errors';
 import { markDirtyRecursive } from './markDirtyRecursive';
-import type { Cell, Computed, RefCell, StateEvent } from './types';
+import type { StateEvent, ValueState } from './types';
 import { createEventEmitter } from './util/eventEmitter';
 import { type Compare, defaultCompare, generateStateId, isDisposable } from './util/util';
+
+export interface Cell<T = any> extends ValueState<T>, Disposable {
+  kind: 'cell';
+  autoDispose: true;
+}
+
+export interface RefCell<T = any> extends ValueState<T>, Disposable {
+  kind: 'cell';
+  autoDispose: false;
+}
 
 function createCellInternal<T>(
   initialValue: T,

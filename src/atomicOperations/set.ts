@@ -1,6 +1,6 @@
 import type { AtomicContext } from '../atomicContext';
 import { DisposedStateError } from '../errors';
-import type { Cell, RefCell } from '../types';
+import type { Cell, RefCell } from '../cell';
 import { isDisposable } from '../util/util';
 import { disposeForAtomicOperation } from './dispose';
 import { markDirtyRecursiveForCopy } from './markDirtyRecursiveForCopy';

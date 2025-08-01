@@ -1,4 +1,6 @@
+import { Cell, RefCell } from './cell';
 import type { ReactiveCollections } from './collections';
+import { Computed } from './computed';
 import type { EventEmitter } from './util/eventEmitter';
 import type { Compare } from './util/util';
 
@@ -21,23 +23,6 @@ export interface ValueState<T = any> extends ReactiveState {
   pendingPromise?: Promise<any>;
   isDisposed: boolean;
   event: EventEmitter<StateEvent>;
-}
-
-export interface Cell<T = any> extends ValueState<T>, Disposable {
-  kind: 'cell';
-  autoDispose: true;
-}
-
-export interface RefCell<T = any> extends ValueState<T>, Disposable {
-  kind: 'cell';
-  autoDispose: false;
-}
-
-export interface Computed<T = any> extends ValueState<T>, Disposable {
-  kind: 'computed';
-  dependencies: Set<ValueStates>;
-  isDirty: boolean;
-  compute(getter: <V>(target: ValueStates<V>) => V): T;
 }
 
 export type ValueStates<T = any> = Cell<T> | RefCell<T> | Computed<T>;

@@ -1,5 +1,7 @@
+import { Cell, RefCell } from '../cell';
+import { Computed } from '../computed';
 import type { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
-import type { Cell, Computed, RefCell, ValueStates } from '../types';
+import type { ValueStates } from '../types';
 import type { CellCopy, ComputedCopy, ValueStateCopy } from './copy';
 
 export type CopyStore = {

@@ -1,6 +1,7 @@
 import { type AtomicContext, type AtomicPendingOptions, commit, createAtomicContext, createAtomicOperations } from './atomicContext';
+import { Cell, RefCell } from './cell';
 import { type ExclusiveToken, type GuardToken, getConcurrentActions, type SequencerToken } from './concurrent';
-import type { Cell, RefCell, ValueStates } from './types';
+import type { ValueStates } from './types';
 
 export type AtomicOperations = {
   get: <T>(state: ValueStates<T>) => T;

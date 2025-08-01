@@ -1,4 +1,5 @@
-import type { Computed, ReactiveState } from '../types';
+import { Computed } from '../computed';
+import type { ReactiveState } from '../types';
 import type { EventEmitter } from '../util/eventEmitter';
 import type { ReactiveArray } from './array/rArray';
 

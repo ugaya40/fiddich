@@ -1,12 +1,28 @@
-import type { AtomicContext } from '../../atomicContext';
 import { IndexOutOfRangeError } from '../../errors';
-import type { Computed } from '../../types';
+import type { Computed } from '../../computed';
 import { createEventEmitter } from '../../util/eventEmitter';
 import { generateStateId } from '../../util/util';
 import type { CollectionChanged, ReactiveCollection } from '../types';
 
 export type ReactiveArray<T = any> = ReactiveCollection<T> & {
   internalArray: T[];
+  length(): number;
+  indexOf(item: T, fromIndex?: number): number;
+  lastIndexOf(item: T, fromIndex?: number): number;
+  includes(item: T, fromIndex?: number): boolean;
+  find(predicate: (value: T, index: number, array: T[]) => boolean): T | undefined;
+  findIndex(predicate: (value: T, index: number, array: T[]) => boolean): number;
+  get(index: number): T;
+  set(index: number, item: T): void;
+  add(item: T): void;
+  addRange(items: T[]): void;
+  insert(index: number, item: T): void;
+  insertRange(index: number, items: T[]): void;
+  remove(item: T): boolean;
+  removeAt(index: number): void;
+  removeRange(index: number, count: number): void;
+  removeAll(predicate: (item: T) => boolean): number;
+  clear(): void;
 };
 
 function length<T>(rArray: ReactiveArray<T>): number {
@@ -132,11 +148,11 @@ function clear<T>(rArray: ReactiveArray<T>): void {
   rArray.event.emit('onCollectionChanged', [{ type: 'reset' }]);
 }
 
-function createRArray<T>(source?: Iterable<T>): ReactiveArray<T> {
+function createReactiveArray<T>(source?: Iterable<T>): ReactiveArray<T> {
   const internalArray = Array.from(source ?? []);
   const event = createEventEmitter<CollectionChanged<T>>();
   let pendingPromiseInternal: Promise<any> | undefined;
-  return {
+  const array: ReactiveArray<T> = {
     id: generateStateId(),
     kind: 'collection',
     type: 'array',
@@ -158,13 +174,29 @@ function createRArray<T>(source?: Iterable<T>): ReactiveArray<T> {
     toJSON() {
       return internalArray;
     },
+
+    length: () => length(array),
+    indexOf: (item, fromIndex) => indexOf(array, item, fromIndex),
+    lastIndexOf: (item, fromIndex) => lastIndexOf(array, item, fromIndex),
+    includes: (item, fromIndex) => includes(array, item, fromIndex),
+    find: (predicate) => find(array, predicate),
+    findIndex: (predicate) => findIndex(array, predicate),
+    get: (index) => get(array, index),
+    set: (index, item) => set(array, index, item),
+    add: (item) => add(array, item),
+    addRange: (items) => addRange(array, items),
+    insert: (index, item) => insert(array, index, item),
+    insertRange: (index, items) => insertRange(array, index, items),
+    remove: (item) => remove(array, item),
+    removeAt: (index) => removeAt(array, index),
+    removeRange: (index, count) => removeRange(array, index, count),
+    removeAll: (predicate) => removeAll(array, predicate),
+    clear: () => clear(array),
   };
+  return array;
 }
 
-export function copyRArray<T>(rArray: ReactiveArray<T>, context: AtomicContext) {}
-
 export function rArray<T>(source?: Iterable<T>): ReactiveArray<T> {
-  const current = createRArray(source);
-  current.event.on('onCollectionChanged', (arg) => {});
+  const current = createReactiveArray(source);
   return current;
 }

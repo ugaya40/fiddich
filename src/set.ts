@@ -1,5 +1,5 @@
 import { atomicUpdate } from './atomicUpdate';
-import type { Cell, RefCell } from './types';
+import type { Cell, RefCell } from './cell';
 
 export function set<T>(cell: Cell<T> | RefCell<T>, value: T): void {
   atomicUpdate((ops) => {
