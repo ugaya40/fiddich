@@ -96,7 +96,7 @@ function remove<T>(rArray: ReactiveArray<T>, item: T): boolean {
   if (index !== -1) {
     const oldItem = rArray.internalArray[index];
     rArray.internalArray.splice(index, 1);
-    rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [oldItem], oldStartingIndex: index }]);
+    rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldItems: [oldItem], oldStartingIndex: index }]);
     return true;
   }
   return false;
@@ -105,13 +105,13 @@ function remove<T>(rArray: ReactiveArray<T>, item: T): boolean {
 function removeAt<T>(rArray: ReactiveArray<T>, index: number): void {
   const oldItem = rArray.internalArray[index];
   rArray.internalArray.splice(index, 1);
-  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [oldItem], oldStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldItems: [oldItem], oldStartingIndex: index }]);
 }
 
 function removeRange<T>(rArray: ReactiveArray<T>, index: number, count: number): void {
   const oldItems = rArray.internalArray.slice(index, index + count);
   rArray.internalArray.splice(index, count);
-  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: oldItems, oldStartingIndex: index }]);
+  rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldItems: oldItems, oldStartingIndex: index }]);
 }
 
 function removeAll<T>(rArray: ReactiveArray<T>, predicate: (item: T) => boolean): number {
@@ -126,7 +126,7 @@ function removeAll<T>(rArray: ReactiveArray<T>, predicate: (item: T) => boolean)
   for (let i = toRemove.length - 1; i >= 0; i--) {
     const { index, item } = toRemove[i];
     rArray.internalArray.splice(index, 1);
-    rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldImtes: [item], oldStartingIndex: index }]);
+    rArray.collectionEvent.emit('onCollectionChanged', [{ type: 'remove', oldItems: [item], oldStartingIndex: index }]);
   }
 
   if (toRemove.length !== 0) {
@@ -134,7 +134,7 @@ function removeAll<T>(rArray: ReactiveArray<T>, predicate: (item: T) => boolean)
       .values()
       .map((removedItem) => ({
         type: 'remove' as const,
-        oldImtes: [removedItem.item],
+        oldItems: [removedItem.item],
         oldStartingIndex: removedItem.index,
       }))
       .toArray();

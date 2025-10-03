@@ -4,7 +4,7 @@ import type { EventEmitter } from '../util/eventEmitter';
 import type { ReactiveArray } from './array/rArray';
 
 export type Add<T> = { type: 'add'; newItems: T[]; newStartingIndex: number };
-export type Remove<T> = { type: 'remove'; oldImtes: T[]; oldStartingIndex: number };
+export type Remove<T> = { type: 'remove'; oldItems: T[]; oldStartingIndex: number };
 export type Replace<T> = { type: 'replace'; newItem: T; oldItem: T; index: number };
 export type Reset = { type: 'reset' };
 
