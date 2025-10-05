@@ -10,7 +10,7 @@ import {
 import type { Cell, RefCell } from '../cell';
 import type { CopyState, DependencyChangeSet } from '../stateUtil/dependencyTracker';
 import type { ValueStates } from '../types';
-import type { ComputedCopy, ValueStateCopy } from './copy';
+import type { ComputedCopy, StateCopy, ValueStateCopy } from './copy';
 import { createCopyStore } from './copyStore';
 import type { AtomicContext } from './types';
 
@@ -19,7 +19,7 @@ export function createAtomicContext(): AtomicContext {
   const dependencyDirty = new Set<DependencyChangeSet<CopyState>>();
   const valueChanged = new Set<ValueStateCopy>();
   const toDispose = new Set<Disposable>();
-  const toNotify = new Set<ValueStateCopy>();
+  const toNotify = new Set<StateCopy>();
 
   const partialContext: AtomicContext = {
     valueDirty,

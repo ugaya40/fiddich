@@ -19,7 +19,7 @@ export interface ReactiveState extends Disposable {
   toJSON(): unknown;
 }
 
-export interface ValueState<T = any> extends ReactiveState {
+export interface ValueStateBase<T = any> extends ReactiveState {
   stableValue: T;
   compare: Compare<T>;
   toJSON(): T;

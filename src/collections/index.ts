@@ -1,6 +1,7 @@
 export type {
   Add,
-  CollectionChanged,
+  CollectionChange,
+  CollectionEvents,
   ReactiveCollection,
   ReactiveCollections,
   Remove,

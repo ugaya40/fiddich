@@ -1,11 +1,11 @@
 import { DisposedStateError } from './errors';
 import { get } from './get';
 import { markDirtyRecursive } from './markDirtyRecursive';
-import type { StateEvent, ValueState, ValueStates } from './types';
+import type { StateEvent, ValueStateBase, ValueStates } from './types';
 import { createEventEmitter } from './util/eventEmitter';
 import { type Compare, defaultCompare, generateStateId } from './util/util';
 
-export interface Computed<T = any> extends ValueState<T>, Disposable {
+export interface Computed<T = any> extends ValueStateBase<T>, Disposable {
   kind: 'computed';
   dependencies: Set<ValueStates>;
   isDirty: boolean;

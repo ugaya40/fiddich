@@ -8,15 +8,17 @@ export type Remove<T> = { type: 'remove'; oldItems: T[]; oldStartingIndex: numbe
 export type Replace<T> = { type: 'replace'; newItem: T; oldItem: T; index: number };
 export type Reset = { type: 'reset' };
 
-export type CollectionChanged<T> = {
-  onCollectionChanged: (Add<T> | Remove<T> | Replace<T> | Reset)[];
+export type CollectionChange<T> = Add<T> | Remove<T> | Replace<T> | Reset;
+
+export type CollectionEvents<T> = {
+  onCollectionChanged: CollectionChange<T>[];
 };
 
 export interface ReactiveCollection<T = any> extends ReactiveState {
   kind: 'collection';
   type: string;
   dependents: Set<Computed>;
-  collectionEvent: EventEmitter<CollectionChanged<T>>;
+  collectionEvent: EventEmitter<CollectionEvents<T>>;
 }
 
 export type ReactiveCollections = ReactiveArray;

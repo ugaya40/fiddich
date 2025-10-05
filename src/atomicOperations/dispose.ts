@@ -1,9 +1,9 @@
 import type { AtomicContext } from '../atomicContext';
-import { isComputedCopy, isValueState } from '../stateUtil/typeUtil';
+import { isComputedCopy, isState } from '../stateUtil/typeUtil';
 import { markDirtyRecursiveForCopy } from './markDirtyRecursiveForCopy';
 
 export function disposeForAtomicOperation<T extends Disposable>(target: T, context: AtomicContext) {
-  if (isValueState(target)) {
+  if (isState(target)) {
     const copy = context.copyStore.getCopy(target);
 
     if (copy.isDisposed) return;
